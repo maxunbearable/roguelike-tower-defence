@@ -72,6 +72,9 @@ struct MetaSave {
     // (sim::TutorialStep). Stored rather than a bare "done" flag so a player who
     // quits halfway resumes where they were instead of starting over.
     int tutorialStep = 0;
+    // Chosen difficulty (core::Difficulty). Per profile rather than per run, so
+    // it is a way to play rather than a decision to re-make every map.
+    int difficulty = 1;  // Standard
 };
 
 // A map is playable when it is the first, or when the one before it in `order`

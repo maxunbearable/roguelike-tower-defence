@@ -49,9 +49,10 @@ HubAction hubHitTest(const content::Registry& reg, const core::SaveSlot& slot, i
 // --- map select -----------------------------------------------------------
 
 struct MapAction {
-    enum class Kind { None, Play, Back };
+    enum class Kind { None, Play, Back, SetDifficulty };
     Kind kind = Kind::None;
     std::string mapId;
+    int difficulty = -1;
 };
 
 // The campaign order, authored via each map's `order` field rather than the

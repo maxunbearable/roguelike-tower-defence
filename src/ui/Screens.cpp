@@ -6,6 +6,7 @@
 #include "raylib.h"
 
 #include "content/MapFacts.h"
+#include "core/Difficulty.h"
 #include "core/Progression.h"
 #include "render/Palette.h"
 #include "render/PixelCanvas.h"
@@ -604,6 +605,15 @@ void drawMapThumb(const content::MapDef& m, int x, int y, int w, int h, bool ope
     DrawRectangleLines(ox - 2, oy - 2, tw + 4, th + 4, Color{40, 32, 26, 255});
 }
 
+// Difficulty sits under the cards, in the band that was empty. It is a way to
+// play rather than a per-map decision, so it is one row for the whole screen.
+constexpr int kDiffW = 268, kDiffH = 80, kDiffGap = 22;
+int diffY() { return kMapTop + kMapCardH + 34; }
+int diffX(int i) {
+    const int total = core::kDifficultyCount * kDiffW + (core::kDifficultyCount - 1) * kDiffGap;
+    return (kVirtualW - total) / 2 + i * (kDiffW + kDiffGap);
+}
+
 int mapCardX(int i) {
     const int total = 5 * kMapCardW + 4 * kMapGap;
     return (kVirtualW - total) / 2 + i * (kMapCardW + kMapGap);
@@ -630,6 +640,11 @@ MapAction mapHitTest(const content::Registry& reg, const core::SaveSlot& slot, c
             return {MapAction::Kind::Play, order[static_cast<size_t>(i)]};
         }
     }
+    for (int i = 0; i < core::kDifficultyCount; ++i) {
+        if (inRect(m, diffX(i), diffY(), kDiffW, kDiffH)) {
+            return {MapAction::Kind::SetDifficulty, {}, i};
+        }
+    }
     return {};
 }
 
@@ -642,6 +657,22 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
 
     const auto hit = mapHitTest(reg, slot, mouse);
     const auto order = mapOrder(reg);
+
+    // Difficulty. The project spent several rounds trying to be both "hardcore,
+    // limited resources" and "clearable in 8-10 losses" at once; they are the
+    // same dial pulled opposite ways, and this is the honest resolution.
+    centred("DIFFICULTY", diffY() - 22, 10, palette::kHudDim);
+    for (int i = 0; i < core::kDifficultyCount; ++i) {
+        const auto d = core::difficultyFromIndex(i);
+        const bool on = slot.meta.difficulty == i;
+        const bool hot = hit.kind == MapAction::Kind::SetDifficulty && hit.difficulty == i;
+        button(atlas, diffX(i), diffY(), kDiffW, kDiffH, hot, on);
+        centredIn(core::difficultyName(d), diffX(i) + kDiffW / 2, diffY() + 12, 20,
+                  on ? kInk : kInkDim);
+        centredIn(core::difficultyBlurb(d), diffX(i) + kDiffW / 2, diffY() + 38, 10, kInkDim);
+        centredIn(core::difficultyReward(d), diffX(i) + kDiffW / 2, diffY() + 56, 10,
+                  d == core::Difficulty::Brutal ? Color{132, 178, 108, 255} : kInkDim);
+    }
 
     for (int i = 0; i < static_cast<int>(order.size()) && i < 5; ++i) {
         const auto& id = order[static_cast<size_t>(i)];

@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+
+#include "core/Difficulty.h"
 #include <vector>
 
 #include <entt/entt.hpp>
@@ -80,7 +82,10 @@ public:
     // `meta` carries which skill-tree nodes the player permanently owns. Which
     // SPEC is live is decided per-tower during the run, not here.
     World(const content::Registry& reg, const content::MapDef& map, uint64_t seed,
-          const core::Loadout& meta = core::Loadout{}, int goldOverride = -1);
+          const core::Loadout& meta = core::Loadout{}, int goldOverride = -1,
+          core::Difficulty difficulty = core::Difficulty::Standard);
+
+    core::Difficulty difficulty() const { return difficulty_; }
     ~World();
 
     void tick(float dt);
@@ -121,6 +126,7 @@ public:
     bool elementSpecInUse(const std::string& spec) const;
 
     int lives() const { return lives_; }
+    int startingLives() const { return startingLives_; }
     int gold() const { return gold_; }
     int waveIndex() const { return waveIndex_; }
     int waveCount() const { return static_cast<int>(map_->waves.size()); }
@@ -270,11 +276,17 @@ private:
     core::Loadout loadoutFor(const TowerTag& tag) const;
 
     int lives_ = kStartingLives;
+    // What this run STARTED with. gainLife caps against this rather than the
+    // raw constant: on Relaxed a run opens with more lives than kStartingLives,
+    // and capping at the constant would silently confiscate them.
+    int startingLives_ = kStartingLives;
     int shardsEarned_ = 0;
     int gold_ = 0;
     int waveIndex_ = 0;
     int enemiesSpawned_ = 0;
     RunStats stats_;
+    core::Difficulty difficulty_ = core::Difficulty::Standard;
+    core::DifficultyMods mods_{};
     float abilityCd_[kAbilityCount] = {0.0f, 0.0f};
     std::vector<WardField> wards_;
     Phase phase_ = Phase::Build;

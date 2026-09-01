@@ -218,7 +218,8 @@ void Game::beginRun(bool resume, const std::string& mapId) {
     if (!registry_->hasMap(runMapId_)) runMapId_ = "greenfields";
     world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_),
                                           resume && slot.run ? slot.run->seed : 20260830u,
-                                          metaLoadout());
+                                          metaLoadout(), -1,
+                                          core::difficultyFromIndex(slot.meta.difficulty));
     if (resume && slot.run) {
         world_->restore(*slot.run);
     } else {
@@ -327,6 +328,11 @@ void Game::updateMaps() {
     switch (act.kind) {
         case ui::MapAction::Kind::Play: beginRun(false, act.mapId); break;
         case ui::MapAction::Kind::Back: screen_ = Screen::Hub; break;
+        case ui::MapAction::Kind::SetDifficulty:
+            active().meta.difficulty = act.difficulty;
+            persist();
+            sfx_.play(audio::Cue::Click, 0.02f, 0.6f);
+            break;
         case ui::MapAction::Kind::None: break;
     }
 }

@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "content/Registry.h"
+#include "core/Difficulty.h"
 #include "core/Progression.h"
 #include "sim/AutoPlayer.h"
 #include "sim/World.h"
@@ -85,7 +86,8 @@ using Policy = const core::SkillNode* (*)(const content::Registry&, const core::
 // Plays runs until map 1 falls or the budget runs out. Returns the run it fell
 // on, or -1, and appends a per-run table to `os`.
 int runLoop(const content::Registry& reg, const content::MapDef& map, Policy policy,
-            const char* label, std::ostringstream& os) {
+            const char* label, std::ostringstream& os,
+            core::Difficulty difficulty = core::Difficulty::Standard) {
     core::MetaSave meta;
     os << "\n " << label << "\n run  waves  earned  banked  nodes  cleared\n";
     for (int run = 1; run <= 24; ++run) {
@@ -93,7 +95,8 @@ int runLoop(const content::Registry& reg, const content::MapDef& map, Policy pol
         lo.ownAll = false;
         lo.ownedNodes = meta.ownedNodes;
 
-        const auto r = sim::autoPlay(reg, map, lo, static_cast<uint64_t>(run));
+        const auto r = sim::autoPlay(reg, map, lo, static_cast<uint64_t>(run), 60,
+                                     difficulty);
         meta.shards += r.shards;
 
         while (const auto* n = policy(reg, meta)) {
@@ -119,11 +122,20 @@ TEST_CASE("report how many runs it takes to clear map 1", "[balance][.report]") 
     std::ostringstream os;
     const int greedy = runLoop(reg, map, &greedyPurchase, "greedy (floor)", os);
     const int planned = runLoop(reg, map, &plannedPurchase, "planned (realistic)", os);
+    // The whole reason difficulty exists: "hardcore" and "clearable in 8-10
+    // losses" are the same dial pulled opposite ways, so they became a choice.
+    // This is the measurement that says whether the choice actually delivers.
+    const int relaxed = runLoop(reg, map, &plannedPurchase, "planned on RELAXED", os,
+                                core::Difficulty::Relaxed);
+    const int brutal = runLoop(reg, map, &plannedPurchase, "planned on BRUTAL", os,
+                               core::Difficulty::Brutal);
 
     const auto say = [](int n) {
         return n > 0 ? std::to_string(n) : std::string("not within 24");
     };
     os << "\n first cleared -- greedy: " << say(greedy) << "   planned: " << say(planned)
-       << "   (design target: 8-10 losses, read against 'planned')\n";
+       << "\n   by difficulty -- relaxed: " << say(relaxed) << "   standard: " << say(planned)
+       << "   brutal: " << say(brutal)
+       << "\n   (the 8-10 loss target belongs to RELAXED; brutal is meant to hurt)\n";
     WARN(os.str());
 }

@@ -1,5 +1,7 @@
 #include "ui/Hud.h"
 
+#include "core/Difficulty.h"
+
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -199,6 +201,17 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
     zoneRule(kWaveX - 26);
 
     caption("WAVE", kWaveX, inkDim);
+    // Which difficulty this run is on. Without it the player has no way to tell
+    // a hard wave from a hard SETTING, and the number they are proud of has no
+    // context.
+    {
+        const auto d = w.difficulty();
+        const char* dn = core::difficultyName(d);
+        DrawText(dn, kWaveX + 52, kHudY + 14, 10,
+                 d == core::Difficulty::Brutal    ? Color{206, 108, 84, 255}
+                 : d == core::Difficulty::Relaxed ? Color{120, 158, 104, 255}
+                                                  : inkDim);
+    }
     DrawText(TextFormat("%d/%d", w.waveIndex() + 1, w.waveCount()), kWaveX, kHudY + 28, 32, ink);
     // Tower count belongs here: only one of each specialisation may be fielded,
     // so "how much board do I have" is a decision input, not trivia.

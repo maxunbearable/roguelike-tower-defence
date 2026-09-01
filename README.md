@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 240 tests
+ctest --test-dir build          # 248 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -163,12 +163,18 @@ on how shards are spent than on how many are earned:
 | `greedy` | cheapest prereq-met node anywhere | not within 24 runs |
 | `planned` | pushes one line and *saves* for it | **run 21** |
 
-Those numbers moved deliberately. Map 1 fell on run 11 before the hardcore pass;
-shard income was then cut by ~60% (`kShardsPerWave` 2 → 1, map-clear 40 → 20,
-per-kill ×0.4) against node prices cut 38%, and it moved to run 21. **"Hardcore,
-limited resources" and "map 1 in 8–10 losses" are the same dial pulled opposite
-ways** — 21 is what hardcore costs, and the dial is `kShardsPerWave` in
-`src/sim/World.h` plus `nodeCost`/`shard` in `tools/balance.py`.
+**"Hardcore, limited resources" and "map 1 in 8–10 losses" are the same dial
+pulled opposite ways.** Both were asked for; neither is reachable while there is
+only one tuning. That is why difficulty exists, and the report measures each:
+
+| difficulty | runs to clear map 1 |
+|---|---|
+| Relaxed | **9** |
+| Standard | 19 |
+| Brutal | not within 24 |
+
+Nine is the middle of the target the project chased for rounds without hitting.
+It did not need better tuning; it needed to stop being one number.
 
 Greedy is kept as a floor and as a warning: the six element trunks are the
 cheapest nodes in the game, so it buys all six first, and under a gold deficit
@@ -220,6 +226,22 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## Difficulty
+
+Three settings, chosen on the map select screen. Each scales several modest
+things — enemy health, how many arrive, starting gold and lives — rather than one
+large health multiplier, because scaling health alone changes how *long* a wave
+takes while changing the count changes what a wave *is*.
+
+**Standard is a true no-op**, and there is a test asserting it: every balance
+measurement in this repository was taken there, and if Standard were not identity
+they would all silently stop meaning what they say.
+
+Nothing reduces shard payout below baseline. Taxing the meta progression of
+players who chose the easier setting punishes exactly the people who needed it,
+and it is the design players most often say makes them doubt a game's fairness.
+Brutal pays 35% more instead — harder is rewarded rather than easier being taxed.
 
 ## Learning the game
 

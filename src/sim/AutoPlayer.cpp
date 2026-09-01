@@ -74,8 +74,9 @@ std::string bestElementFor(const content::Registry& reg, const content::MapDef& 
 }  // namespace
 
 AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map,
-                        const core::Loadout& meta, uint64_t seed, int maxWaves) {
-    World w(reg, map, seed, meta);
+                        const core::Loadout& meta, uint64_t seed, int maxWaves,
+                        core::Difficulty difficulty) {
+    World w(reg, map, seed, meta, -1, difficulty);
     const auto& def = reg.tower("arrow");
     const auto spots = rankSpots(map, def.range);
     // Read the map before committing, the way a player reads the dossier.

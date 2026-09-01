@@ -75,9 +75,9 @@ TowerStats statsFor(const content::TowerDef& d, int level, const core::StatBlock
 }  // namespace
 
 World::World(const content::Registry& reg, const content::MapDef& map, uint64_t seed,
-             const core::Loadout& meta, int goldOverride)
+             const core::Loadout& meta, int goldOverride, core::Difficulty difficulty)
     : defs_(&reg), map_(&map), path_(buildPath(map)), rng_(seed), meta_(meta),
-      buildTimer_(map.buildTime) {
+      buildTimer_(map.buildTime), difficulty_(difficulty), mods_(core::modsFor(difficulty)) {
     // Global-tree power applies from the first second; spec power is bought
     // per-tower during the run.
     core::Loadout globalOnly = meta;
@@ -86,10 +86,18 @@ World::World(const content::Registry& reg, const content::MapDef& map, uint64_t 
     globalOnly.elementSpec.clear();
     const auto globalStats = core::resolveStats(reg, globalOnly);
 
+    // goldOverride is a test and capture hook and deliberately bypasses
+    // difficulty: a test that asks for 100000 gold means 100000.
     gold_ = goldOverride >= 0
                 ? goldOverride
-                : map.startGold + static_cast<int>(globalStats.get("global.startGold"));
-    lives_ = kStartingLives + static_cast<int>(globalStats.get("global.lives"));
+                : static_cast<int>((map.startGold +
+                                    static_cast<int>(globalStats.get("global.startGold"))) *
+                                   mods_.startGold);
+    lives_ = std::max(1, static_cast<int>(
+                             (kStartingLives +
+                              static_cast<int>(globalStats.get("global.lives"))) *
+                             mods_.lives));
+    startingLives_ = lives_;
 }
 
 World::~World() = default;
@@ -243,7 +251,14 @@ void World::startNextWave() {
                   groups_.end());
     groups_.reserve(groups_.size() + wave.groups.size());
     for (const auto& g : wave.groups) {
-        groups_.push_back(GroupRuntime{g.count, g.startDelay, g.enemyId, g.interval,
+        // A boss group is one enemy and must stay one enemy: scaling it would
+        // put two bosses on the board at Brutal, which is a different fight
+        // rather than a harder one.
+        const bool solo = g.count <= 1;
+        const int count =
+            solo ? g.count
+                 : std::max(1, static_cast<int>(std::lround(g.count * mods_.enemyCount)));
+        groups_.push_back(GroupRuntime{count, g.startDelay, g.enemyId, g.interval,
                                        g.hpMult, g.armorAdd, g.bountyMult});
     }
 
@@ -261,7 +276,7 @@ void World::loseLife(int n) {
 
 void World::gainLife(int n) {
     if (phase_ == Phase::Defeated) return;  // no resurrections
-    lives_ = std::min(lives_ + n, kStartingLives);
+    lives_ = std::min(lives_ + n, startingLives_);
 }
 
 void World::addGold(int n) { gold_ += n; }
@@ -355,7 +370,7 @@ int World::shardsForRun() const {
     // a failed roguelike run from feeling wasted.
     const int waveBonus = waveIndex_ * kShardsPerWave;
     const int clearBonus = phase_ == Phase::Cleared ? kShardsPerMapClear : 0;
-    return shardsEarned_ + waveBonus + clearBonus;
+    return static_cast<int>((shardsEarned_ + waveBonus + clearBonus) * mods_.shards);
 }
 
 void World::emit(const VisualEvent& e) {
@@ -388,7 +403,7 @@ void World::spawnEnemy(const std::string& enemyId, float hpMult, float armorAdd,
     const auto& def = defs_->enemy(enemyId);
     const auto e = ecs_.create();
     const core::Vec2 start = path_.positionAt(0.0f);
-    const float hp = def.maxHp * hpMult;
+    const float hp = def.maxHp * hpMult * mods_.enemyHp;
     ecs_.emplace<Position>(e, start);
     ecs_.emplace<PrevPosition>(e, start);
     ecs_.emplace<PathFollower>(e, 0.0f);

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/Difficulty.h"
 #include "sim/World.h"
 
 namespace td::sim {
@@ -22,6 +23,7 @@ struct AutoPlayResult {
 
 // Plays a whole run to its end and reports how far it got.
 AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map,
-                        const core::Loadout& meta, uint64_t seed, int maxWaves = 60);
+                        const core::Loadout& meta, uint64_t seed, int maxWaves = 60,
+                        core::Difficulty difficulty = core::Difficulty::Standard);
 
 }  // namespace td::sim
