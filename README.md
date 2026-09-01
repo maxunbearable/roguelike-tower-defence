@@ -94,10 +94,12 @@ itself constantly:
   scenarios and asserts relational guardrails, never magic numbers. It caught a
   spec measuring 79% against a row median of 23%. Its guardrails used to compare
   specs only against **each other**, which structurally cannot catch a whole
-  tower's specs being bad — so one of the fifteen, the game's only *support*
-  build, sat for the whole project at a sixth of the median while actively
-  costing you output. There is now a test that every spec beats the same tower
-  **unspecialised**.
+  tower's specs being bad — so support builds — whose value lands on
+  *other* towers — read as broken. The scenario also left every tower but the
+  specialised one at level 1, which biased it against them again. Fixing both
+  collapsed the spread across the fifteen specialisations from **7.9× to 3.6×**
+  without touching a single content value. There is now also a test that every
+  spec beats the same tower **unspecialised**.
 - The same harness caught the worst bug in the project so far. `levelUnlocked()`
   checked `owns("global.unlock.level2")`, but that string is a **flag granted by**
   the node `global.level2` — and owned-node sets hold node ids, never granted

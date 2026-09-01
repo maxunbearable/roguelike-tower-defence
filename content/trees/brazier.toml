@@ -96,24 +96,26 @@ cost = 36
 requires = ["brazier.trunk.rate1"]
 pos = [0, 2]
 modifiers = [
-  # Measured: at +18%/+18% against a self-nerf of x0.55 damage and x0.7 rate,
-  # taking Forge made a board WORSE than leaving the tower unspecialised -- 4.27%
-  # against 5.88% of health removed. A specialisation you pay gold for that costs
-  # you output is a trap, not a trade-off, and it sat that way unnoticed because
-  # nothing asserted otherwise.
+  # These values are the ORIGINAL ones and they are correct. They were changed
+  # once and the change was a mistake worth recording.
   #
-  # +100% looks enormous and is not: the aura buffs LEVEL 1 neighbours, while
-  # what it gives up is a share of a LEVEL 3 tower. A maxed brazier does about
-  # 12.97 x 4.43 dps against a level-1 neighbour's 5.87 x 3.73, and the boosted
-  # towers overlap, so much of the gain is overkill. Bisected to land above
-  # unspecialised (6.80% vs 5.88%) and below its siblings (pyre 9.48%, cinder
-  # 13.44%): a real choice, not a trap and not a dominant pick.
+  # Forge measured at a sixth of the median across the combination matrix and
+  # was read as a dead build. It was not. The harness placed only two towers and
+  # left every tower but the specialised one at level 1, so the only SUPPORT
+  # specialisation in the game was measured with almost nothing to support.
+  # Retuning it to a +100% aura cleared that bar and then measured 70% -- more
+  # than twice its nearest sibling -- once the harness was fixed.
+  #
+  # Against a representative board (four towers, all levelled) these untouched
+  # values give 24.4% against 19.0% unspecialised, with pyre at 26.2% and cinder
+  # at 30.8%. A real third option, neither trap nor dominant. The content was
+  # always right; the instrument was wrong.
   { target = "brazier.trait.towerBuff", op = "flag" },
   { target = "brazier.towerBuff.radius", op = "set", value = 2.6 },
-  { target = "brazier.towerBuff.damagePct", op = "set", value = 1.00 },
-  { target = "brazier.towerBuff.fireRatePct", op = "set", value = 1.00 },
-  { target = "brazier.damage", op = "mult", value = 0.85 },
-  { target = "brazier.fireRate", op = "mult", value = 0.90 },
+  { target = "brazier.towerBuff.damagePct", op = "set", value = 0.18 },
+  { target = "brazier.towerBuff.fireRatePct", op = "set", value = 0.18 },
+  { target = "brazier.damage", op = "mult", value = 0.55 },
+  { target = "brazier.fireRate", op = "mult", value = 0.7 },
 ]
 
 [[node]]

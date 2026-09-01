@@ -119,9 +119,18 @@ ComboResult simulateCombo(const content::Registry& reg, const std::string& tower
     // measured 3% against a 20% median across the matrix -- read for the whole
     // project as a dead build, when it was a mismeasured one. A real board holds
     // twelve to thirty-four towers; two is not representative of anything.
-    w.placeTower(5, 2, towerId);
-    w.placeTower(4, 2, towerId);
-    w.placeTower(6, 2, towerId);
+    // ...and LEVELLED, like the specialised one. Leaving them at level 1 made
+    // this a maxed tower standing among beginners rather than a board, and it
+    // distorted anything whose value lands on its neighbours: forge had to be
+    // tuned to a +100% aura to clear the bar against level-1 supporters, which
+    // would be far too strong beside maxed ones. A support build must be
+    // measured against the board a player actually has.
+    for (const auto& [tx, ty] :
+         {std::pair<int, int>{5, 2}, {4, 2}, {6, 2}}) {
+        w.placeTower(tx, ty, towerId);
+        while (w.upgradeCost(tx, ty) > 0 && w.upgradeTower(tx, ty)) {
+        }
+    }
     w.enterSandbox();
 
     ComboResult out;
