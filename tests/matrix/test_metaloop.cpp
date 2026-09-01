@@ -68,7 +68,13 @@ const core::SkillNode* greedyPurchase(const content::Registry& reg, const core::
 // Returns nullptr when the next node on the line is unaffordable, which is the
 // whole point: it BANKS instead of buying a consolation prize elsewhere.
 const core::SkillNode* plannedPurchase(const content::Registry& reg, const core::MetaSave& meta) {
-    static const std::vector<std::string> priority = {"global", sim::kStartingTower, "earth"};
+    // A second TOWER, not just a second element. The line used to be global ->
+    // arrow -> earth, so the modelled player never bought a tower charter and
+    // finished a 24-run campaign having only ever fielded arrow towers -- on a
+    // game that sells five and gates them behind cheap charters. That made the
+    // loss counts a reading of a player nobody is.
+    static const std::vector<std::string> priority = {"global", sim::kStartingTower, "cannon",
+                                                      "earth"};
     for (const auto& treeId : priority) {
         if (!reg.trees().count(treeId)) continue;
         const auto& tree = reg.trees().at(treeId);

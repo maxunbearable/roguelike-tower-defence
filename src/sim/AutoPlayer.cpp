@@ -1,6 +1,7 @@
 #include "sim/AutoPlayer.h"
 
 #include <algorithm>
+#include <set>
 
 namespace td::sim {
 namespace {
@@ -37,47 +38,33 @@ std::vector<Spot> rankSpots(const content::MapDef& m, float range) {
     return out;
 }
 
-// Picks the element whose damage type this map's roster is LEAST resistant to.
-//
-// The autoplayer used to hardcode "earth", which made it a bad proxy on exactly
-// the maps that matter: blightmarsh resists earth at 0.5 by design, so the
-// harness was measuring a player deliberately bringing the wrong element and
-// reporting the map as too hard. A real player reads the dossier and brings the
-// counter, so the measuring instrument has to as well.
-std::string bestElementFor(const content::Registry& reg, const content::MapDef& m) {
-    std::string best;
-    float bestScore = -1.0f;
-    for (const auto& [id, edef] : reg.elements()) {
-        float total = 0.0f;
-        int n = 0;
-        for (const auto& p : m.recipe.pool) {
-            if (!reg.hasEnemy(p.enemyId)) continue;
-            total += reg.enemy(p.enemyId).resistTo(edef.damageType);
-            ++n;
-        }
-        // Bosses count too: they are the wall the map builds to.
-        for (const auto& b : m.recipe.bosses) {
-            if (!reg.hasEnemy(b.enemyId)) continue;
-            total += reg.enemy(b.enemyId).resistTo(edef.damageType);
-            ++n;
-        }
-        const float score = n > 0 ? total / static_cast<float>(n) : 1.0f;
-        // Ties broken by id, so the choice is deterministic across runs.
-        if (score > bestScore || (score == bestScore && id < best)) {
-            bestScore = score;
-            best = id;
-        }
-    }
-    return best.empty() ? "earth" : best;
-}
-
 }  // namespace
+
+// Defined below, used by autoPlay above them. towerPreferenceFor is declared in
+// the header instead, because the tests inspect the harness's own choices.
+std::string bestElementFor(const content::Registry& reg, const content::MapDef& m);
 
 AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map,
                         const core::Loadout& meta, uint64_t seed, int maxWaves,
                         core::Difficulty difficulty) {
     World w(reg, map, seed, meta, -1, difficulty);
-    const auto& def = reg.tower("arrow");
+
+    // Which towers this profile would actually field. Every measurement in this
+    // project used to come from a player who built ONLY arrow towers, on a game
+    // with five tower types whose entire pitch is 270 combinations -- so the
+    // instrument exercised a fifth of the tower content and none of the
+    // combinations. A playtesting agent does not have to be skilled, but it does
+    // have to be REPRESENTATIVE, or its readings cannot correlate with what a
+    // real player meets.
+    const auto prefs = towerPreferenceFor(reg, map, w);
+    const auto& def = reg.tower(prefs.empty() ? std::string(kStartingTower) : prefs.front());
+
+    // Cheapest thing this profile can put down, for the "can I afford anything"
+    // checks. Using the preferred tower's price would stall a poor board that
+    // could still afford an arrow.
+    int cheapest = def.buildCost;
+    for (const auto& id : prefs) cheapest = std::min(cheapest, reg.tower(id).buildCost);
+
     const auto spots = rankSpots(map, def.range);
     // Read the map before committing, the way a player reads the dossier.
     const std::string element = bestElementFor(reg, map);
@@ -102,10 +89,20 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
     auto buildOne = [&] {
         for (const auto& s2 : spots) {
             if (w.towerAt(s2.x, s2.y) != entt::null) continue;
-            if (w.placeTower(s2.x, s2.y, "arrow") == World::PlaceResult::Ok) {
-                built.emplace_back(s2.x, s2.y);
-                ++res.towersBuilt;
-                return true;
+            // Rotate through the top few preferences rather than stacking one
+            // type. A real board is mixed, and a bot that builds 34 identical
+            // towers measures a board nobody plays. Deliberately not optimal:
+            // the agent needs to correlate with a human's experience, not beat
+            // one.
+            const size_t spread = std::min<size_t>(3, prefs.size());
+            for (size_t i = 0; i < prefs.size(); ++i) {
+                const size_t k = spread > 0 ? (built.size() + i) % spread : 0;
+                const std::string& pick = prefs[i < spread ? k : i];
+                if (w.placeTower(s2.x, s2.y, pick) == World::PlaceResult::Ok) {
+                    built.emplace_back(s2.x, s2.y);
+                    ++res.towersBuilt;
+                    return true;
+                }
             }
         }
         return false;
@@ -117,7 +114,7 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
             acted = false;
 
             // 1. Coverage first.
-            if (built.size() < kCoverageFirst && w.gold() >= def.buildCost) {
+            if (built.size() < kCoverageFirst && w.gold() >= cheapest) {
                 if (buildOne()) { acted = true; continue; }
             }
 
@@ -160,7 +157,7 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
 
             // 4. Then widen and deepen, preferring a new tower to a third level.
             if (built.size() < std::min(spots.size(), kMaxTowers) &&
-                w.gold() >= def.buildCost) {
+                w.gold() >= cheapest) {
                 if (buildOne()) { acted = true; continue; }
             }
             for (const auto& [tx, ty] : built) {
@@ -183,6 +180,12 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
         for (int i = 0; i < 120 * 60 && w.phase() == Phase::Wave; ++i) w.tick(kFixedDt);
     }
 
+    {
+        std::set<std::string> kinds;
+        w.reg().view<const TowerTag>().each(
+            [&](const TowerTag& t) { kinds.insert(t.defId); });
+        res.distinctTowerTypes = static_cast<int>(kinds.size());
+    }
     res.wavesSurvived = w.waveIndex();
     res.cleared = w.phase() == Phase::Cleared;
     res.shards = w.shardsForRun();
@@ -196,6 +199,39 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
 // harness was measuring a player deliberately bringing the wrong element and
 // reporting the map as too hard. A real player reads the dossier and brings the
 // counter, so the measuring instrument has to as well.
+// Towers this profile can build, ordered by how well their damage type fares
+// against the map's roster. Same reasoning as bestElementFor: a player reads the
+// dossier and brings a counter, so the measuring instrument has to as well.
+std::vector<std::string> towerPreferenceFor(const content::Registry& reg,
+                                            const content::MapDef& m, const World& w) {
+    std::vector<std::pair<float, std::string>> scored;
+    for (const auto& [id, tdef] : reg.towers()) {
+        if (!w.towerUnlocked(id)) continue;  // locked towers are not an option
+        float total = 0.0f;
+        int n = 0;
+        for (const auto& p : m.recipe.pool) {
+            if (!reg.hasEnemy(p.enemyId)) continue;
+            total += reg.enemy(p.enemyId).resistTo(tdef.damageType);
+            ++n;
+        }
+        for (const auto& b : m.recipe.bosses) {
+            if (!reg.hasEnemy(b.enemyId)) continue;
+            total += reg.enemy(b.enemyId).resistTo(tdef.damageType);
+            ++n;
+        }
+        scored.emplace_back(n > 0 ? total / static_cast<float>(n) : 1.0f, id);
+    }
+    // Best first; ties broken by id so a run is reproducible.
+    std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) {
+        if (a.first != b.first) return a.first > b.first;
+        return a.second < b.second;
+    });
+    std::vector<std::string> out;
+    out.reserve(scored.size());
+    for (auto& [score, id] : scored) out.push_back(std::move(id));
+    return out;
+}
+
 std::string bestElementFor(const content::Registry& reg, const content::MapDef& m) {
     std::string best;
     float bestScore = -1.0f;

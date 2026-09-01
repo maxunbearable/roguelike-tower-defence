@@ -87,6 +87,9 @@ itself constantly:
 - A **simulated player** (`sim::AutoPlayer`) plays complete runs with no window,
   so difficulty is *measured* rather than guessed. It found a wave-4 death spiral
   and a meta-progression that ended in one run — neither visible by inspection.
+  It fields a **mixed board**, choosing towers by how the map's roster resists
+  their damage type: it used to build only arrow towers, which made every figure
+  it produced a faithful reading of a board no player would field.
 - A **combination matrix** (`sim::Scenario`) runs all 270 pairings against fixed
   scenarios and asserts relational guardrails, never magic numbers. It caught a
   spec measuring 79% against a row median of 23%.
@@ -144,7 +147,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 259 tests
+ctest --test-dir build          # 264 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -170,7 +173,7 @@ only one tuning. That is why difficulty exists, and the report measures each:
 | difficulty | runs to clear map 1 |
 |---|---|
 | Relaxed | **9** |
-| Standard | 19 |
+| Standard | 18 |
 | Brutal | not within 24 |
 
 Nine is the middle of the target the project chased for rounds without hitting.
@@ -357,9 +360,10 @@ Known gaps, honestly:
 - The tutorial does not yet **point at** anything — it names the button but does
   not highlight it, and the onboarding research asks for clear visual cues. Text
   alone is weaker than text plus a highlight.
-- The simulated player only builds arrow towers, and its element choice is
-  resistance-aware but not synergy-aware, so its difficulty readings are a
-  conservative lower bound rather than a picture of good play.
+- The simulated player never **specialises** a tower or imbues beyond its one
+  chosen element, so the 270 combinations are still unexercised by any full-run
+  measurement. The combination matrix tests them in isolation, which is not the
+  same as a board using them.
 - **Adjustable text size** is the one Steam accessibility category still
   unmet. Every caption is a literal size at its call site, so it needs routing
   through a helper rather than a setting bolted on.
