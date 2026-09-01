@@ -108,7 +108,20 @@ ComboResult simulateCombo(const content::Registry& reg, const std::string& tower
     w.attachElement(5, 0, elementId);
     w.specialiseTower(5, 0, towerSpec);
     w.specialiseElement(5, 0, elementSpec);
+    // THREE plain towers, not one. The comment above always said "a pair of
+    // plain towers stands in for the supporting fire a real board has", but the
+    // code placed a single one -- and that quietly made this harness unable to
+    // measure the only SUPPORT specialisation in the game.
+    //
+    // Forge trades 61% of its own output (damage x0.55, rate x0.7) for +18%
+    // damage and +18% rate on every tower in radius. It breaks even at 1.57
+    // buffed neighbours. With exactly one it is structurally behind, and it
+    // measured 3% against a 20% median across the matrix -- read for the whole
+    // project as a dead build, when it was a mismeasured one. A real board holds
+    // twelve to thirty-four towers; two is not representative of anything.
     w.placeTower(5, 2, towerId);
+    w.placeTower(4, 2, towerId);
+    w.placeTower(6, 2, towerId);
     w.enterSandbox();
 
     ComboResult out;

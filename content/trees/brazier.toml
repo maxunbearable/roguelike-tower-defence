@@ -96,12 +96,24 @@ cost = 36
 requires = ["brazier.trunk.rate1"]
 pos = [0, 2]
 modifiers = [
+  # Measured: at +18%/+18% against a self-nerf of x0.55 damage and x0.7 rate,
+  # taking Forge made a board WORSE than leaving the tower unspecialised -- 4.27%
+  # against 5.88% of health removed. A specialisation you pay gold for that costs
+  # you output is a trap, not a trade-off, and it sat that way unnoticed because
+  # nothing asserted otherwise.
+  #
+  # +100% looks enormous and is not: the aura buffs LEVEL 1 neighbours, while
+  # what it gives up is a share of a LEVEL 3 tower. A maxed brazier does about
+  # 12.97 x 4.43 dps against a level-1 neighbour's 5.87 x 3.73, and the boosted
+  # towers overlap, so much of the gain is overkill. Bisected to land above
+  # unspecialised (6.80% vs 5.88%) and below its siblings (pyre 9.48%, cinder
+  # 13.44%): a real choice, not a trap and not a dominant pick.
   { target = "brazier.trait.towerBuff", op = "flag" },
   { target = "brazier.towerBuff.radius", op = "set", value = 2.6 },
-  { target = "brazier.towerBuff.damagePct", op = "set", value = 0.18 },
-  { target = "brazier.towerBuff.fireRatePct", op = "set", value = 0.18 },
-  { target = "brazier.damage", op = "mult", value = 0.55 },
-  { target = "brazier.fireRate", op = "mult", value = 0.7 },
+  { target = "brazier.towerBuff.damagePct", op = "set", value = 1.00 },
+  { target = "brazier.towerBuff.fireRatePct", op = "set", value = 1.00 },
+  { target = "brazier.damage", op = "mult", value = 0.85 },
+  { target = "brazier.fireRate", op = "mult", value = 0.90 },
 ]
 
 [[node]]

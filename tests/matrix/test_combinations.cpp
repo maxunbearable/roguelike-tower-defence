@@ -303,3 +303,47 @@ TEST_CASE("print the combination matrix", "[matrix][.report]") {
     }
     WARN(os.str());
 }
+
+TEST_CASE("no specialisation is worse than not specialising", "[matrix]") {
+    // The test this file was missing, and the reason brazier/forge sat broken
+    // for the whole project. Forge is the only SUPPORT specialisation in the
+    // game: it trades its own output for an aura on its neighbours. It was
+    // tuned so badly that taking it made a board weaker than leaving the tower
+    // plain -- 4.27% of health removed against 5.88% -- so a player who saved
+    // for it and spent the gold got less than one who did nothing.
+    //
+    // Every other guardrail here compares specs against EACH OTHER, which cannot
+    // catch a whole tower's specs being bad, or a support spec whose value lands
+    // on other towers. Comparing against the unspecialised baseline can.
+    const auto reg = loadReg();
+
+    for (const auto& [towerId, tdef] : reg.towers()) {
+        if (!reg.hasTree(towerId)) continue;
+        const auto& specs = reg.tree(towerId).specs;
+        if (specs.empty()) continue;
+
+        // The same tower, same element, same scenarios, with and without a
+        // specialisation. The only difference is the spec.
+        const auto measure = [&](const std::string& spec) {
+            float total = 0.0f;
+            for (const auto kind : {sim::ScenarioKind::LoneTank, sim::ScenarioKind::Swarm,
+                                    sim::ScenarioKind::Mixed}) {
+                total += sim::simulateCombo(reg, towerId, spec, "earth", "poison", kind,
+                                            kSeconds, 1)
+                             .clearedFraction();
+            }
+            return total / 3.0f;
+        };
+
+        const float plain = measure("");
+        REQUIRE(plain > 0.0f);
+        for (const auto& spec : specs) {
+            const float specialised = measure(spec);
+            UNSCOPED_INFO(towerId << "/" << spec << " " << specialised * 100.0f
+                                  << "% vs unspecialised " << plain * 100.0f << "%");
+            // Not "must be better by X" -- a support spec pays off on a board
+            // this harness only partly represents. But it must not COST you.
+            CHECK(specialised >= plain * 0.95f);
+        }
+    }
+}

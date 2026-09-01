@@ -92,7 +92,12 @@ itself constantly:
   it produced a faithful reading of a board no player would field.
 - A **combination matrix** (`sim::Scenario`) runs all 270 pairings against fixed
   scenarios and asserts relational guardrails, never magic numbers. It caught a
-  spec measuring 79% against a row median of 23%.
+  spec measuring 79% against a row median of 23%. Its guardrails used to compare
+  specs only against **each other**, which structurally cannot catch a whole
+  tower's specs being bad — so one of the fifteen, the game's only *support*
+  build, sat for the whole project at a sixth of the median while actively
+  costing you output. There is now a test that every spec beats the same tower
+  **unspecialised**.
 - The same harness caught the worst bug in the project so far. `levelUnlocked()`
   checked `owns("global.unlock.level2")`, but that string is a **flag granted by**
   the node `global.level2` — and owned-node sets hold node ids, never granted
@@ -147,7 +152,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 264 tests
+ctest --test-dir build          # 265 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
