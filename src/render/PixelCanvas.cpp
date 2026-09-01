@@ -1,5 +1,7 @@
 #include "render/PixelCanvas.h"
 
+#include "core/Blit.h"
+
 #include <algorithm>
 
 #include "render/Palette.h"
@@ -7,18 +9,12 @@
 namespace td::render {
 namespace {
 
-struct Blit {
-    int scale;
-    float offX;
-    float offY;
-};
+// Set by the profile's display option; see core/Blit.h for why this matters.
+bool g_integerOnly = true;
 
-Blit computeBlit() {
-    const int sw = GetScreenWidth();
-    const int sh = GetScreenHeight();
-    const int s = std::max(1, std::min(sw / kVirtualW, sh / kVirtualH));
-    return {s, static_cast<float>((sw - kVirtualW * s) / 2),
-            static_cast<float>((sh - kVirtualH * s) / 2)};
+core::BlitRect computeBlit() {
+    return core::fitCanvas(GetScreenWidth(), GetScreenHeight(), kVirtualW, kVirtualH,
+                           g_integerOnly);
 }
 
 }  // namespace
@@ -37,10 +33,12 @@ void PixelCanvas::begin() {
 
 void PixelCanvas::end() { EndTextureMode(); }
 
-int PixelCanvas::scale() const { return computeBlit().scale; }
+float PixelCanvas::scale() const { return computeBlit().scale; }
+
+void PixelCanvas::setIntegerScaling(bool on) { g_integerOnly = on; }
 
 void PixelCanvas::blitToWindow() const {
-    const Blit b = computeBlit();
+    const auto b = computeBlit();
     // Negative source height: raylib render textures are stored y-flipped, and
     // forgetting this draws the entire game upside down.
     const Rectangle src{0.0f, 0.0f, static_cast<float>(kVirtualW),
@@ -51,9 +49,10 @@ void PixelCanvas::blitToWindow() const {
 }
 
 core::Vec2 PixelCanvas::windowToVirtual(core::Vec2 windowPos) const {
-    const Blit b = computeBlit();
-    return core::Vec2{(windowPos.x - b.offX) / static_cast<float>(b.scale),
-                      (windowPos.y - b.offY) / static_cast<float>(b.scale)};
+    const auto b = computeBlit();
+    // Mouse mapping MUST use the same blit as the draw, or clicks land where the
+    // player is not looking. Both go through computeBlit for exactly that reason.
+    return core::Vec2{(windowPos.x - b.offX) / b.scale, (windowPos.y - b.offY) / b.scale};
 }
 
 }  // namespace td::render

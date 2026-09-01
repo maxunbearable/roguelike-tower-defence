@@ -21,6 +21,7 @@ std::string toJson(const SaveSlot& slot) {
     j["meta"]["difficulty"] = slot.meta.difficulty;
     j["meta"]["colorAlternatives"] = slot.meta.colorAlternatives;
     j["meta"]["shake"] = slot.meta.shake;
+    j["meta"]["integerScaling"] = slot.meta.integerScaling;
     j["meta"]["runsPlayed"] = slot.meta.runsPlayed;
     j["meta"]["bestWave"] = slot.meta.bestWave;
     j["meta"]["ownedNodes"] = std::vector<std::string>(slot.meta.ownedNodes.begin(),
@@ -88,6 +89,7 @@ SaveSlot fromJson(const std::string& text) {
         s.meta.difficulty = m.value("difficulty", 1);
         s.meta.colorAlternatives = m.value("colorAlternatives", false);
         s.meta.shake = m.value("shake", 1.0f);
+        s.meta.integerScaling = m.value("integerScaling", true);
         s.meta.runsPlayed = m.value("runsPlayed", 0);
         s.meta.bestWave = m.value("bestWave", 0);
         s.meta.musicVolume = m.value("musicVolume", 0.5f);

@@ -78,6 +78,7 @@ void Game::updateTutorial() {
 void Game::applySettings() {
     const auto& m = activeConst().meta;
     renderer_.setShakeScale(m.shake);
+    render::PixelCanvas::setIntegerScaling(m.integerScaling);
     hud_.colorAlternatives = m.colorAlternatives;
     jukebox_.setVolume(m.musicVolume);
     sfx_.setVolume(m.sfxVolume);
@@ -829,6 +830,10 @@ void Game::updatePlaying(float frameDt) {
                 active().meta.colorAlternatives = !active().meta.colorAlternatives;
                 applySettings();
                 persist();
+            } else if (act.kind == ui::PauseAction::Kind::ToggleScaling) {
+                active().meta.integerScaling = !active().meta.integerScaling;
+                applySettings();
+                persist();
             } else if (act.kind == ui::PauseAction::Kind::CycleShake) {
                 const int next = (core::shakeIndexOf(active().meta.shake) + 1) % 3;
                 active().meta.shake = core::kShakeLevels[next];
@@ -1001,7 +1006,8 @@ void Game::renderCanvas(float alpha) {
             if (hud_.menuOpen) {
                 ui::drawPause(renderer_.atlas(), active().meta.musicVolume,
                               active().meta.sfxVolume, active().meta.colorAlternatives,
-                              active().meta.shake, mouseVirtual());
+                              active().meta.shake, active().meta.integerScaling,
+                              mouseVirtual());
             } else if (hud_.paused) {
                 // A slim banner, not a curtain: the whole point of the tactical
                 // pause is that the board stays readable and clickable.

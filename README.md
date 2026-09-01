@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 251 tests
+ctest --test-dir build          # 259 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -226,6 +226,21 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## Fitting the screen
+
+Integer scaling with nearest neighbour is lossless, so it stays the default and
+letterboxing is the accepted cost. What is *not* a preference is cropping: the
+old rule was `max(1, min(sw / vw, sh / vh))` with integer division, and the floor
+of 1 meant a window smaller than the canvas still drew at 1:1 — on a 1366×768
+laptop the game rendered at **107% of the screen** and the bottom of the HUD was
+cut off and unclickable. It now scales down when it has to, and offers Fill for
+players who would rather use a whole 1440p monitor than 31% of one.
+
+The base resolution is the real constraint and this does not fix it: 1408×800
+divides no common display, which is why crisp mode sits at 1× everywhere below
+4K. A base like 320×180 would scale cleanly, but changing it moves every UI
+coordinate, the 64px tile and the 22×11 grid.
 
 ## Accessibility
 

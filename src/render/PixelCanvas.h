@@ -33,7 +33,11 @@ public:
     void end();
     void blitToWindow() const;
 
-    int scale() const;
+    float scale() const;
+    // Crisp (integer) or Fill (fractional). Integer keeps pixel art exact but
+    // letterboxes: at 1920x1080 the canvas uses 54% of the screen and at
+    // 2560x1440 only 31%. Some players would rather fill the display.
+    static void setIntegerScaling(bool on);
     core::Vec2 windowToVirtual(core::Vec2 windowPos) const;
 
 private:

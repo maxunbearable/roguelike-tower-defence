@@ -766,7 +766,7 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
 // ==========================================================================
 
 namespace {
-constexpr int kPauseW = 420, kPauseH = 424;
+constexpr int kPauseW = 420, kPauseH = 470;
 int pauseX() { return (kVirtualW - kPauseW) / 2; }
 int pauseY() { return (kPlayH - kPauseH) / 2; }
 constexpr int kSliderH = 14;
@@ -778,11 +778,12 @@ int sfxY() { return pauseY() + 166; }
 constexpr int kOptH = 34;
 int colorAltY() { return pauseY() + 208; }
 int shakeY() { return pauseY() + 250; }
+int scalingY() { return pauseY() + 292; }
 int optX() { return pauseX() + 40; }
 int optW() { return kPauseW - 80; }
 constexpr int kPauseBtnH = 40;
-int resumeY() { return pauseY() + 306; }
-int quitY() { return pauseY() + 350; }
+int resumeY() { return pauseY() + 350; }
+int quitY() { return pauseY() + 394; }
 
 // A slider's value comes from where in the track the cursor is.
 float valueAt(core::Vec2 m) {
@@ -802,6 +803,7 @@ PauseAction pauseHitTest(core::Vec2 m) {
     if (onSlider(m, sfxY())) return {PauseAction::Kind::SetSfx, valueAt(m)};
     if (inRect(m, optX(), colorAltY(), optW(), kOptH)) return {PauseAction::Kind::ToggleColorAlt};
     if (inRect(m, optX(), shakeY(), optW(), kOptH)) return {PauseAction::Kind::CycleShake};
+    if (inRect(m, optX(), scalingY(), optW(), kOptH)) return {PauseAction::Kind::ToggleScaling};
     if (inRect(m, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH)) {
         return {PauseAction::Kind::Resume};
     }
@@ -812,7 +814,7 @@ PauseAction pauseHitTest(core::Vec2 m) {
 }
 
 void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol, bool colorAlt,
-               float shake, core::Vec2 mouse) {
+               float shake, bool integerScaling, core::Vec2 mouse) {
     DrawRectangle(0, 0, kVirtualW, kPlayH, Color{14, 12, 20, 170});
     const auto hit = pauseHitTest(mouse);
 
@@ -848,6 +850,8 @@ void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol, b
            PauseAction::Kind::ToggleColorAlt);
     option("SCREEN SHAKE", core::kShakeNames[core::shakeIndexOf(shake)], shakeY(),
            shake < 0.99f, PauseAction::Kind::CycleShake);
+    option("DISPLAY", integerScaling ? "Crisp" : "Fill", scalingY(), !integerScaling,
+           PauseAction::Kind::ToggleScaling);
 
     button(atlas, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH,
            hit.kind == PauseAction::Kind::Resume, false);

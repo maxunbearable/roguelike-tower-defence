@@ -78,6 +78,9 @@ struct MetaSave {
     // Accessibility. See core/Settings.h for why these two exist specifically.
     bool colorAlternatives = false;
     float shake = 1.0f;
+    // Crisp (integer, letterboxed, lossless) or Fill (fractional, uses the whole
+    // screen). Crisp by default: pixel art at a whole scale loses nothing.
+    bool integerScaling = true;
 };
 
 // A map is playable when it is the first, or when the one before it in `order`
