@@ -1,0 +1,117 @@
+[tree]
+id = "fire"
+kind = "element"
+specs = ["burn", "blast", "melt"]
+
+# Fire's three specs each key off a different property of a hit, so which one is
+# best depends entirely on the tower carrying it.
+
+[[node]]
+id = "fire.trunk.potency"
+name = "Kindling"
+desc = "+15% Fire effect magnitude"
+branch = "trunk"
+cost = 18
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "fire.potency", op = "mult", value = 1.15 }]
+
+[[node]]
+id = "fire.trunk.duration"
+name = "Slow Burn"
+desc = "+20% Fire effect duration"
+branch = "trunk"
+cost = 22
+requires = ["fire.trunk.potency"]
+pos = [0, 1]
+modifiers = [{ target = "fire.duration", op = "mult", value = 1.2 }]
+
+[[node]]
+id = "fire.burn.core"
+name = "Burn"
+desc = "Hits ignite. Bigger hits burn far hotter."
+branch = "burn"
+cost = 56
+requires = ["fire.trunk.duration"]
+pos = [-2, 2]
+modifiers = [{ target = "fire.burn.pctPerHit", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "fire.burn.deep"
+name = "Deep Char"
+desc = "+40% burn magnitude"
+branch = "burn"
+cost = 44
+requires = ["fire.burn.core"]
+pos = [-2, 3]
+modifiers = [{ target = "fire.burn.pctPerHit", op = "mult", value = 1.4 }]
+
+[[node]]
+id = "fire.burn.long"
+name = "Smoulder"
+desc = "+2s burn duration"
+branch = "burn"
+cost = 44
+requires = ["fire.burn.core"]
+pos = [-3, 3]
+modifiers = [{ target = "fire.burn.duration", op = "add", value = 2.0 }]
+
+[[node]]
+id = "fire.blast.core"
+name = "Blast"
+desc = "Every hit explodes for area damage."
+branch = "blast"
+cost = 56
+requires = ["fire.trunk.duration"]
+pos = [0, 2]
+modifiers = [{ target = "fire.blast.damagePct", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "fire.blast.wide"
+name = "Wide Detonation"
+desc = "+0.6 tiles blast radius"
+branch = "blast"
+cost = 44
+requires = ["fire.blast.core"]
+pos = [0, 3]
+modifiers = [{ target = "fire.blast.radius", op = "add", value = 0.6 }]
+
+[[node]]
+id = "fire.blast.hard"
+name = "Shaped Charge"
+desc = "+35% blast damage"
+branch = "blast"
+cost = 44
+requires = ["fire.blast.core"]
+pos = [1, 3]
+modifiers = [{ target = "fire.blast.damagePct", op = "mult", value = 1.35 }]
+
+[[node]]
+id = "fire.melt.core"
+name = "Melt"
+desc = "Hits peel resistance, so everything after lands harder."
+branch = "melt"
+cost = 56
+requires = ["fire.trunk.duration"]
+pos = [2, 2]
+modifiers = [{ target = "fire.melt.resistPerHit", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "fire.melt.fast"
+name = "Rapid Corrosion"
+desc = "+50% resistance peeled per hit"
+branch = "melt"
+cost = 44
+requires = ["fire.melt.core"]
+pos = [2, 3]
+modifiers = [{ target = "fire.melt.resistPerHit", op = "mult", value = 1.5 }]
+
+[[node]]
+id = "fire.melt.deep"
+name = "Total Meltdown"
+desc = "Raises the resistance cap to 60%"
+branch = "melt"
+cost = 44
+requires = ["fire.melt.core"]
+pos = [3, 3]
+modifiers = [{ target = "fire.melt.maxResist", op = "set", value = 0.6 }]

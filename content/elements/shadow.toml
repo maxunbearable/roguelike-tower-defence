@@ -1,0 +1,31 @@
+[element]
+id = "shadow"
+name = "Shadow"
+damageType = "void"
+attachCost = 95
+specCost = 115
+
+[element.base]
+potency = 1.0
+duration = 1.0
+
+# Shadow is the attrition element: none of its specs help with the enemy in front
+# of you, and all three make everything after it worse off.
+[spec.wither]
+# Permanent within a wave: withering does not tick down, it accumulates. Hit
+# COUNT drives it, and it is the only effect in the game that does not expire.
+pctPerHit = 0.012
+maxPct = 0.45
+
+[spec.siphon]
+# Kills occasionally return a life. The one effect that undoes a leak, so its
+# value rises exactly when the run is going badly.
+lifeChance = 0.02
+goldPerKill = 1
+
+[spec.rift]
+# A kill tears open a rift that keeps damaging whatever walks through it, so it
+# rewards killing things EARLY on the path where the rest of the wave follows.
+radius = 1.5
+dps = 14.0
+duration = 3.0

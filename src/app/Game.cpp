@@ -1,0 +1,720 @@
+#include "app/Game.h"
+
+#include <cstdio>
+
+#include "raylib.h"
+
+#include "render/Palette.h"
+#include "render/Renderer.h"
+#include "ui/Hud.h"
+#include "core/Progression.h"
+#include "ui/RadialMenu.h"
+#include "ui/Screens.h"
+
+namespace td::app {
+namespace {
+
+const char* describe(sim::World::PlaceResult r) {
+    switch (r) {
+        case sim::World::PlaceResult::Ok: return "";
+        case sim::World::PlaceResult::NotBuildable: return "cannot build there";
+        case sim::World::PlaceResult::Occupied: return "tile already occupied";
+        case sim::World::PlaceResult::TooPoor: return "not enough gold";
+        case sim::World::PlaceResult::OutOfBounds: return "outside the map";
+        case sim::World::PlaceResult::UnknownTower: return "unknown tower";
+    }
+    return "";
+}
+
+}  // namespace
+
+Game::Game(const content::Registry& registry) : registry_(&registry) { reloadSlots(); }
+
+void Game::say(const std::string& msg) {
+    hud_.message = msg;
+    hud_.messageAge = 0.0f;
+}
+
+core::Vec2 Game::mouseVirtual() const {
+    const Vector2 m = GetMousePosition();
+    return canvas_.windowToVirtual({m.x, m.y});
+}
+
+// Dev capture only: a throwaway funded run with a part-built defence, so
+// screenshots show real gameplay instead of an empty board.
+// Dev capture only: fields all three specialisations with all three element
+// powers, which the uniqueness rule now permits, so a screenshot shows the
+// whole tower line at once.
+void Game::requestStart(bool demoTowers, const std::string& mapId) {
+    if (!mapId.empty() && registry_->hasMap(mapId)) runMapId_ = mapId;
+    startRun(demoTowers ? 4000 : -1);
+    if (!demoTowers) return;
+
+    struct Build { int x, y; };
+    const Build spots[] = {{3, 1}, {8, 3}, {15, 5}, {20, 7}};
+    // Buildable tiles differ per map, so skip any spot this map does not allow
+    // rather than silently ending up with fewer towers than the loop assumes.
+    std::vector<Build> placed;
+    for (const auto& b : spots) {
+        if (world_->placeTower(b.x, b.y, "arrow") == sim::World::PlaceResult::Ok) {
+            placed.push_back(b);
+        }
+    }
+
+    // Three specialised towers, each with a different element power. Levelling
+    // to max first, because specialising now requires it.
+    for (int i = 0; i < static_cast<int>(placed.size()) && i < 3; ++i) {
+        const auto& b = placed[static_cast<size_t>(i)];
+        while (world_->upgradeCost(b.x, b.y) > 0) world_->upgradeTower(b.x, b.y);
+        world_->attachElement(b.x, b.y, "earth");
+        const auto ts = world_->availableTowerSpecs(b.x, b.y);
+        if (!ts.empty()) world_->specialiseTower(b.x, b.y, ts.front());
+        const auto es = world_->availableElementSpecs(b.x, b.y);
+        if (!es.empty()) world_->specialiseElement(b.x, b.y, es.front());
+        world_->upgradeTower(b.x, b.y);
+    }
+    world_->upgradeTower(3, 1);   // a gold-tier tower, to show the trim
+
+    // The menu is NOT opened here. It used to be, which meant every --autostart
+    // capture had a radial menu sitting over the board; --menu opens it
+    // deliberately, with coordinates.
+    world_->startNextWave();
+}
+
+void Game::openHub(int slot) {
+    reloadSlots();
+    activeSlot_ = slot;
+    if (!active().used) {
+        active().used = true;
+        active().profileName = "Slot " + std::to_string(slot + 1);
+    }
+    screen_ = Screen::Hub;
+}
+
+void Game::reloadSlots() {
+    slots_.clear();
+    for (int i = 0; i < core::kSlotCount; ++i) slots_.push_back(core::loadSlot(i));
+}
+
+core::SaveSlot& Game::active() { return slots_[static_cast<size_t>(activeSlot_)]; }
+
+// The permanent half of a run's power: which skill nodes the profile owns.
+core::Loadout Game::metaLoadout() const {
+    core::Loadout lo;
+    lo.ownAll = false;  // Plan 2 owned everything; a real profile owns what it bought
+    if (activeSlot_ >= 0) lo.ownedNodes = slots_[static_cast<size_t>(activeSlot_)].meta.ownedNodes;
+    return lo;
+}
+
+void Game::persist() {
+    if (activeSlot_ < 0) return;
+    core::writeSlot(activeSlot_, active());
+}
+
+void Game::beginRun(bool resume, const std::string& mapId) {
+    auto& slot = active();
+    // Resuming uses the map the run was saved on; a new run uses the chosen one.
+    runMapId_ = resume && slot.run && !slot.run->mapId.empty() ? slot.run->mapId
+                : !mapId.empty()                               ? mapId
+                                                               : runMapId_;
+    if (!registry_->hasMap(runMapId_)) runMapId_ = "greenfields";
+    world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_),
+                                          resume && slot.run ? slot.run->seed : 20260830u,
+                                          metaLoadout());
+    if (resume && slot.run) {
+        world_->restore(*slot.run);
+    } else {
+        slot.meta.runsPlayed += 1;
+        slot.run.reset();
+        persist();
+    }
+
+    screen_ = Screen::Playing;
+    accumulator_ = 0.0f;
+    hud_ = ui::HudState{};
+    closeMenu();
+}
+
+void Game::finishRun() {
+    auto& slot = active();
+    lastAward_ = world_->shardsForRun();
+    slot.meta.shards += lastAward_;
+    slot.meta.bestWave = std::max(slot.meta.bestWave, world_->waveIndex());
+
+    // Per-map progress, which is what unlocks the next map.
+    auto& mp = slot.meta.mapProgress[runMapId_];
+    mp.bestWave = std::max(mp.bestWave, world_->waveIndex());
+    if (world_->phase() == sim::Phase::Cleared) mp.cleared = true;
+
+    slot.run.reset();  // the run is over; nothing left to resume
+    persist();
+    sfx_.play(world_->phase() == sim::Phase::Cleared ? audio::Cue::Victory : audio::Cue::Defeat,
+              0.0f, 0.8f);
+    screen_ = Screen::Results;
+}
+
+void Game::startRun(int goldOverride) {
+    // Retained for the dev capture path, which wants a throwaway run with money.
+    world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_), 20260830,
+                                          core::Loadout{}, goldOverride);
+    screen_ = Screen::Playing;
+    accumulator_ = 0.0f;
+    hud_ = ui::HudState{};
+    closeMenu();
+}
+
+void Game::updateSlots() {
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    const auto act = ui::slotHitTest(slots_, mouseVirtual());
+    if (act.kind == ui::SlotAction::Kind::Delete) {
+        core::deleteSlot(act.slot);
+        reloadSlots();
+        return;
+    }
+    if (act.kind != ui::SlotAction::Kind::Open) return;
+
+    activeSlot_ = act.slot;
+    if (!active().used) {
+        active() = core::SaveSlot{};
+        active().used = true;
+        active().profileName = "Slot " + std::to_string(act.slot + 1);
+        persist();
+    }
+    hubTab_ = 0;
+    hubMessage_.clear();
+    screen_ = Screen::Hub;
+}
+
+void Game::updateHub() {
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    const auto act = ui::hubHitTest(*registry_, active(), hubTab_, mouseVirtual());
+    switch (act.kind) {
+        case ui::HubAction::Kind::SwitchTab:
+            hubTab_ = act.tab;
+            hubMessage_.clear();
+            break;
+        case ui::HubAction::Kind::Buy: {
+            const int before = active().meta.shards;
+            const auto tabs = ui::hubTabs(*registry_);
+            if (tabs.empty()) break;
+            const auto& tree = registry_->tree(
+                tabs[static_cast<size_t>(std::clamp(hubTab_, 0,
+                                                    static_cast<int>(tabs.size()) - 1))].treeId);
+            const auto r = core::buyNode(tree, active().meta, act.nodeId);
+            hubMessage_ = core::describe(r);
+            if (r == core::BuyResult::Ok) {
+                persist();
+                sfx_.play(audio::Cue::Buy, 0.03f, 0.7f);
+            } else {
+                sfx_.play(audio::Cue::Click, 0.02f, 0.35f);
+            }
+            (void)before;
+            break;
+        }
+        case ui::HubAction::Kind::ContinueRun: beginRun(true); break;
+        case ui::HubAction::Kind::NewRun: screen_ = Screen::Maps; break;
+        case ui::HubAction::Kind::BackToSlots:
+            reloadSlots();
+            screen_ = Screen::Slots;
+            break;
+        case ui::HubAction::Kind::None: break;
+    }
+}
+
+void Game::updateMaps() {
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    const auto act = ui::mapHitTest(*registry_, active(), mouseVirtual());
+    switch (act.kind) {
+        case ui::MapAction::Kind::Play: beginRun(false, act.mapId); break;
+        case ui::MapAction::Kind::Back: screen_ = Screen::Hub; break;
+        case ui::MapAction::Kind::None: break;
+    }
+}
+
+void Game::updateResults() {
+    if (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        reloadSlots();
+        screen_ = Screen::Hub;
+    }
+}
+
+// One line on what each tower is for. Kingdom Rush shows a description beside
+// the ring so the player never has to buy one to find out what it does.
+const char* towerBlurb(const std::string& id) {
+    if (id == "arrow") return "A steady shot. Everything else builds on it.";
+    if (id == "cannon") return "Slow, heavy shells that damage a whole cluster.";
+    if (id == "arcane") return "Support: chains, curses and gold from kills.";
+    if (id == "ballista") return "Longest reach. One bolt through a whole rank.";
+    if (id == "brazier") return "Short range, relentless cadence. Placement is everything.";
+    return "";
+}
+
+// Builds one page of the menu from what is actually legal right now, so the
+// menu can never offer something the world would reject.
+std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage page) const {
+    using A = ui::RadialItem::Action;
+    std::vector<ui::RadialItem> items;
+
+    const auto tower = world_->towerAt(tileX, tileY);
+
+    // Empty ground: the choice is which tower to build. Kingdom Rush shows the
+    // tower types directly rather than behind a category, so we do too.
+    if (tower == entt::null) {
+        // Every tower the content declares, not a hardcoded one. Kingdom Rush
+        // shows the tower types directly rather than behind a category, so the
+        // ring is the tower list.
+        for (const auto& [id, def] : registry_->towers()) {
+            const std::string art =
+                renderer_.atlas().has("tower_" + id) ? "tower_" + id : "tower_plain";
+            items.push_back({A::Build, art, def.name, towerBlurb(id), id, def.buildCost, true,
+                             true});
+        }
+        return items;
+    }
+
+    const auto& tag = world_->reg().get<sim::TowerTag>(tower);
+    const int upCost = world_->upgradeCost(tileX, tileY);
+    const auto towerSpecs = world_->availableTowerSpecs(tileX, tileY);
+    const auto elemSpecs = world_->availableElementSpecs(tileX, tileY);
+    const bool canAttach = tag.elementId.empty();
+
+    switch (page) {
+        case MenuPage::Root: {
+            items.push_back({A::LevelUp,
+                             renderer_.atlas().has("ui_icon_08") ? "ui_icon_08" : "icon_level",
+                             upCost > 0 ? "Level " + std::to_string(tag.level + 1)
+                                        : std::string("Max level"),
+                             upCost > 0 ? "More damage, range and fire rate."
+                                        : "This tower is fully levelled.",
+                             "", upCost > 0 ? upCost : 0, true, upCost > 0});
+            // The reason it is unavailable matters more than the fact, so the
+            // player knows what to do about it.
+            std::string specWhy = "Choose how this tower fights.";
+            if (!tag.towerSpec.empty()) specWhy = "This tower is already specialised.";
+            else if (!world_->atMaxLevel(tileX, tileY))
+                specWhy = "Reach max level first.";
+            else if (towerSpecs.empty())
+                specWhy = "Every specialisation is already in use.";
+            items.push_back({A::OpenSpec, "icon_spec", "Specialise", specWhy, "", 0, true,
+                             !towerSpecs.empty()});
+            const bool elementAvailable = canAttach || !elemSpecs.empty();
+            items.push_back({A::OpenElement, "icon_gem", "Element",
+                             canAttach ? "Imbue this tower with an element."
+                                       : (elemSpecs.empty() ? "Element fully specialised."
+                                                            : "Choose the element's power."),
+                             "", 0, true, elementAvailable});
+            items.push_back({A::Sell, "icon_sell", "Remove",
+                             "Refunds part of everything invested.", "", 0, true, true});
+            break;
+        }
+        case MenuPage::Spec: {
+            const int cost = world_->towerSpecCost(tileX, tileY);
+            for (const auto& spec : towerSpecs) {
+                const std::string detail = "Only one of each spec on the map at a time.";
+                // The button shows the actual building, so the menu and the
+                // board agree about what each specialisation is.
+                items.push_back({A::TowerSpec, "tower_" + spec, spec, detail, spec, cost,
+                                 true, true});
+            }
+            items.push_back({A::Back, "icon_back", "Back", "", "", 0, true, true});
+            break;
+        }
+        case MenuPage::Element: {
+            if (canAttach) {
+                // Every element the content declares.
+                for (const auto& [eid, edef] : registry_->elements()) {
+                    const std::string art =
+                        renderer_.atlas().has("icon_" + eid) ? "icon_" + eid : "icon_gem";
+                    items.push_back({A::AttachElement, art, edef.name,
+                                     "Lets this tower carry " + edef.name + ".", eid,
+                                     world_->attachElementCost(eid), true, true});
+                }
+            } else {
+                const int cost = world_->elementSpecCost(tileX, tileY);
+                for (const auto& spec : elemSpecs) {
+                    const std::string detail = "Only one of each element power at a time.";
+                    items.push_back({A::ElementSpec, "icon_" + spec, spec, detail, spec, cost,
+                                     true, true});
+                }
+            }
+            items.push_back({A::Back, "icon_back", "Back", "", "", 0, true, true});
+            break;
+        }
+    }
+    return items;
+}
+
+void Game::showPage(MenuPage page) {
+    menuPage_ = page;
+    auto items = buildMenuItems(selX_, selY_, page);
+    if (items.empty()) {
+        closeMenu();
+        return;
+    }
+    menu_.open(selX_, selY_,
+               {(selX_ + 0.5f) * render::kTile, (selY_ + 0.5f) * render::kTile},
+               std::move(items));
+}
+
+namespace {
+
+std::string num(float v, int dp = 1) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), dp == 0 ? "%.0f" : "%.1f", v);
+    return buf;
+}
+
+// Expected damage per second before armour and resistance: what a player
+// actually compares two towers on.
+float dpsOf(const sim::TowerStats& s) {
+    const float critBonus = 1.0f + s.critChance * std::max(0.0f, s.critMult - 1.0f);
+    return s.damage * s.fireRate * static_cast<float>(std::max(1, s.projectileCount)) * critBonus;
+}
+
+}  // namespace
+
+void Game::drawHoveredEnemy() {
+    if (!world_) return;
+    const auto m = mouseVirtual();
+    if (m.y >= static_cast<float>(render::kPlayH)) return;  // in the HUD band
+    if (menu_.isOpen() && menu_.contains(m)) return;        // the menu owns the cursor
+
+    entt::entity best = entt::null;
+    float bestDist = 24.0f;  // generous, because enemies are small and moving
+    world_->reg().view<const sim::Position, const sim::EnemyTag>().each(
+        [&](entt::entity e, const sim::Position& p, const sim::EnemyTag&) {
+            const float d = core::distance({p.v.x * render::kTile, p.v.y * render::kTile}, m);
+            if (d < bestDist) {
+                bestDist = d;
+                best = e;
+            }
+        });
+    if (best == entt::null) return;
+    const auto& tag = world_->reg().get<sim::EnemyTag>(best);
+    ui::drawEnemyDossier(renderer_.atlas(), registry_->enemy(tag.defId), m);
+}
+
+void Game::refreshMenuInfo() {
+    if (!menu_.isOpen() || !world_) {
+        menu_.clearInfo();
+        return;
+    }
+    const auto tower = world_->towerAt(menu_.tileX(), menu_.tileY());
+    if (tower == entt::null) {
+        menu_.clearInfo();  // empty ground: the build ring speaks for itself
+        return;
+    }
+
+    const auto& tag = world_->reg().get<sim::TowerTag>(tower);
+    const auto& st = world_->reg().get<sim::TowerStats>(tower);
+    const auto& def = registry_->tower(tag.defId);
+
+    // Only when the upgrade item is hovered, so the panel is a readout the rest
+    // of the time and a comparison exactly when it matters.
+    const int hovered = menu_.hitTest(mouseVirtual());
+    bool previewing = false;
+    sim::TowerStats next;
+    if (hovered >= 0 && menu_.items()[static_cast<size_t>(hovered)].action ==
+                            ui::RadialItem::Action::LevelUp) {
+        previewing = world_->previewUpgrade(menu_.tileX(), menu_.tileY(), next);
+    }
+    const auto row = [&](const char* label, float now, float nxt, int dp) {
+        ui::StatRow r{label, num(now, dp), {}};
+        if (previewing && std::abs(nxt - now) > 1e-3f) r.next = num(nxt, dp);
+        return r;
+    };
+
+    std::vector<ui::StatRow> rows;
+    rows.push_back(row("damage", st.damage, next.damage, 0));
+    rows.push_back(row("fire rate", st.fireRate, next.fireRate, 1));
+    rows.push_back(row("dps", dpsOf(st), previewing ? dpsOf(next) : 0.0f, 0));
+    rows.push_back(row("range", st.range, next.range, 1));
+    if (st.projectileCount > 1) {
+        rows.push_back(row("shots", static_cast<float>(st.projectileCount),
+                           static_cast<float>(next.projectileCount), 0));
+    }
+    if (st.pierce > 0) {
+        rows.push_back(row("pierce", static_cast<float>(st.pierce),
+                           static_cast<float>(next.pierce), 0));
+    }
+    if (st.critChance > 0.0f) {
+        rows.push_back(row("crit %", st.critChance * 100.0f, next.critChance * 100.0f, 0));
+    }
+    if (st.armorPen > 0.0f) {
+        rows.push_back(row("armour pen", st.armorPen, next.armorPen, 0));
+    }
+    // The damage type is what interacts with enemy resistance, so it belongs
+    // beside the numbers rather than buried in content.
+    rows.push_back(ui::StatRow{"damage type", st.damageType, {}});
+    if (!tag.elementSpec.empty()) {
+        rows.push_back(ui::StatRow{"element", tag.elementSpec, {}});
+    } else if (!tag.elementId.empty()) {
+        rows.push_back(ui::StatRow{"element", tag.elementId + " (unspecialised)", {}});
+    }
+
+    std::string title = def.name;
+    if (!tag.towerSpec.empty()) title = tag.towerSpec;
+    title += "  L" + std::to_string(tag.level);
+    menu_.setInfo(title, std::move(rows));
+}
+
+bool Game::openMenuAt(int tileX, int tileY) {
+    if (world_->towerAt(tileX, tileY) == entt::null &&
+        !world_->map().buildableAt(tileX, tileY)) {
+        return false;
+    }
+    selX_ = tileX;
+    selY_ = tileY;
+    showPage(MenuPage::Root);
+    return menu_.isOpen();
+}
+
+void Game::applyMenuItem(const ui::RadialItem& item) {
+    using A = ui::RadialItem::Action;
+    const int x = menu_.tileX(), y = menu_.tileY();
+
+    // Categories just change page; they cost nothing and can always be taken.
+    switch (item.action) {
+        case A::OpenSpec:    if (item.enabled) showPage(MenuPage::Spec); return;
+        case A::OpenElement: if (item.enabled) showPage(MenuPage::Element); return;
+        case A::Back:        showPage(MenuPage::Root); return;
+        case A::Sell:
+            world_->sellTower(x, y);
+            sfx_.play(audio::Cue::Sell);
+            closeMenu();
+            return;
+        default: break;
+    }
+
+    bool ok = false;
+    switch (item.action) {
+        case A::Build:
+            ok = world_->placeTower(x, y, item.arg) == sim::World::PlaceResult::Ok;
+            break;
+        case A::LevelUp: ok = world_->upgradeTower(x, y); break;
+        case A::AttachElement: ok = world_->attachElement(x, y, item.arg); break;
+        case A::TowerSpec: ok = world_->specialiseTower(x, y, item.arg); break;
+        case A::ElementSpec: ok = world_->specialiseElement(x, y, item.arg); break;
+        default: break;
+    }
+
+    if (!ok) {
+        say("not enough gold");
+        sfx_.play(audio::Cue::Click, 0.02f, 0.35f);
+        return;
+    }
+    sfx_.play(item.action == A::Build ? audio::Cue::Build : audio::Cue::Buy, 0.04f, 0.55f);
+    // Back to the root so the newly-unlocked categories are visible at once.
+    showPage(MenuPage::Root);
+}
+
+void Game::closeMenu() {
+    menu_.close();
+    selX_ = selY_ = -1;
+}
+
+// One click, one decision. This used to be spread across three overlapping
+// `if` blocks, which let a single click be consumed dismissing the old menu
+// without opening the new one -- the reason building appeared to need a
+// double click. The whole flow is now a single ordered decision tree.
+void Game::handleBuildInput() {
+    const core::Vec2 v = mouseVirtual();
+    const bool inPlay = v.x >= 0 && v.y >= 0 && v.x < render::kPlayW && v.y < render::kPlayH;
+    const int tx = inPlay ? static_cast<int>(v.x) / render::kTile : -1;
+    const int ty = inPlay ? static_cast<int>(v.y) / render::kTile : -1;
+
+    // Hover stays live even with the menu open, so the next target is visible.
+    hoverX_ = tx;
+    hoverY_ = ty;
+
+    if (IsKeyPressed(KEY_ESCAPE)) closeMenu();
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+
+    // 1. The HUD owns clicks outside the playfield.
+    if (!inPlay) {
+        switch (ui::hudHitTest(v)) {
+            case ui::HudButton::NextWave:
+                if (world_->phase() == sim::Phase::Build) sfx_.play(audio::Cue::WaveStart, 0.02f);
+                world_->startNextWave();
+                return;
+            case ui::HudButton::Speed:
+                hud_.speedIndex = (hud_.speedIndex + 1) % 3;
+                sfx_.play(audio::Cue::Click);
+                return;
+            case ui::HudButton::Pause:
+                hud_.paused = !hud_.paused;
+                sfx_.play(audio::Cue::Click);
+                return;
+            case ui::HudButton::Quit:
+                // Leaving mid-run keeps the autosave, so Continue picks it up.
+                sfx_.play(audio::Cue::Click);
+                reloadSlots();
+                screen_ = Screen::Hub;
+                return;
+            case ui::HudButton::Mute:
+                sfx_.setMuted(!sfx_.muted());
+                hud_.muted = sfx_.muted();
+                sfx_.play(audio::Cue::Click);
+                return;
+            case ui::HudButton::None: closeMenu(); return;
+        }
+    }
+
+    // 2. A click on one of the open menu's buttons is that button's click.
+    if (menu_.isOpen()) {
+        const int hit = menu_.hitTest(v);
+        if (hit >= 0) {
+            applyMenuItem(menu_.items()[static_cast<size_t>(hit)]);
+            return;
+        }
+    }
+
+    // 3. Otherwise the click targets a tile. Always opens on the FIRST press.
+    closeMenu();
+    if (!openMenuAt(tx, ty)) {
+        if (world_->towerAt(tx, ty) == entt::null && !world_->map().buildableAt(tx, ty)) {
+            say("cannot build there");
+        }
+    }
+}
+
+void Game::updatePlaying(float frameDt) {
+    handleBuildInput();
+    if (IsKeyPressed(KEY_SPACE)) world_->startNextWave();
+    if (IsKeyPressed(KEY_F)) hud_.speedIndex = (hud_.speedIndex + 1) % 3;
+    if (IsKeyPressed(KEY_P)) hud_.paused = !hud_.paused;
+
+    const float scaled = hud_.paused ? 0.0f : frameDt * kSpeeds[hud_.speedIndex];
+    accumulator_ += scaled;
+    if (accumulator_ > 0.25f) accumulator_ = 0.25f;  // spiral-of-death guard
+    while (accumulator_ >= sim::kFixedDt) {
+        world_->tick(sim::kFixedDt);
+        accumulator_ -= sim::kFixedDt;
+    }
+
+    hud_.messageAge += frameDt;
+    {
+        const auto events = world_->drainEvents();
+        renderer_.update(scaled, events);
+        sfx_.handle(events);
+    }
+
+    if (world_->phase() == sim::Phase::Cleared || world_->phase() == sim::Phase::Defeated) {
+        if (activeSlot_ >= 0) finishRun();
+        return;
+    }
+
+    // Autosave whenever a new build phase begins. Build phases are the only
+    // moment the field is empty, which is exactly what makes a run snapshottable.
+    if (activeSlot_ >= 0 && world_->canSnapshot() &&
+        world_->waveIndex() != savedWave_) {
+        savedWave_ = world_->waveIndex();
+        active().run = world_->snapshot();
+        persist();
+    }
+}
+
+std::vector<render::PostFx::Light> Game::collectLights() const {
+    std::vector<render::PostFx::Light> out;
+    if (!world_) return out;
+
+    // Element powers colour their tower's light, so the board tells you what is
+    // fielded without reading the HUD.
+    const auto tintFor = [](const std::string& spec) -> Color {
+        if (spec == "poison") return Color{150, 230, 130, 255};
+        if (spec == "rock") return Color{192, 176, 228, 255};
+        if (spec == "quake") return Color{246, 182, 112, 255};
+        return Color{255, 208, 142, 255};  // plain torchlight
+    };
+
+    world_->reg().view<const sim::Position, const sim::TowerTag>().each(
+        [&](const sim::Position& pos, const sim::TowerTag& tag) {
+            if (static_cast<int>(out.size()) >= render::PostFx::kMaxLights) return;
+            render::PostFx::Light l;
+            l.pos = {pos.v.x * render::kTile, pos.v.y * render::kTile};
+            l.color = tintFor(tag.elementSpec);
+            // Tighter than before: at 132+20/level a cluster of towers sat
+            // entirely inside every neighbour's pool.
+            l.radius = 96.0f + 16.0f * static_cast<float>(tag.level);
+            out.push_back(l);
+        });
+    return out;
+}
+
+void Game::renderCanvas(float alpha) {
+    canvas_.begin();
+    switch (screen_) {
+        case Screen::ArtCompare:
+            renderer_.drawArtCompare();
+            break;
+        case Screen::SpriteSheet:
+            renderer_.drawSpriteSheet();
+            break;
+        case Screen::Slots:
+            ui::drawSlots(renderer_.atlas(), slots_, mouseVirtual());
+            break;
+        case Screen::Hub:
+            ui::drawHub(renderer_.atlas(), *registry_, active(), hubTab_, hubMessage_,
+                        mouseVirtual());
+            break;
+        case Screen::Maps:
+            ui::drawMaps(renderer_.atlas(), *registry_, active(), mouseVirtual());
+            break;
+
+        case Screen::Playing: {
+            render::Cursor cur;
+            cur.hoverX = hoverX_;
+            cur.hoverY = hoverY_;
+            cur.selX = selX_;
+            cur.selY = selY_;
+            if (hoverX_ >= 0) {
+                cur.hoverBuildable = world_->map().buildableAt(hoverX_, hoverY_) &&
+                                     world_->towerAt(hoverX_, hoverY_) == entt::null;
+                cur.hoverAffordable = world_->gold() >= registry_->tower("arrow").buildCost;
+            }
+            renderer_.draw(*world_, alpha, cur);
+            ui::drawBossBars(renderer_.atlas(), *world_);
+            refreshMenuInfo();
+            menu_.draw(renderer_.atlas(), mouseVirtual(), world_->gold());
+            ui::drawHud(renderer_.atlas(), *world_, hud_, mouseVirtual());
+            drawHoveredEnemy();
+            break;
+        }
+        case Screen::Results:
+            renderer_.draw(*world_, alpha, render::Cursor{});
+            ui::drawResults(renderer_.atlas(), *world_, lastAward_,
+                            activeSlot_ >= 0 ? slots_[static_cast<size_t>(activeSlot_)].meta.shards
+                                             : 0);
+            break;
+    }
+    canvas_.end();
+
+    // The atmosphere pass grades and darkens the play field and lights it back
+    // around the towers. Only the world screens want it; the slot select and the
+    // skill trees are interface, and grading a parchment panel looks like a bug.
+    const bool worldScreen = (screen_ == Screen::Playing || screen_ == Screen::Results);
+    postfx_.setEnabled(worldScreen);
+    if (worldScreen && world_) postfx_.setLights(collectLights());
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+    postfx_.beginPass();
+    canvas_.blitToWindow();
+    postfx_.endPass();
+    EndDrawing();
+}
+
+void Game::frame(float frameDt) {
+    switch (screen_) {
+        case Screen::Slots: updateSlots(); break;
+        case Screen::Hub: updateHub(); break;
+        case Screen::Playing: updatePlaying(frameDt); break;
+        case Screen::Maps: updateMaps(); break;
+        case Screen::Results: updateResults(); break;
+        case Screen::ArtCompare: break;
+        case Screen::SpriteSheet: break;
+    }
+    renderCanvas(screen_ == Screen::Playing ? accumulator_ / sim::kFixedDt : 0.0f);
+}
+
+}  // namespace td::app

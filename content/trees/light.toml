@@ -1,0 +1,118 @@
+[tree]
+id = "light"
+kind = "element"
+specs = ["sear", "judgement", "beacon"]
+
+# Light is the answer to a map built to resist what you brought: Sear ignores
+# resistance outright, Judgement reaches past the chaff, and Beacon turns one hit
+# into a crowd hit.
+
+[[node]]
+id = "light.trunk.potency"
+name = "First Ray"
+desc = "+15% Light effect magnitude"
+branch = "trunk"
+cost = 20
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "light.potency", op = "mult", value = 1.15 }]
+
+[[node]]
+id = "light.trunk.duration"
+name = "Lasting Glow"
+desc = "+20% Light effect duration"
+branch = "trunk"
+cost = 24
+requires = ["light.trunk.potency"]
+pos = [0, 1]
+modifiers = [{ target = "light.duration", op = "mult", value = 1.2 }]
+
+[[node]]
+id = "light.sear.core"
+name = "Sear"
+desc = "Flat radiant damage that ignores resistance entirely."
+branch = "sear"
+cost = 58
+requires = ["light.trunk.duration"]
+pos = [-2, 2]
+modifiers = [{ target = "light.sear.flatPerHit", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "light.sear.hard"
+name = "Kindled Faith"
+desc = "+70% sear damage"
+branch = "sear"
+cost = 46
+requires = ["light.sear.core"]
+pos = [-2, 3]
+modifiers = [{ target = "light.sear.flatPerHit", op = "mult", value = 1.7 }]
+
+[[node]]
+id = "light.sear.more"
+name = "Zeal"
+desc = "+5 flat sear per hit"
+branch = "sear"
+cost = 46
+requires = ["light.sear.core"]
+pos = [-3, 3]
+modifiers = [{ target = "light.sear.flatPerHit", op = "add", value = 5.0 }]
+
+[[node]]
+id = "light.judgement.core"
+name = "Judgement"
+desc = "Every few shots smites the healthiest enemy in reach."
+branch = "judgement"
+cost = 58
+requires = ["light.trunk.duration"]
+pos = [0, 2]
+modifiers = [{ target = "light.judgement.damage", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "light.judgement.often"
+name = "Swift Verdict"
+desc = "Smites every 3rd shot instead of 5th"
+branch = "judgement"
+cost = 46
+requires = ["light.judgement.core"]
+pos = [0, 3]
+modifiers = [{ target = "light.judgement.everyNShots", op = "set", value = 3.0 }]
+
+[[node]]
+id = "light.judgement.hard"
+name = "Wrath"
+desc = "+60% smite damage"
+branch = "judgement"
+cost = 46
+requires = ["light.judgement.core"]
+pos = [1, 3]
+modifiers = [{ target = "light.judgement.damage", op = "mult", value = 1.6 }]
+
+[[node]]
+id = "light.beacon.core"
+name = "Beacon"
+desc = "Marks a target, and the next hit on it splashes to the crowd."
+branch = "beacon"
+cost = 58
+requires = ["light.trunk.duration"]
+pos = [2, 2]
+modifiers = [{ target = "light.beacon.sharePct", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "light.beacon.hard"
+name = "Radiance"
+desc = "+45% shared damage"
+branch = "beacon"
+cost = 46
+requires = ["light.beacon.core"]
+pos = [2, 3]
+modifiers = [{ target = "light.beacon.sharePct", op = "mult", value = 1.45 }]
+
+[[node]]
+id = "light.beacon.wide"
+name = "Blinding Halo"
+desc = "+0.8 tiles share radius"
+branch = "beacon"
+cost = 46
+requires = ["light.beacon.core"]
+pos = [3, 3]
+modifiers = [{ target = "light.beacon.radius", op = "add", value = 0.8 }]

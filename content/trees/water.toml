@@ -1,0 +1,117 @@
+[tree]
+id = "water"
+kind = "element"
+specs = ["chill", "shatter", "freeze"]
+
+# Water is the control element. Two of its three specs deal no damage of their
+# own and pay off through what they let the rest of the board do.
+
+[[node]]
+id = "water.trunk.potency"
+name = "Cold Snap"
+desc = "+15% Water effect magnitude"
+branch = "trunk"
+cost = 18
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "water.potency", op = "mult", value = 1.15 }]
+
+[[node]]
+id = "water.trunk.duration"
+name = "Deep Freeze"
+desc = "+20% Water effect duration"
+branch = "trunk"
+cost = 22
+requires = ["water.trunk.potency"]
+pos = [0, 1]
+modifiers = [{ target = "water.duration", op = "mult", value = 1.2 }]
+
+[[node]]
+id = "water.chill.core"
+name = "Chill"
+desc = "Hits stack a slow that builds toward a cap."
+branch = "chill"
+cost = 56
+requires = ["water.trunk.duration"]
+pos = [-2, 2]
+modifiers = [{ target = "water.chill.slowPerHit", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "water.chill.deep"
+name = "Biting Cold"
+desc = "+50% slow per hit"
+branch = "chill"
+cost = 44
+requires = ["water.chill.core"]
+pos = [-2, 3]
+modifiers = [{ target = "water.chill.slowPerHit", op = "mult", value = 1.5 }]
+
+[[node]]
+id = "water.chill.cap"
+name = "Glacial"
+desc = "Raises the slow cap to 70%"
+branch = "chill"
+cost = 44
+requires = ["water.chill.core"]
+pos = [-3, 3]
+modifiers = [{ target = "water.chill.maxSlow", op = "set", value = 0.7 }]
+
+[[node]]
+id = "water.shatter.core"
+name = "Shatter"
+desc = "Bonus damage scaled by how slowed the target is."
+branch = "shatter"
+cost = 56
+requires = ["water.trunk.duration"]
+pos = [0, 2]
+modifiers = [{ target = "water.shatter.bonusPerSlowPct", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "water.shatter.hard"
+name = "Fracture"
+desc = "+40% shatter bonus"
+branch = "shatter"
+cost = 44
+requires = ["water.shatter.core"]
+pos = [0, 3]
+modifiers = [{ target = "water.shatter.bonusPerSlowPct", op = "mult", value = 1.4 }]
+
+[[node]]
+id = "water.shatter.easy"
+name = "Hairline Cracks"
+desc = "Triggers on the slightest slow"
+branch = "shatter"
+cost = 44
+requires = ["water.shatter.core"]
+pos = [1, 3]
+modifiers = [{ target = "water.shatter.minSlow", op = "set", value = 0.01 }]
+
+[[node]]
+id = "water.freeze.core"
+name = "Freeze"
+desc = "A chance to stop the target outright."
+branch = "freeze"
+cost = 56
+requires = ["water.trunk.duration"]
+pos = [2, 2]
+modifiers = [{ target = "water.freeze.chance", op = "mult", value = 1.0 }]
+
+[[node]]
+id = "water.freeze.often"
+name = "Flash Frost"
+desc = "+6% freeze chance"
+branch = "freeze"
+cost = 44
+requires = ["water.freeze.core"]
+pos = [2, 3]
+modifiers = [{ target = "water.freeze.chance", op = "add", value = 0.06 }]
+
+[[node]]
+id = "water.freeze.long"
+name = "Solid Ice"
+desc = "+0.7s freeze duration"
+branch = "freeze"
+cost = 44
+requires = ["water.freeze.core"]
+pos = [3, 3]
+modifiers = [{ target = "water.freeze.duration", op = "add", value = 0.7 }]

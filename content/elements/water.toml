@@ -1,0 +1,26 @@
+[element]
+id = "water"
+name = "Water"
+damageType = "frost"
+attachCost = 75
+specCost = 95
+
+[element.base]
+potency = 1.0
+duration = 1.0
+
+[spec.chill]
+# Stacking slow: hit COUNT drives it toward the cap.
+slowPerHit = 0.07
+maxSlow = 0.55
+duration = 2.5
+
+[spec.shatter]
+# Pays out proportionally to how slowed the target already is, which is what
+# makes Chill-then-Shatter a real decision rather than a strictly better pick.
+bonusPerSlowPct = 1.8
+minSlow = 0.05
+
+[spec.freeze]
+chance = 0.09
+duration = 1.1

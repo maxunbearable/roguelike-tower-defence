@@ -1,0 +1,29 @@
+[tower]
+id = "arcane"
+name = "Arcane Spire"
+buildCost = 110
+sellRefundPct = 0.6
+damage = 18
+fireRate = 0.9
+range = 3.42
+projectileSpeed = 16.0
+projectileCount = 1
+pierce = 0
+critChance = 0.06
+critMult = 2.0
+armorPen = 6            # magic largely ignores plate
+targetPriority = "first"
+damageType = "arcane"
+specCost = 140
+
+[[level]]                 # level 2
+cost = 125
+damageMult = 1.6
+rangeMult = 1.10
+fireRateMult = 1.18
+
+[[level]]                 # level 3
+cost = 215
+damageMult = 2.35
+rangeMult = 1.22
+fireRateMult = 1.34

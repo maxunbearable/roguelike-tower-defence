@@ -1,0 +1,29 @@
+[tower]
+id = "brazier"
+name = "Brazier"
+buildCost = 85
+sellRefundPct = 0.6
+damage = 7
+fireRate = 3.2             # the fastest in the roster by a wide margin
+range = 1.89                # and the shortest, so placement is everything
+projectileSpeed = 12.0
+projectileCount = 1
+pierce = 0
+critChance = 0.03
+critMult = 1.6
+armorPen = 0
+targetPriority = "closest"
+damageType = "searing"
+specCost = 120
+
+[[level]]                  # level 2
+cost = 100
+damageMult = 1.7
+rangeMult = 1.12
+fireRateMult = 1.16
+
+[[level]]                  # level 3
+cost = 180
+damageMult = 2.6
+rangeMult = 1.24
+fireRateMult = 1.32

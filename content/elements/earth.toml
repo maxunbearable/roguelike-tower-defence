@@ -1,0 +1,36 @@
+[element]
+id = "earth"
+name = "Earth"
+damageType = "earth"
+attachCost = 70     # cost to imbue a tower with this element
+specCost = 90       # cost to specialise the element (poison/rock/quake)
+
+# Stat paths become "earth.<key>" for base and "earth.<spec>.<key>" for specs,
+# so adding Fire/Water/Wind later needs a new TOML file and no new C++ for stats.
+[element.base]
+potency = 1.0
+duration = 1.0
+
+[spec.poison]
+# A low per-stack value against a high cap makes hit COUNT the gate on poison's
+# ceiling, which is what lets a high-rate spec out-scale a heavy-hit one without
+# any rule naming either of them.
+dpsPerStack = 1.8
+maxStacks = 10.0
+duration = 4.0
+spreadPct = 0.5
+spreadRadius = 1.6
+
+[spec.rock]
+shredPerHit = 1.0
+shredDuration = 3.0
+petrifyChance = 0.06
+petrifyDuration = 0.8
+flatBonus = 2.0
+
+[spec.quake]
+radius = 1.4
+damage = 8.0
+slowPct = 0.35
+slowDuration = 1.5
+everyNShots = 3.0

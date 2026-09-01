@@ -1,0 +1,34 @@
+[element]
+id = "fire"
+name = "Fire"
+damageType = "fire"
+attachCost = 80
+specCost = 100
+
+[element.base]
+potency = 1.0
+duration = 1.0
+
+# Fire's three specs are deliberately gated on different properties of a hit, so
+# the three tower firing profiles separate them without any pairing rule:
+#   burn  scales with hit MAGNITUDE  -> heavy, slow towers
+#   blast scales with hit COUNT      -> multishot towers
+#   melt  scales with hit RATE       -> fast towers
+[spec.burn]
+# A fraction of the hit that landed, so a 400-damage sniper shot ignites far
+# harder than a 20-damage volley arrow.
+pctPerHit = 0.35
+maxStacks = 6.0
+duration = 4.0
+
+[spec.blast]
+radius = 1.5
+damagePct = 0.45
+falloff = 0.5
+
+[spec.melt]
+# Each hit peels resistance, so everything landing after hits harder. The cap
+# stops a high-rate tower from removing resistance entirely.
+resistPerHit = 0.04
+maxResist = 0.40
+duration = 3.0

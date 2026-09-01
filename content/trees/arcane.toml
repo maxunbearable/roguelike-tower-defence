@@ -1,0 +1,146 @@
+[tree]
+id = "arcane"
+kind = "tower"
+specs = ["tempest", "hex", "drain"]
+
+# The arcane spire is the support tower. Two of its three specs make the REST of
+# the board better rather than out-damaging it themselves.
+
+[[node]]
+id = "arcane.trunk.dmg1"
+name = "Focused Rune"
+desc = "+10% bolt damage"
+branch = "trunk"
+cost = 18
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "arcane.damage", op = "mult", value = 1.1 }]
+
+[[node]]
+id = "arcane.trunk.rate1"
+name = "Quickened Cant"
+desc = "+10% fire rate"
+branch = "trunk"
+cost = 22
+requires = ["arcane.trunk.dmg1"]
+pos = [0, 1]
+modifiers = [{ target = "arcane.fireRate", op = "mult", value = 1.1 }]
+
+[[node]]
+id = "arcane.trunk.range1"
+name = "Far Sight"
+desc = "+0.6 tiles range"
+branch = "trunk"
+cost = 22
+requires = ["arcane.trunk.dmg1"]
+pos = [1, 1]
+modifiers = [{ target = "arcane.range", op = "add", value = 0.6 }]
+
+[[node]]
+id = "arcane.tempest.core"
+name = "Tempest"
+desc = "Bolts arc from target to target."
+branch = "tempest"
+cost = 58
+requires = ["arcane.trunk.rate1"]
+pos = [-2, 2]
+modifiers = [
+  { target = "arcane.trait.chain", op = "flag" },
+  { target = "arcane.chain.jumps", op = "set", value = 3.0 },
+  { target = "arcane.chain.radius", op = "set", value = 2.2 },
+  { target = "arcane.chain.damagePct", op = "set", value = 0.55 },
+  { target = "arcane.chain.falloff", op = "set", value = 0.7 },
+  { target = "arcane.damage", op = "mult", value = 0.85 },
+  { target = "arcane.fireRate", op = "mult", value = 1.1 },
+]
+
+[[node]]
+id = "arcane.tempest.more"
+name = "Chain Lightning"
+desc = "+2 arc jumps"
+branch = "tempest"
+cost = 46
+requires = ["arcane.tempest.core"]
+pos = [-3, 3]
+modifiers = [{ target = "arcane.chain.jumps", op = "add", value = 2.0 }]
+
+[[node]]
+id = "arcane.tempest.hard"
+name = "Overcharge"
+desc = "+35% arc damage"
+branch = "tempest"
+cost = 46
+requires = ["arcane.tempest.core"]
+pos = [-2, 3]
+modifiers = [{ target = "arcane.chain.damagePct", op = "mult", value = 1.35 }]
+
+[[node]]
+id = "arcane.hex.core"
+name = "Hex"
+desc = "Marks a target so every tower hurts it more."
+branch = "hex"
+cost = 58
+requires = ["arcane.trunk.rate1"]
+pos = [0, 2]
+modifiers = [
+  { target = "arcane.trait.amplify", op = "flag" },
+  { target = "arcane.amplify.pct", op = "set", value = 0.3 },
+  { target = "arcane.amplify.duration", op = "set", value = 3.5 },
+  { target = "arcane.damage", op = "mult", value = 0.7 },
+  { target = "arcane.fireRate", op = "mult", value = 1.3 },
+  { target = "arcane.range", op = "mult", value = 1.1 },
+]
+
+[[node]]
+id = "arcane.hex.deep"
+name = "Deeper Curse"
+desc = "+15% damage amplification"
+branch = "hex"
+cost = 46
+requires = ["arcane.hex.core"]
+pos = [0, 3]
+modifiers = [{ target = "arcane.amplify.pct", op = "add", value = 0.15 }]
+
+[[node]]
+id = "arcane.hex.long"
+name = "Lingering Mark"
+desc = "+2s hex duration"
+branch = "hex"
+cost = 46
+requires = ["arcane.hex.core"]
+pos = [1, 3]
+modifiers = [{ target = "arcane.amplify.duration", op = "add", value = 2.0 }]
+
+[[node]]
+id = "arcane.drain.core"
+name = "Drain"
+desc = "Every kill it lands pays gold."
+branch = "drain"
+cost = 58
+requires = ["arcane.trunk.range1"]
+pos = [2, 2]
+modifiers = [
+  { target = "arcane.trait.drain", op = "flag" },
+  { target = "arcane.drain.goldPerKill", op = "set", value = 3.0 },
+  { target = "arcane.damage", op = "mult", value = 1.15 },
+]
+
+[[node]]
+id = "arcane.drain.more"
+name = "Tithe"
+desc = "+3 gold per kill"
+branch = "drain"
+cost = 46
+requires = ["arcane.drain.core"]
+pos = [2, 3]
+modifiers = [{ target = "arcane.drain.goldPerKill", op = "add", value = 3.0 }]
+
+[[node]]
+id = "arcane.drain.dmg"
+name = "Soul Siphon"
+desc = "+35% bolt damage"
+branch = "drain"
+cost = 46
+requires = ["arcane.drain.core"]
+pos = [3, 3]
+modifiers = [{ target = "arcane.damage", op = "mult", value = 1.35 }]

@@ -1,0 +1,160 @@
+[tree]
+id = "arrow"
+kind = "tower"
+specs = ["sniper", "elf", "hunter"]
+
+# --- trunk: always applies when the arrow tower is used --------------------
+
+[[node]]
+id = "arrow.trunk.dmg1"
+name = "Sharpened Heads"
+desc = "+10% arrow damage"
+branch = "trunk"
+cost = 17
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "arrow.damage", op = "mult", value = 1.10 }]
+
+[[node]]
+id = "arrow.trunk.rate1"
+name = "Practised Draw"
+desc = "+10% fire rate"
+branch = "trunk"
+cost = 21
+requires = ["arrow.trunk.dmg1"]
+pos = [0, 1]
+modifiers = [{ target = "arrow.fireRate", op = "mult", value = 1.10 }]
+
+[[node]]
+id = "arrow.trunk.range1"
+name = "Longer Shafts"
+desc = "+0.5 tiles range"
+branch = "trunk"
+cost = 21
+requires = ["arrow.trunk.dmg1"]
+pos = [1, 1]
+modifiers = [{ target = "arrow.range", op = "add", value = 0.5 }]
+
+# --- sniper: few enormous hits, long reach, crits --------------------------
+
+[[node]]
+id = "arrow.sniper.core"
+name = "Sniper"
+desc = "Far fewer, far heavier shots. Bonus damage to healthy targets."
+branch = "sniper"
+cost = 55
+requires = ["arrow.trunk.rate1"]
+pos = [-2, 2]
+modifiers = [
+  { target = "arrow.trait.execute", op = "flag" },
+  { target = "arrow.execute.threshold", op = "set", value = 0.6 },
+  { target = "arrow.execute.mult", op = "set", value = 1.8 },
+  { target = "arrow.damage", op = "mult", value = 2.6 },
+  { target = "arrow.fireRate", op = "mult", value = 0.45 },
+  { target = "arrow.range", op = "mult", value = 1.7 },
+  { target = "arrow.critChance", op = "add", value = 0.20 },
+  { target = "arrow.critMult", op = "add", value = 0.5 },
+  { target = "arrow.armorPen", op = "add", value = 4.0 },
+]
+
+[[node]]
+id = "arrow.sniper.pen"
+name = "Armour Piercer"
+desc = "+4 armour penetration"
+branch = "sniper"
+cost = 42
+requires = ["arrow.sniper.core"]
+pos = [-3, 3]
+modifiers = [{ target = "arrow.armorPen", op = "add", value = 4.0 }]
+
+[[node]]
+id = "arrow.sniper.crit"
+name = "Steady Hand"
+desc = "+15% crit chance, +0.5 crit multiplier"
+branch = "sniper"
+cost = 42
+requires = ["arrow.sniper.core"]
+pos = [-2, 3]
+modifiers = [
+  { target = "arrow.critChance", op = "add", value = 0.15 },
+  { target = "arrow.critMult", op = "add", value = 0.5 },
+]
+
+# --- elf: relentless rate, tiny hits, ramps on a held target ---------------
+
+[[node]]
+id = "arrow.elf.core"
+name = "Elf"
+desc = "Blistering fire rate that climbs while held on one target."
+branch = "elf"
+cost = 55
+requires = ["arrow.trunk.rate1"]
+pos = [0, 2]
+modifiers = [
+  { target = "arrow.trait.rampUp", op = "flag" },
+  { target = "arrow.rampUp.perSec", op = "set", value = 0.35 },
+  { target = "arrow.rampUp.maxMult", op = "set", value = 2.0 },
+  { target = "arrow.damage", op = "mult", value = 0.55 },
+  { target = "arrow.fireRate", op = "mult", value = 3.2 },
+  { target = "arrow.range", op = "mult", value = 0.85 },
+]
+
+[[node]]
+id = "arrow.elf.rate"
+name = "Quickening"
+desc = "+25% fire rate"
+branch = "elf"
+cost = 42
+requires = ["arrow.elf.core"]
+pos = [-1, 3]
+modifiers = [{ target = "arrow.fireRate", op = "mult", value = 1.25 }]
+
+[[node]]
+id = "arrow.elf.ramp"
+name = "Focused Volley"
+desc = "Ramp climbs faster and higher"
+branch = "elf"
+cost = 42
+requires = ["arrow.elf.core"]
+pos = [0, 3]
+modifiers = [
+  { target = "arrow.rampUp.perSec", op = "set", value = 0.5 },
+  { target = "arrow.rampUp.maxMult", op = "set", value = 2.6 },
+]
+
+# --- hunter: multishot and pierce, built for crowds ------------------------
+
+[[node]]
+id = "arrow.hunter.core"
+name = "Hunter"
+desc = "Fires a spread of arrows that punch through ranks."
+branch = "hunter"
+cost = 55
+requires = ["arrow.trunk.rate1"]
+pos = [2, 2]
+modifiers = [
+  { target = "arrow.projectileCount", op = "add", value = 2.0 },
+  { target = "arrow.pierce", op = "add", value = 1.0 },
+  { target = "arrow.damage", op = "mult", value = 0.8 },
+  { target = "arrow.range", op = "mult", value = 1.1 },
+]
+
+[[node]]
+id = "arrow.hunter.spread"
+name = "Wider Volley"
+desc = "+1 arrow per shot"
+branch = "hunter"
+cost = 42
+requires = ["arrow.hunter.core"]
+pos = [2, 3]
+modifiers = [{ target = "arrow.projectileCount", op = "add", value = 1.0 }]
+
+[[node]]
+id = "arrow.hunter.pierce"
+name = "Bodkin Points"
+desc = "+1 pierce"
+branch = "hunter"
+cost = 42
+requires = ["arrow.hunter.core"]
+pos = [3, 3]
+modifiers = [{ target = "arrow.pierce", op = "add", value = 1.0 }]

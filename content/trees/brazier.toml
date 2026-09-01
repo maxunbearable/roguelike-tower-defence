@@ -1,0 +1,149 @@
+[tree]
+id = "brazier"
+kind = "tower"
+specs = ["pyre", "forge", "cinder"]
+
+# The brazier is the short-range, high-cadence tower: cheap, weak per hit, and
+# utterly dependent on placement. Because element potency scales with hit COUNT,
+# it is the natural partner for every stacking element -- and Forge makes it a
+# support building instead, which is the only tower in the game that raises the
+# output of its neighbours.
+
+[[node]]
+id = "brazier.trunk.dmg1"
+name = "Stoked Coals"
+desc = "+10% damage"
+branch = "trunk"
+cost = 18
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "brazier.damage", op = "mult", value = 1.1 }]
+
+[[node]]
+id = "brazier.trunk.rate1"
+name = "Bellows"
+desc = "+12% fire rate"
+branch = "trunk"
+cost = 22
+requires = ["brazier.trunk.dmg1"]
+pos = [0, 1]
+modifiers = [{ target = "brazier.fireRate", op = "mult", value = 1.12 }]
+
+[[node]]
+id = "brazier.trunk.range1"
+name = "Tall Flame"
+desc = "+0.5 tiles range"
+branch = "trunk"
+cost = 24
+requires = ["brazier.trunk.dmg1"]
+pos = [1, 1]
+modifiers = [{ target = "brazier.range", op = "add", value = 0.5 }]
+
+[[node]]
+id = "brazier.pyre.core"
+name = "Pyre"
+desc = "Wider reach and a splash on every hit."
+branch = "pyre"
+cost = 58
+requires = ["brazier.trunk.rate1"]
+pos = [-2, 2]
+modifiers = [
+  { target = "brazier.trait.splash", op = "flag" },
+  { target = "brazier.splash.radius", op = "set", value = 1.1 },
+  { target = "brazier.splash.damagePct", op = "set", value = 0.55 },
+  { target = "brazier.splash.falloff", op = "set", value = 0.5 },
+  { target = "brazier.range", op = "mult", value = 1.45 },
+  { target = "brazier.damage", op = "mult", value = 1.25 },
+  { target = "brazier.fireRate", op = "mult", value = 0.8 },
+]
+
+[[node]]
+id = "brazier.pyre.wide"
+name = "Roaring Blaze"
+desc = "+0.5 tiles splash radius"
+branch = "pyre"
+cost = 46
+requires = ["brazier.pyre.core"]
+pos = [-3, 3]
+modifiers = [{ target = "brazier.splash.radius", op = "add", value = 0.5 }]
+
+[[node]]
+id = "brazier.pyre.far"
+name = "Beacon Fire"
+desc = "+1 tile range"
+branch = "pyre"
+cost = 46
+requires = ["brazier.pyre.core"]
+pos = [-2, 3]
+modifiers = [{ target = "brazier.range", op = "add", value = 1.0 }]
+
+[[node]]
+id = "brazier.forge.core"
+name = "Forge"
+desc = "Raises the damage and rate of every tower around it."
+branch = "forge"
+cost = 58
+requires = ["brazier.trunk.rate1"]
+pos = [0, 2]
+modifiers = [
+  { target = "brazier.trait.towerBuff", op = "flag" },
+  { target = "brazier.towerBuff.radius", op = "set", value = 2.6 },
+  { target = "brazier.towerBuff.damagePct", op = "set", value = 0.18 },
+  { target = "brazier.towerBuff.fireRatePct", op = "set", value = 0.18 },
+  { target = "brazier.damage", op = "mult", value = 0.55 },
+  { target = "brazier.fireRate", op = "mult", value = 0.7 },
+]
+
+[[node]]
+id = "brazier.forge.strong"
+name = "Master Smith"
+desc = "+12% damage to buffed towers"
+branch = "forge"
+cost = 46
+requires = ["brazier.forge.core"]
+pos = [0, 3]
+modifiers = [{ target = "brazier.towerBuff.damagePct", op = "add", value = 0.12 }]
+
+[[node]]
+id = "brazier.forge.wide"
+name = "Great Furnace"
+desc = "+1.2 tiles buff radius"
+branch = "forge"
+cost = 46
+requires = ["brazier.forge.core"]
+pos = [1, 3]
+modifiers = [{ target = "brazier.towerBuff.radius", op = "add", value = 1.2 }]
+
+[[node]]
+id = "brazier.cinder.core"
+name = "Cinder"
+desc = "A relentless cadence, and armour that means nothing."
+branch = "cinder"
+cost = 58
+requires = ["brazier.trunk.range1"]
+pos = [2, 2]
+modifiers = [
+  { target = "brazier.fireRate", op = "mult", value = 1.8 },
+  { target = "brazier.damage", op = "mult", value = 0.8 },
+  { target = "brazier.armorPen", op = "add", value = 9.0 },
+]
+
+[[node]]
+id = "brazier.cinder.fast"
+name = "White Heat"
+desc = "+30% fire rate"
+branch = "cinder"
+cost = 46
+requires = ["brazier.cinder.core"]
+pos = [2, 3]
+modifiers = [{ target = "brazier.fireRate", op = "mult", value = 1.3 }]
+
+[[node]]
+id = "brazier.cinder.pen"
+name = "Slagging"
+desc = "+8 armour penetration"
+branch = "cinder"
+cost = 46
+requires = ["brazier.cinder.core"]
+pos = [3, 3]
+modifiers = [{ target = "brazier.armorPen", op = "add", value = 8.0 }]

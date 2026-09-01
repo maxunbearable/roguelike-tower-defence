@@ -1,0 +1,32 @@
+[tower]
+id = "arrow"
+name = "Arrow Tower"
+buildCost = 60
+sellRefundPct = 0.6
+damage = 12
+fireRate = 1.1            # shots per second
+range = 3.15               # tiles
+projectileSpeed = 14.0    # tiles per second
+projectileCount = 1
+pierce = 0
+critChance = 0.05
+critMult = 2.0
+armorPen = 0
+targetPriority = "first"  # first | last | strongest | weakest | closest
+damageType = "piercing"
+specCost = 95       # must be reachable within a first run
+
+# Level multipliers are ABSOLUTE against base, not cumulative:
+# level 3 damage is base * 2.4, not base * 1.6 * 2.4.
+
+[[level]]                 # level 2
+cost = 75
+damageMult = 1.6
+rangeMult = 1.1
+fireRateMult = 1.15
+
+[[level]]                 # level 3
+cost = 140
+damageMult = 2.4
+rangeMult = 1.2
+fireRateMult = 1.3

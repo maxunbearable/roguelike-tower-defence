@@ -1,0 +1,126 @@
+#include "core/SaveGame.h"
+
+#include <stdexcept>
+
+#include <nlohmann/json.hpp>
+
+namespace td::core {
+namespace {
+using json = nlohmann::json;
+}
+
+std::string toJson(const SaveSlot& slot) {
+    json j;
+    j["version"] = slot.version;
+    j["used"] = slot.used;
+    j["profileName"] = slot.profileName;
+
+    j["meta"]["shards"] = slot.meta.shards;
+    j["meta"]["runsPlayed"] = slot.meta.runsPlayed;
+    j["meta"]["bestWave"] = slot.meta.bestWave;
+    j["meta"]["ownedNodes"] = std::vector<std::string>(slot.meta.ownedNodes.begin(),
+                                                       slot.meta.ownedNodes.end());
+    for (const auto& [mapId, p] : slot.meta.mapProgress) {
+        j["meta"]["mapProgress"][mapId] = {{"bestWave", p.bestWave}, {"cleared", p.cleared}};
+    }
+
+    if (slot.run) {
+        const auto& r = *slot.run;
+        json jr;
+        jr["mapId"] = r.mapId;
+        jr["seed"] = r.seed;
+        jr["rngState"] = r.rngState;
+        jr["waveIndex"] = r.waveIndex;
+        jr["gold"] = r.gold;
+        jr["lives"] = r.lives;
+        jr["buildTimer"] = r.buildTimer;
+        for (const auto& t : r.towers) {
+            jr["towers"].push_back({{"x", t.x},
+                                    {"y", t.y},
+                                    {"level", t.level},
+                                    {"goldSpent", t.goldSpent},
+                                    {"elementId", t.elementId},
+                                    {"towerSpec", t.towerSpec},
+                                    {"elementSpec", t.elementSpec}});
+        }
+        if (r.towers.empty()) jr["towers"] = json::array();
+        j["run"] = jr;
+    } else {
+        j["run"] = nullptr;
+    }
+    return j.dump(2);
+}
+
+SaveSlot fromJson(const std::string& text) {
+    json j;
+    try {
+        j = json::parse(text);
+    } catch (const std::exception& e) {
+        throw std::runtime_error(std::string("save file is not valid JSON: ") + e.what());
+    }
+
+    SaveSlot s;
+    s.version = j.value("version", 0);
+    if (s.version != kSaveVersion) {
+        // A future migration would live here. Refusing loudly beats silently
+        // loading a save whose fields mean something different.
+        throw std::runtime_error("save version " + std::to_string(s.version) +
+                                 " is not supported (expected " +
+                                 std::to_string(kSaveVersion) + ")");
+    }
+    s.used = j.value("used", false);
+    s.profileName = j.value("profileName", std::string{});
+
+    if (j.contains("meta")) {
+        const auto& m = j["meta"];
+        s.meta.shards = m.value("shards", 0);
+        s.meta.runsPlayed = m.value("runsPlayed", 0);
+        s.meta.bestWave = m.value("bestWave", 0);
+        // Absent in a version-1 save, which must still load: a format change
+        // must never cost a player their profile.
+        if (m.contains("mapProgress")) {
+            for (const auto& [mapId, p] : m["mapProgress"].items()) {
+                s.meta.mapProgress[mapId] = {p.value("bestWave", 0), p.value("cleared", false)};
+            }
+        }
+        for (const auto& n : m.value("ownedNodes", std::vector<std::string>{})) {
+            s.meta.ownedNodes.insert(n);
+        }
+    }
+
+    if (j.contains("run") && !j["run"].is_null()) {
+        const auto& jr = j["run"];
+        RunSave r;
+        r.mapId = jr.value("mapId", std::string{});
+        r.seed = jr.value("seed", uint64_t{0});
+        r.rngState = jr.value("rngState", std::string{});
+        r.waveIndex = jr.value("waveIndex", 0);
+        r.gold = jr.value("gold", 0);
+        r.lives = jr.value("lives", 0);
+        r.buildTimer = jr.value("buildTimer", 0.0f);
+        if (jr.contains("towers")) {
+            for (const auto& jt : jr["towers"]) {
+                TowerSave t;
+                t.x = jt.value("x", 0);
+                t.y = jt.value("y", 0);
+                t.level = jt.value("level", 1);
+                t.goldSpent = jt.value("goldSpent", 0);
+                t.elementId = jt.value("elementId", std::string{});
+                t.towerSpec = jt.value("towerSpec", std::string{});
+                t.elementSpec = jt.value("elementSpec", std::string{});
+                r.towers.push_back(std::move(t));
+            }
+        }
+        s.run = std::move(r);
+    }
+    return s;
+}
+
+bool mapUnlocked(const MetaSave& meta, const std::vector<std::string>& order, int index) {
+    if (index <= 0) return index == 0 && !order.empty();
+    if (index >= static_cast<int>(order.size())) return false;
+    const auto it = meta.mapProgress.find(order[static_cast<size_t>(index) - 1]);
+    return it != meta.mapProgress.end() && it->second.cleared;
+}
+
+}  // namespace td::core

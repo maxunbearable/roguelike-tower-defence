@@ -1,0 +1,110 @@
+[tree]
+id = "earth"
+kind = "element"
+specs = ["poison", "rock", "quake"]
+
+# --- trunk: scales every Earth effect --------------------------------------
+
+[[node]]
+id = "earth.trunk.potency1"
+name = "Deep Roots"
+desc = "+15% Earth effect magnitude"
+branch = "trunk"
+cost = 17
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "earth.potency", op = "mult", value = 1.15 }]
+
+[[node]]
+id = "earth.trunk.duration1"
+name = "Lingering Soil"
+desc = "+20% Earth effect duration"
+branch = "trunk"
+cost = 21
+requires = ["earth.trunk.potency1"]
+pos = [0, 1]
+modifiers = [{ target = "earth.duration", op = "mult", value = 1.20 }]
+
+# --- poison: damage over time that spreads on death ------------------------
+
+[[node]]
+id = "earth.poison.core"
+name = "Poison"
+desc = "Hits inject stacking venom that spreads when the host dies."
+branch = "poison"
+cost = 55
+requires = ["earth.trunk.duration1"]
+pos = [-2, 2]
+modifiers = [
+  { target = "earth.poison.dpsPerStack", op = "mult", value = 1.4 },
+  { target = "earth.poison.maxStacks", op = "add", value = 8.0 },
+]
+
+[[node]]
+id = "earth.poison.spread"
+name = "Contagion"
+desc = "Spreads more venom, further"
+branch = "poison"
+cost = 42
+requires = ["earth.poison.core"]
+pos = [-2, 3]
+modifiers = [
+  { target = "earth.poison.spreadPct", op = "add", value = 0.25 },
+  { target = "earth.poison.spreadRadius", op = "add", value = 0.8 },
+]
+
+# --- rock: armour shred and petrification ----------------------------------
+
+[[node]]
+id = "earth.rock.core"
+name = "Rock"
+desc = "Hits shatter armour and can petrify."
+branch = "rock"
+cost = 55
+requires = ["earth.trunk.duration1"]
+pos = [0, 2]
+modifiers = [
+  { target = "earth.rock.shredPerHit", op = "mult", value = 1.6 },
+  { target = "earth.rock.flatBonus", op = "add", value = 2.0 },
+]
+
+[[node]]
+id = "earth.rock.petrify"
+name = "Stoneskin Curse"
+desc = "+8% petrify chance and longer holds"
+branch = "rock"
+cost = 42
+requires = ["earth.rock.core"]
+pos = [0, 3]
+modifiers = [
+  { target = "earth.rock.petrifyChance", op = "add", value = 0.08 },
+  { target = "earth.rock.petrifyDuration", op = "add", value = 0.4 },
+]
+
+# --- earthquake: area pulses that stagger ----------------------------------
+
+[[node]]
+id = "earth.quake.core"
+name = "Earthquake"
+desc = "Every few shots erupts into a slowing tremor."
+branch = "quake"
+cost = 55
+requires = ["earth.trunk.duration1"]
+pos = [2, 2]
+modifiers = [
+  { target = "earth.quake.damage", op = "mult", value = 1.5 },
+  { target = "earth.quake.radius", op = "add", value = 0.4 },
+]
+
+[[node]]
+id = "earth.quake.tremor"
+name = "Aftershock"
+desc = "Tremors come more often and slow harder"
+branch = "quake"
+cost = 42
+requires = ["earth.quake.core"]
+pos = [2, 3]
+modifiers = [
+  { target = "earth.quake.everyNShots", op = "add", value = -1.0 },
+  { target = "earth.quake.slowPct", op = "add", value = 0.15 },
+]

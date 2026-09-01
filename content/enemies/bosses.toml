@@ -1,0 +1,136 @@
+# Bosses: one mid-boss at wave 25 and one final boss at wave 50 per map.
+#
+# HP is chosen against the curve, not by feel. At wave 50 greenfields' hpMult is
+# roughly 198x, so a 160hp goblin arrives with ~31,700. A final boss at base
+# 1200 lands at ~238,000 -- about 7x a regular enemy of the same wave, which is
+# what makes it a wall rather than a speed bump. Mid-bosses sit at ~4x.
+#
+# Every boss is slow and heavily armoured: the threat is that it does not stop,
+# so the answer has to be damage rather than crowd control.
+#
+# `resist` is the reason five maps replay differently. Each map's bosses resist
+# the element its whole roster leans on, so the build that cleared the last map
+# is the wrong build here.
+
+# --- greenfields: no bias, the tutorial boss ------------------------------
+[[enemy]]
+id = "boss_ogre_warlord"
+name = "Ogre Warlord"
+maxHp = 640.0
+armor = 12.0
+speed = 0.95
+bounty = 108
+shardValue = 8
+flying = false
+boss = true
+
+[[enemy]]
+id = "boss_warlord_grulk"
+name = "Warlord Grulk"
+maxHp = 1200.0
+armor = 22.0
+speed = 0.85
+bounty = 270
+shardValue = 20
+flying = false
+boss = true
+
+# --- ashen-wastes: fire is the wrong answer here --------------------------
+[[enemy]]
+id = "boss_cinder_brute"
+name = "Cinder Brute"
+maxHp = 700.0
+armor = 14.0
+speed = 1.0
+bounty = 126
+shardValue = 9
+flying = false
+boss = true
+resist = { fire = 0.35, frost = 1.4 }
+
+[[enemy]]
+id = "boss_cinder_colossus"
+name = "Cinder Colossus"
+maxHp = 1320.0
+armor = 26.0
+speed = 0.8
+bounty = 297
+shardValue = 22
+flying = false
+boss = true
+resist = { fire = 0.3, frost = 1.45, siege = 0.8 }
+
+# --- frostmere: frost is the wrong answer here ----------------------------
+[[enemy]]
+id = "boss_rime_stalker"
+name = "Rime Stalker"
+maxHp = 660.0
+armor = 10.0
+speed = 1.25
+bounty = 126
+shardValue = 9
+flying = false
+boss = true
+resist = { frost = 0.35, fire = 1.45 }
+
+[[enemy]]
+id = "boss_rime_tyrant"
+name = "Rime Tyrant"
+maxHp = 1280.0
+armor = 24.0
+speed = 0.85
+bounty = 297
+shardValue = 22
+flying = false
+boss = true
+resist = { frost = 0.3, fire = 1.5, piercing = 0.85 }
+
+# --- blightmarsh: earth is the wrong answer here --------------------------
+[[enemy]]
+id = "boss_plague_carrier"
+name = "Plague Carrier"
+maxHp = 720.0
+armor = 11.0
+speed = 1.05
+bounty = 130
+shardValue = 10
+flying = false
+boss = true
+resist = { earth = 0.3, shock = 1.4 }
+
+[[enemy]]
+id = "boss_plague_mother"
+name = "Plague Mother"
+maxHp = 1380.0
+armor = 20.0
+speed = 0.8
+bounty = 306
+shardValue = 23
+flying = false
+boss = true
+resist = { earth = 0.25, shock = 1.45, arcane = 1.2 }
+
+# --- obsidian-gate: no soft answer; armour is the wall --------------------
+[[enemy]]
+id = "boss_gate_sentinel"
+name = "Gate Sentinel"
+maxHp = 820.0
+armor = 26.0
+speed = 0.9
+bounty = 153
+shardValue = 12
+flying = false
+boss = true
+resist = { piercing = 0.7, fire = 0.8, frost = 0.8, earth = 0.8, shock = 0.8 }
+
+[[enemy]]
+id = "boss_gate_warden"
+name = "Gate Warden"
+maxHp = 1650.0
+armor = 38.0
+speed = 0.75
+bounty = 378
+shardValue = 30
+flying = false
+boss = true
+resist = { piercing = 0.65, fire = 0.75, frost = 0.75, earth = 0.75, shock = 0.75, siege = 1.15 }

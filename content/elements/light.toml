@@ -1,0 +1,30 @@
+[element]
+id = "light"
+name = "Light"
+damageType = "radiant"
+attachCost = 100
+specCost = 120
+
+[element.base]
+potency = 1.0
+duration = 1.0
+
+[spec.sear]
+# Radiant damage that ignores resistance entirely. This is the answer to a map
+# built to resist the element you brought -- expensive, and it does not scale.
+flatPerHit = 6.0
+
+[spec.judgement]
+# Every Nth shot smites the HEALTHIEST enemy in range rather than the target,
+# so it reaches past the chaff a fast tower is chewing through.
+everyNShots = 5.0
+damage = 55.0
+radius = 4.0
+
+[spec.beacon]
+# Marks a target; every hit on a marked target heals nothing and does nothing
+# extra, but the mark spreads the next hit's damage to everything nearby. Light's
+# crowd answer.
+radius = 1.8
+sharePct = 0.4
+duration = 2.5

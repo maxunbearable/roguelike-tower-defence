@@ -1,0 +1,17 @@
+build/
+cmake/CPM.cmake
+.cache/
+compile_commands.json
+.DS_Store
+
+# Tiny Swords art. Its licence permits commercial use and modification but
+# FORBIDS redistribution, so the files must not sit in a public repository.
+# Re-create them with: python3 tools/import_tinyswords.py ~/Downloads
+# See docs/ASSET-POLICY.md.
+assets/sprites/*.png
+
+# Working preview renders. Several are deliberate ASSET DUMPS used while
+# debugging the importers (raw spritesheets with gridlines, sprite line-ups),
+# which would redistribute the licensed art in extractable form. The curated
+# gameplay screenshots in docs/screenshots/ are composites and are committed.
+docs/previews/

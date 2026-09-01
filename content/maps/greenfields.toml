@@ -1,0 +1,76 @@
+[map]
+id = "greenfields"
+name = "Greenfields"
+order = 1
+blurb = "Open meadow. Where every build starts."
+gridW = 22
+gridH = 11
+startGold = 425   # must fund ~8 towers: 3 was a death spiral
+buildTime = 12.0  # 50 waves, so build phases are shorter
+
+# '.' buildable   '#' blocked scenery   '=' path   'S' spawn   'E' exit
+tiles = """
+......................
+......................
+S=========............
+.........=............
+.........=.....======.
+...=======.....=....=.
+...=...........=....=.
+...=...........=....=.
+...=============....=.
+....................=E
+......................
+"""
+
+# Waypoint corners in tile coordinates; enemies lerp between them and are drawn
+# at tile centres. Verified against the tiles block above: every tile the route
+# crosses is '=', 'S' or 'E', and there are no orphan path tiles.
+path = [[0,2],[9,2],[9,5],[3,5],[3,8],[15,8],[15,4],[20,4],[20,9],[21,9]]
+
+# 50 waves, expanded deterministically from this recipe rather than authored
+# one by one. Enemy types rotate through whichever pool entries have unlocked,
+# and stats scale smoothly with wave number.
+[waves]
+count = 50
+countBase = 8          # wave 1 sends 8
+countPerWave = 0.40    # gentler early ramp
+intervalBase = 0.9
+intervalDecay = 0.985  # spawns tighten as waves go on
+intervalMin = 0.30
+hpPerWave = 1.055
+hpCurveExp = 1.18  # bends the curve: gentle opening, brutal late game
+armorPerWave = 0.11
+bountyPerWave = 1.02
+secondaryFromWave = 5  # waves become mixed from here
+secondaryFraction = 0.6
+secondaryDelay = 2.5
+delay = 5.0
+
+# One mid-boss and one final boss. Both are additions to their wave, arriving
+# bossDelay seconds after the escort so the wave is fought first.
+bossDelay = 9.0
+
+[[waves.boss]]
+wave = 25
+enemy = "boss_ogre_warlord"
+
+[[waves.boss]]
+wave = 50
+enemy = "boss_warlord_grulk"
+
+[[waves.pool]]
+enemy = "slime"
+fromWave = 1
+
+[[waves.pool]]
+enemy = "wolf"
+fromWave = 5
+
+[[waves.pool]]
+enemy = "goblin"
+fromWave = 8
+
+[[waves.pool]]
+enemy = "wraith"
+fromWave = 12

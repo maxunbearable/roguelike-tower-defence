@@ -1,0 +1,146 @@
+[tree]
+id = "ballista"
+kind = "tower"
+specs = ["harpoon", "scorpion", "javelin"]
+
+# The ballista's identity is PIERCE: one bolt through a whole file of enemies.
+# Its three specs trade that line between weight, cadence and control.
+
+[[node]]
+id = "ballista.trunk.dmg1"
+name = "Tempered Bolts"
+desc = "+10% bolt damage"
+branch = "trunk"
+cost = 18
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "ballista.damage", op = "mult", value = 1.1 }]
+
+[[node]]
+id = "ballista.trunk.pierce1"
+name = "Barbed Heads"
+desc = "+1 pierce"
+branch = "trunk"
+cost = 24
+requires = ["ballista.trunk.dmg1"]
+pos = [0, 1]
+modifiers = [{ target = "ballista.pierce", op = "add", value = 1.0 }]
+
+[[node]]
+id = "ballista.trunk.range1"
+name = "Braced Frame"
+desc = "+0.7 tiles range"
+branch = "trunk"
+cost = 22
+requires = ["ballista.trunk.dmg1"]
+pos = [1, 1]
+modifiers = [{ target = "ballista.range", op = "add", value = 0.7 }]
+
+[[node]]
+id = "ballista.harpoon.core"
+name = "Harpoon"
+desc = "One enormous bolt, straight through the rank."
+branch = "harpoon"
+cost = 58
+requires = ["ballista.trunk.pierce1"]
+pos = [-2, 2]
+modifiers = [
+  { target = "ballista.damage", op = "mult", value = 2.3 },
+  { target = "ballista.fireRate", op = "mult", value = 0.5 },
+  { target = "ballista.pierce", op = "add", value = 4.0 },
+  { target = "ballista.armorPen", op = "add", value = 8.0 },
+]
+
+[[node]]
+id = "ballista.harpoon.pierce"
+name = "Through and Through"
+desc = "+3 pierce"
+branch = "harpoon"
+cost = 46
+requires = ["ballista.harpoon.core"]
+pos = [-3, 3]
+modifiers = [{ target = "ballista.pierce", op = "add", value = 3.0 }]
+
+[[node]]
+id = "ballista.harpoon.dmg"
+name = "Ironhead"
+desc = "+40% bolt damage"
+branch = "harpoon"
+cost = 46
+requires = ["ballista.harpoon.core"]
+pos = [-2, 3]
+modifiers = [{ target = "ballista.damage", op = "mult", value = 1.4 }]
+
+[[node]]
+id = "ballista.scorpion.core"
+name = "Scorpion"
+desc = "A rattling stream of light bolts."
+branch = "scorpion"
+cost = 58
+requires = ["ballista.trunk.pierce1"]
+pos = [0, 2]
+modifiers = [
+  { target = "ballista.damage", op = "mult", value = 0.55 },
+  { target = "ballista.fireRate", op = "mult", value = 2.6 },
+  { target = "ballista.critChance", op = "add", value = 0.1 },
+]
+
+[[node]]
+id = "ballista.scorpion.fast"
+name = "Ratchet Crank"
+desc = "+35% fire rate"
+branch = "scorpion"
+cost = 46
+requires = ["ballista.scorpion.core"]
+pos = [-1, 3]
+modifiers = [{ target = "ballista.fireRate", op = "mult", value = 1.35 }]
+
+[[node]]
+id = "ballista.scorpion.crit"
+name = "Marksman's Eye"
+desc = "+15% crit chance, +0.6 crit multiplier"
+branch = "scorpion"
+cost = 46
+requires = ["ballista.scorpion.core"]
+pos = [0, 3]
+modifiers = [
+  { target = "ballista.critChance", op = "add", value = 0.15 },
+  { target = "ballista.critMult", op = "add", value = 0.6 },
+]
+
+[[node]]
+id = "ballista.javelin.core"
+name = "Javelin"
+desc = "Impacts knock the target down as they punch through."
+branch = "javelin"
+cost = 58
+requires = ["ballista.trunk.range1"]
+pos = [2, 2]
+modifiers = [
+  { target = "ballista.trait.slowOnHit", op = "flag" },
+  { target = "ballista.slowOnHit.pct", op = "set", value = 0.3 },
+  { target = "ballista.slowOnHit.duration", op = "set", value = 1.6 },
+  { target = "ballista.damage", op = "mult", value = 1.2 },
+  { target = "ballista.fireRate", op = "mult", value = 0.85 },
+  { target = "ballista.pierce", op = "add", value = 2.0 },
+]
+
+[[node]]
+id = "ballista.javelin.hard"
+name = "Heavy Shaft"
+desc = "+50% knockdown strength"
+branch = "javelin"
+cost = 46
+requires = ["ballista.javelin.core"]
+pos = [2, 3]
+modifiers = [{ target = "ballista.slowOnHit.pct", op = "mult", value = 1.5 }]
+
+[[node]]
+id = "ballista.javelin.long"
+name = "Weighted Tip"
+desc = "+1.4s knockdown duration"
+branch = "javelin"
+cost = 46
+requires = ["ballista.javelin.core"]
+pos = [3, 3]
+modifiers = [{ target = "ballista.slowOnHit.duration", op = "add", value = 1.4 }]

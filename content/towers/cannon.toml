@@ -1,0 +1,29 @@
+[tower]
+id = "cannon"
+name = "Cannon"
+buildCost = 95
+sellRefundPct = 0.6
+damage = 34
+fireRate = 0.55           # slow: the heavy end of the roster
+range = 2.88
+projectileSpeed = 9.0
+projectileCount = 1
+pierce = 0
+critChance = 0.02
+critMult = 1.8
+armorPen = 2
+targetPriority = "strongest"
+damageType = "siege"
+specCost = 130
+
+[[level]]                 # level 2
+cost = 110
+damageMult = 1.65
+rangeMult = 1.08
+fireRateMult = 1.10
+
+[[level]]                 # level 3
+cost = 195
+damageMult = 2.5
+rangeMult = 1.16
+fireRateMult = 1.22

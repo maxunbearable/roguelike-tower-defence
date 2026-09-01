@@ -1,0 +1,34 @@
+[tree]
+id = "global"
+kind = "global"
+specs = []
+
+[[node]]
+id = "global.gold1"
+name = "Deeper Coffers"
+desc = "+40 starting gold"
+branch = "trunk"
+cost = 21
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "global.startGold", op = "add", value = 40.0 }]
+
+[[node]]
+id = "global.lives1"
+name = "Stout Walls"
+desc = "+5 starting lives"
+branch = "trunk"
+cost = 29
+requires = ["global.gold1"]
+pos = [0, 1]
+modifiers = [{ target = "global.lives", op = "add", value = 5.0 }]
+
+[[node]]
+id = "global.dmg1"
+name = "Sharpened Doctrine"
+desc = "+8% damage for every tower"
+branch = "trunk"
+cost = 46
+requires = ["global.gold1"]
+pos = [1, 1]
+modifiers = [{ target = "arrow.damage", op = "mult", value = 1.08 }]

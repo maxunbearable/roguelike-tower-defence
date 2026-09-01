@@ -1,0 +1,33 @@
+[element]
+id = "wind"
+name = "Wind"
+damageType = "shock"
+attachCost = 85
+specCost = 105
+
+[element.base]
+potency = 1.0
+duration = 1.0
+
+[spec.shock]
+jumps = 3.0
+radius = 2.0
+damagePct = 0.5
+falloff = 0.6
+
+[spec.gust]
+# Pushes the target back along the path it walked, which buys the towers behind
+# it another pass. Distance is in tiles.
+pushTiles = 0.55
+chance = 0.35
+bossPushMult = 0.25
+
+[spec.cyclone]
+# Was every 4th shot for 10 damage, which measured at 79% on the fastest tower
+# against a row median of 23%: shot-counted cadence times a flat payload means a
+# high-rate tower gets the effect almost continuously for free.
+everyNShots = 7.0
+radius = 1.8
+damage = 6.0
+slowPct = 0.3
+slowDuration = 1.6
