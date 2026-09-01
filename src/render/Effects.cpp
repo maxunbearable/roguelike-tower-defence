@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <string>
+
 #include "render/Palette.h"
 #include "render/PixelCanvas.h"
 
@@ -65,8 +67,23 @@ void Effects::consume(const std::vector<sim::VisualEvent>& events) {
                       e.crit ? Color{255, 236, 170, 255} : Color{240, 227, 160, 255},
                       e.crit ? 5.0f : 3.2f, e.crit ? 0.30f : 0.20f);
                 if (e.value >= 1.0f) {
+                    // The tag is "<damageType>" with an optional trailing '-'
+                    // for resisted or '+' for vulnerable.
+                    std::string type = e.tag;
+                    int mark = 0;
+                    if (!type.empty() && (type.back() == '-' || type.back() == '+')) {
+                        mark = type.back() == '+' ? 1 : -1;
+                        type.pop_back();
+                    }
+                    Color c = type.empty() ? Color{245, 245, 235, 255}
+                                           : palette::damageTypeColor(type);
+                    // Resisted hits read dim and vulnerable ones read hot, on top
+                    // of the type hue, so direction survives at a glance.
+                    if (mark < 0) c = Color{static_cast<unsigned char>(c.r * 0.55f),
+                                            static_cast<unsigned char>(c.g * 0.55f),
+                                            static_cast<unsigned char>(c.b * 0.62f), 255};
                     numbers_.push_back({{e.pos.x, e.pos.y - 0.35f}, 0.62f, 0.62f,
-                                        static_cast<int>(e.value + 0.5f), e.crit});
+                                        static_cast<int>(e.value + 0.5f), e.crit, c, mark});
                 }
                 if (e.crit) addShake(0.9f);
                 break;
@@ -155,8 +172,13 @@ void Effects::drawWorldLayer() const {
         const int x = static_cast<int>(n.pos.x * kTile) - MeasureText(txt, size) / 2;
         const int y = static_cast<int>(n.pos.y * kTile);
         DrawText(txt, x + 1, y + 1, size, fade(Color{0, 0, 0, 255}, t * 0.6f));
-        DrawText(txt, x, y, size,
-                 fade(n.crit ? Color{255, 232, 150, 255} : Color{245, 245, 235, 255}, t));
+        DrawText(txt, x, y, size, fade(n.crit ? Color{255, 232, 150, 255} : n.color, t));
+        // A vulnerable hit gets a small up-chevron; resisted gets a down one.
+        if (n.mark != 0) {
+            const char* m = n.mark > 0 ? "^" : "v";
+            DrawText(m, x + MeasureText(txt, size) + 2, y, 10,
+                     fade(n.mark > 0 ? palette::kVulnerable : palette::kResistant, t));
+        }
     }
 }
 

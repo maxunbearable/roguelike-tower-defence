@@ -37,6 +37,40 @@ std::vector<Spot> rankSpots(const content::MapDef& m, float range) {
     return out;
 }
 
+// Picks the element whose damage type this map's roster is LEAST resistant to.
+//
+// The autoplayer used to hardcode "earth", which made it a bad proxy on exactly
+// the maps that matter: blightmarsh resists earth at 0.5 by design, so the
+// harness was measuring a player deliberately bringing the wrong element and
+// reporting the map as too hard. A real player reads the dossier and brings the
+// counter, so the measuring instrument has to as well.
+std::string bestElementFor(const content::Registry& reg, const content::MapDef& m) {
+    std::string best;
+    float bestScore = -1.0f;
+    for (const auto& [id, edef] : reg.elements()) {
+        float total = 0.0f;
+        int n = 0;
+        for (const auto& p : m.recipe.pool) {
+            if (!reg.hasEnemy(p.enemyId)) continue;
+            total += reg.enemy(p.enemyId).resistTo(edef.damageType);
+            ++n;
+        }
+        // Bosses count too: they are the wall the map builds to.
+        for (const auto& b : m.recipe.bosses) {
+            if (!reg.hasEnemy(b.enemyId)) continue;
+            total += reg.enemy(b.enemyId).resistTo(edef.damageType);
+            ++n;
+        }
+        const float score = n > 0 ? total / static_cast<float>(n) : 1.0f;
+        // Ties broken by id, so the choice is deterministic across runs.
+        if (score > bestScore || (score == bestScore && id < best)) {
+            bestScore = score;
+            best = id;
+        }
+    }
+    return best.empty() ? "earth" : best;
+}
+
 }  // namespace
 
 AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map,
@@ -44,6 +78,8 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
     World w(reg, map, seed, meta);
     const auto& def = reg.tower("arrow");
     const auto spots = rankSpots(map, def.range);
+    // Read the map before committing, the way a player reads the dossier.
+    const std::string element = bestElementFor(reg, map);
 
     AutoPlayResult res;
     std::vector<std::pair<int, int>> built;
@@ -103,8 +139,8 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
             // 3. Element, then its specialisation, tower by tower.
             for (const auto& [tx, ty] : built) {
                 const auto& tag = w.reg().get<TowerTag>(w.towerAt(tx, ty));
-                if (tag.elementId.empty() && w.gold() >= w.attachElementCost("earth")) {
-                    if (w.attachElement(tx, ty, "earth")) { acted = true; break; }
+                if (tag.elementId.empty() && w.gold() >= w.attachElementCost(element)) {
+                    if (w.attachElement(tx, ty, element)) { acted = true; break; }
                 }
                 const auto es = w.availableElementSpecs(tx, ty);
                 if (!es.empty() && w.gold() >= w.elementSpecCost(tx, ty)) {
@@ -141,6 +177,40 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
     res.cleared = w.phase() == Phase::Cleared;
     res.shards = w.shardsForRun();
     return res;
+}
+
+// Picks the element whose damage type this map's roster is LEAST resistant to.
+//
+// The autoplayer used to hardcode "earth", which made it a bad proxy on exactly
+// the maps that matter: blightmarsh resists earth at 0.5 by design, so the
+// harness was measuring a player deliberately bringing the wrong element and
+// reporting the map as too hard. A real player reads the dossier and brings the
+// counter, so the measuring instrument has to as well.
+std::string bestElementFor(const content::Registry& reg, const content::MapDef& m) {
+    std::string best;
+    float bestScore = -1.0f;
+    for (const auto& [id, edef] : reg.elements()) {
+        float total = 0.0f;
+        int n = 0;
+        for (const auto& p : m.recipe.pool) {
+            if (!reg.hasEnemy(p.enemyId)) continue;
+            total += reg.enemy(p.enemyId).resistTo(edef.damageType);
+            ++n;
+        }
+        // Bosses count too: they are the wall the map builds to.
+        for (const auto& b : m.recipe.bosses) {
+            if (!reg.hasEnemy(b.enemyId)) continue;
+            total += reg.enemy(b.enemyId).resistTo(edef.damageType);
+            ++n;
+        }
+        const float score = n > 0 ? total / static_cast<float>(n) : 1.0f;
+        // Ties broken by id, so the choice is deterministic across runs.
+        if (score > bestScore || (score == bestScore && id < best)) {
+            bestScore = score;
+            best = id;
+        }
+    }
+    return best.empty() ? "earth" : best;
 }
 
 }  // namespace td::sim

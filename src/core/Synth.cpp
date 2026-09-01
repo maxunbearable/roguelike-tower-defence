@@ -89,6 +89,37 @@ Pcm thud(float seconds, float toneHz, const Envelope& env, float gain, uint32_t 
     return out;
 }
 
+Pcm tone(float seconds, float hz, Wave shape, const Envelope& env, float gain) {
+    const int n = std::max(1, static_cast<int>(seconds * kSampleRate));
+    Pcm out(static_cast<size_t>(n));
+    const float step = hz / static_cast<float>(kSampleRate);
+    float phase = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        float v = 0.0f;
+        switch (shape) {
+            case Wave::Sine: v = std::sin(phase * 2.0f * 3.14159265f); break;
+            case Wave::Triangle: v = 4.0f * std::fabs(phase - 0.5f) - 1.0f; break;
+            case Wave::Saw: v = 2.0f * phase - 1.0f; break;
+            case Wave::Square: v = phase < 0.5f ? 1.0f : -1.0f; break;
+        }
+        const float t = static_cast<float>(i) / static_cast<float>(kSampleRate);
+        out[static_cast<size_t>(i)] = clamp16(v * envelopeAt(env, t, seconds) * gain * 9000.0f);
+        phase += step;
+        if (phase >= 1.0f) phase -= 1.0f;
+    }
+    return out;
+}
+
+void overlay(Pcm& dest, const Pcm& src, size_t offset) {
+    if (dest.size() < offset + src.size()) dest.resize(offset + src.size(), 0);
+    for (size_t i = 0; i < src.size(); ++i) {
+        // Summed as int then clamped, so layering four voices cannot wrap round
+        // into a click.
+        dest[offset + i] = clamp16(static_cast<float>(static_cast<int>(dest[offset + i]) +
+                                                      static_cast<int>(src[i])));
+    }
+}
+
 Pcm mix(const Pcm& a, const Pcm& b) {
     Pcm out(std::max(a.size(), b.size()), 0);
     for (size_t i = 0; i < out.size(); ++i) {

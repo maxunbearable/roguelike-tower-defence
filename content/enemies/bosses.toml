@@ -121,7 +121,7 @@ bounty = 153
 shardValue = 12
 flying = false
 boss = true
-resist = { piercing = 0.7, fire = 0.8, frost = 0.8, earth = 0.8, shock = 0.8 }
+resist = { piercing = 0.85, fire = 0.9, frost = 0.9, earth = 0.9, shock = 0.9 }
 
 [[enemy]]
 id = "boss_gate_warden"
@@ -133,4 +133,4 @@ bounty = 378
 shardValue = 30
 flying = false
 boss = true
-resist = { piercing = 0.65, fire = 0.75, frost = 0.75, earth = 0.75, shock = 0.75, siege = 1.15 }
+resist = { piercing = 0.82, fire = 0.88, frost = 0.88, earth = 0.88, shock = 0.88, siege = 1.2 }

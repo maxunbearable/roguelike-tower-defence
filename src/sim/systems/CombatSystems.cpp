@@ -265,7 +265,14 @@ void runProjectileSystem(World& w, float dt) {
                     // Recorded so on-kill effects fire the KILLER's element.
                     r.emplace_or_replace<LastHitBy>(ee, pr.source);
                     r.emplace_or_replace<HitFlash>(ee, 0.08f);
-                    w.emit({VisualEvent::Kind::Hit, epos.v, pr.dir, dealt, pr.crit, {}});
+                    // The tag carries the damage TYPE, and the sign of `value`
+                    // is never used for anything, so resistance direction rides
+                    // along as a suffix: the renderer needs to know whether this
+                    // hit was resisted to draw it dimmer.
+                    w.emit({VisualEvent::Kind::Hit, epos.v, pr.dir, dealt, pr.crit,
+                            pr.damageType + (resist < 0.95f    ? "-"
+                                             : resist > 1.05f  ? "+"
+                                                               : "")});
                     // Tower traits fire off the landed hit, so they scale with
                     // whatever the tower and its element already did.
                     if (const auto* sp = r.try_get<Splash>(pr.source);

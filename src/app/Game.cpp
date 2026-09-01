@@ -96,7 +96,17 @@ void Game::reloadSlots() {
     for (int i = 0; i < core::kSlotCount; ++i) slots_.push_back(core::loadSlot(i));
 }
 
-core::SaveSlot& Game::active() { return slots_[static_cast<size_t>(activeSlot_)]; }
+core::SaveSlot& Game::active() {
+    // With no slot selected this used to index slots_[static_cast<size_t>(-1)],
+    // i.e. slots_[SIZE_MAX] -- undefined behaviour. Reachable from the dev
+    // capture paths, which start a run without choosing a profile. A detached
+    // scratch slot keeps callers honest without every one of them branching.
+    if (activeSlot_ < 0 || activeSlot_ >= static_cast<int>(slots_.size())) {
+        static core::SaveSlot scratch;
+        return scratch;
+    }
+    return slots_[static_cast<size_t>(activeSlot_)];
+}
 
 // The permanent half of a run's power: which skill nodes the profile owns.
 core::Loadout Game::metaLoadout() const {
@@ -132,6 +142,8 @@ void Game::beginRun(bool resume, const std::string& mapId) {
     screen_ = Screen::Playing;
     accumulator_ = 0.0f;
     hud_ = ui::HudState{};
+    jukebox_.setVolume(slot.meta.musicVolume);
+    sfx_.setVolume(slot.meta.sfxVolume);
     closeMenu();
 }
 
@@ -579,10 +591,46 @@ void Game::handleBuildInput() {
 }
 
 void Game::updatePlaying(float frameDt) {
+    if (IsKeyPressed(KEY_P) || (hud_.paused && IsKeyPressed(KEY_ESCAPE))) {
+        hud_.paused = !hud_.paused;
+    }
+
+    // The pause overlay owns the cursor while it is up: without this, clicking
+    // RESUME would also place a tower on the tile underneath it.
+    if (hud_.paused) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            const auto act = ui::pauseHitTest(mouseVirtual());
+            switch (act.kind) {
+                // Sliders respond to HELD, not pressed, so they can be dragged.
+                case ui::PauseAction::Kind::SetMusic:
+                    active().meta.musicVolume = act.value;
+                    jukebox_.setVolume(act.value);
+                    break;
+                case ui::PauseAction::Kind::SetSfx:
+                    active().meta.sfxVolume = act.value;
+                    sfx_.setVolume(act.value);
+                    break;
+                default: break;
+            }
+        }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            const auto act = ui::pauseHitTest(mouseVirtual());
+            if (act.kind == ui::PauseAction::Kind::Resume) {
+                hud_.paused = false;
+            } else if (act.kind == ui::PauseAction::Kind::Quit) {
+                hud_.paused = false;
+                persist();  // volumes and the autosaved run
+                reloadSlots();
+                screen_ = Screen::Hub;
+                return;
+            }
+        }
+        return;  // frozen: no simulation, no build input
+    }
+
     handleBuildInput();
     if (IsKeyPressed(KEY_SPACE)) world_->startNextWave();
     if (IsKeyPressed(KEY_F)) hud_.speedIndex = (hud_.speedIndex + 1) % 3;
-    if (IsKeyPressed(KEY_P)) hud_.paused = !hud_.paused;
 
     const float scaled = hud_.paused ? 0.0f : frameDt * kSpeeds[hud_.speedIndex];
     accumulator_ += scaled;
@@ -678,6 +726,10 @@ void Game::renderCanvas(float alpha) {
             menu_.draw(renderer_.atlas(), mouseVirtual(), world_->gold());
             ui::drawHud(renderer_.atlas(), *world_, hud_, mouseVirtual());
             drawHoveredEnemy();
+            if (hud_.paused) {
+                ui::drawPause(renderer_.atlas(), active().meta.musicVolume,
+                              active().meta.sfxVolume, mouseVirtual());
+            }
             break;
         }
         case Screen::Results:
@@ -705,6 +757,12 @@ void Game::renderCanvas(float alpha) {
 }
 
 void Game::frame(float frameDt) {
+    // A run gets the battle track; every menu gets the hub track. Results keeps
+    // the battle track, because the run has only just ended.
+    const bool inRun = screen_ == Screen::Playing || screen_ == Screen::Results;
+    jukebox_.setTrack(inRun ? core::Track::Battle : core::Track::Hub);
+    jukebox_.update(frameDt);
+
     switch (screen_) {
         case Screen::Slots: updateSlots(); break;
         case Screen::Hub: updateHub(); break;

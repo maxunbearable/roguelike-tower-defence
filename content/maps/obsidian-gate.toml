@@ -32,14 +32,14 @@ path = [[0,5],[3,5],[3,1],[8,1],[8,8],[13,8],[13,1],[18,1],[18,6],[21,6]]
 
 [waves]
 count = 50
-countBase = 12
-countPerWave = 0.52
+countBase = 10
+countPerWave = 0.44
 intervalBase = 0.82
 intervalDecay = 0.985
 intervalMin = 0.30
-hpPerWave = 1.065
-hpCurveExp = 1.22
-armorPerWave = 0.17
+hpPerWave = 1.0411
+hpCurveExp = 1.1
+armorPerWave = 0.1
 bountyPerWave = 1.02
 secondaryFromWave = 4
 secondaryFraction = 0.6

@@ -70,6 +70,33 @@ TEST_CASE("even a fully upgraded profile is tested by the late waves", "[balance
     REQUIRE(r.wavesSurvived < 50);   // but mastery, not shopping, clears the map
 }
 
+TEST_CASE("the endgame is actually reachable, on every map", "[balance]") {
+    // THE guardrail whose absence let the game ship unwinnable through three
+    // passes. The curve was hpPerWave ^ (wave ^ 1.18) -- an exponential of a
+    // power -- so enemy health multiplied 7x between wave 34 and wave 50 while
+    // the player, already fully built, gained nothing. A profile owning all 126
+    // nodes died at wave 34 of 50, which made maps 2-5 and 8 of the 10 bosses
+    // unreachable content.
+    //
+    // The autoplayer only builds arrow towers, so it is a LOWER bound on what a
+    // real player can field. If it can get within a few waves of the end, a
+    // human choosing cannon or ballista and matching elements to the map's
+    // weakness can finish.
+    const auto reg = loadReg();
+    for (const auto& [mapId, def] : reg.maps()) {
+        const auto r = sim::autoPlay(reg, def, fullyUpgraded(), 1);
+        // 76% of the map. The broken state had a fully-upgraded profile dying at
+        // 68% (wave 34 of 50) on the EASIEST map, so this catches any drift back
+        // toward that wall. It deliberately does not demand a clear: the
+        // autoplayer builds only arrow towers, so it is a lower bound on a real
+        // player who has five tower types and can match a spec to the map.
+        const int target = static_cast<int>(def.recipe.count * 0.76);
+        UNSCOPED_INFO(mapId << ": fully upgraded reached wave " << r.wavesSurvived << " of "
+                            << def.recipe.count << ", needs " << target);
+        REQUIRE(r.wavesSurvived >= target);
+    }
+}
+
 TEST_CASE("the meta progression outlasts a single run", "[balance]") {
     // A run once paid for the entire tree several times over, which ended the
     // progression before it began.
@@ -98,8 +125,15 @@ TEST_CASE("the difficulty curve is gentle early and steep late", "[balance]") {
     const float w15 = waves[14].groups[0].hpMult;
     const float w50 = waves[49].groups[0].hpMult;
 
-    REQUIRE(w5 < 1.6f);    // the opening barely scales at all
-    REQUIRE(w50 > 50.0f);  // the ending is a different game
+    REQUIRE(w5 < 1.6f);  // the opening barely scales at all
+
+    // The SHAPE, not an absolute. This used to assert `w50 > 50`, which pinned
+    // the old super-exponential curve in place: enemy health multiplied 197x by
+    // wave 50 while the player's damage plateaued around wave 34, so the map was
+    // unwinnable and this test was defending that. An upper bound now guards the
+    // opposite failure -- a tail that outruns anything the player can build.
+    REQUIRE(w50 > 12.0f);   // the ending is still a different game
+    REQUIRE(w50 < 60.0f);   // but it is a wall a full board can break
     // Later growth must outpace earlier growth, which is what "bent" means.
     REQUIRE((w50 / w15) > (w15 / w5));
 }

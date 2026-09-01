@@ -120,6 +120,8 @@ void Sfx::unload() {
     loaded_ = false;
 }
 
+void Sfx::setVolume(float v) { master_ = std::clamp(v, 0.0f, 1.0f); }
+
 void Sfx::play(Cue cue, float pitchJitter, float volume) {
     if (!loaded_ || muted_) return;
     const auto it = cues_.find(cue);
@@ -134,7 +136,7 @@ void Sfx::play(Cue cue, float pitchJitter, float volume) {
     seed = seed * 1664525u + 1013904223u;
     const float r = static_cast<float>((seed >> 8) & 0xFFFF) / 65535.0f * 2.0f - 1.0f;
     SetSoundPitch(s, 1.0f + r * pitchJitter);
-    SetSoundVolume(s, std::clamp(volume, 0.0f, 1.0f));
+    SetSoundVolume(s, std::clamp(volume, 0.0f, 1.0f) * master_);
     PlaySound(s);
 }
 

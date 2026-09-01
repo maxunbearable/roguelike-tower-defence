@@ -20,6 +20,8 @@ std::string toJson(const SaveSlot& slot) {
     j["meta"]["bestWave"] = slot.meta.bestWave;
     j["meta"]["ownedNodes"] = std::vector<std::string>(slot.meta.ownedNodes.begin(),
                                                        slot.meta.ownedNodes.end());
+    j["meta"]["musicVolume"] = slot.meta.musicVolume;
+    j["meta"]["sfxVolume"] = slot.meta.sfxVolume;
     for (const auto& [mapId, p] : slot.meta.mapProgress) {
         j["meta"]["mapProgress"][mapId] = {{"bestWave", p.bestWave}, {"cleared", p.cleared}};
     }
@@ -76,6 +78,8 @@ SaveSlot fromJson(const std::string& text) {
         s.meta.shards = m.value("shards", 0);
         s.meta.runsPlayed = m.value("runsPlayed", 0);
         s.meta.bestWave = m.value("bestWave", 0);
+        s.meta.musicVolume = m.value("musicVolume", 0.5f);
+        s.meta.sfxVolume = m.value("sfxVolume", 0.85f);
         // Absent in a version-1 save, which must still load: a format change
         // must never cost a player their profile.
         if (m.contains("mapProgress")) {

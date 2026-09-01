@@ -10,6 +10,7 @@
 #include "render/Renderer.h"
 #include "render/PostFx.h"
 #include "audio/Sfx.h"
+#include "audio/Jukebox.h"
 #include "core/SaveGame.h"
 #include "core/SaveIO.h"
 #include "ui/Hud.h"
@@ -33,6 +34,7 @@ public:
         renderer_.load(*registry_);
         sfx_.load();
         postfx_.load(std::filesystem::path(TD_ASSET_DIR) / "shaders");
+        jukebox_.load();
     }
 
     void frame(float frameDt);  // update + render one frame, including blit
@@ -58,6 +60,8 @@ public:
             }
         }
     }
+
+    void devPause() { hud_.paused = true; }
 
     void devJumpToWave(int wave) {
         if (world_) world_->devSetWave(wave);
@@ -113,6 +117,7 @@ private:
     render::Renderer renderer_;
     render::PostFx postfx_;
     audio::Sfx sfx_;
+    audio::Jukebox jukebox_;
     std::unique_ptr<sim::World> world_;
 
     Screen screen_ = Screen::Slots;

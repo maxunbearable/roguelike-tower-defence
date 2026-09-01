@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
     const char* forceMap = nullptr;
     int jumpWave = 0;
     int cluster = 0;
+    bool pauseIt = false;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--shot") == 0 && i + 1 < argc) shotPath = argv[++i];
         else if (std::strcmp(argv[i], "--after") == 0 && i + 1 < argc)
@@ -70,6 +71,8 @@ int main(int argc, char** argv) {
                 menuY = std::atoi(argv[++i]);
             }
         }
+        else if (std::strcmp(argv[i], "--pause") == 0)
+            pauseIt = true;
         else if (std::strcmp(argv[i], "--cluster") == 0 && i + 1 < argc)
             cluster = std::atoi(argv[++i]);
         else if (std::strcmp(argv[i], "--wave") == 0 && i + 1 < argc)
@@ -107,6 +110,7 @@ int main(int argc, char** argv) {
         game.requestStart(/*demoTowers=*/true, forceMap ? forceMap : "");
         if (cluster > 0) game.devCluster(cluster);
         if (jumpWave > 0) game.devJumpToWave(jumpWave);
+        if (pauseIt) game.devPause();
     }
     if (hub) { game.openHub(0); game.devSetHubTab(hubTab); }
     if (artCompare) game.showArtCompare();

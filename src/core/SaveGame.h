@@ -52,6 +52,10 @@ struct MetaSave {
     // a map and not a vector: adding or reordering maps must not shift anyone's
     // recorded progress.
     std::map<std::string, MapProgress> mapProgress;
+    // Audio preferences. Stored per profile because that is the only persistent
+    // thing the game has; there is no separate settings file.
+    float musicVolume = 0.5f;
+    float sfxVolume = 0.85f;
 };
 
 // A map is playable when it is the first, or when the one before it in `order`

@@ -28,6 +28,18 @@ Pcm noise(float seconds, const Envelope& env, float gain = 1.0f, uint32_t seed =
 // Noise whose brightness falls over time, which is what an impact sounds like.
 Pcm thud(float seconds, float toneHz, const Envelope& env, float gain = 1.0f, uint32_t seed = 1);
 
+// Waveform for sustained tones. The existing square is right for a blip and
+// far too harsh to hold a chord for four bars, which is what music needs.
+enum class Wave { Sine, Triangle, Saw, Square };
+
+// A steady tone. Unlike `square` this does not sweep -- music wants pitch to
+// stay put.
+Pcm tone(float seconds, float hz, Wave shape, const Envelope& env, float gain = 1.0f);
+
+// Adds `src` into `dest` starting at `offset` samples, growing `dest` if needed.
+// This is how notes are sequenced onto a timeline rather than concatenated.
+void overlay(Pcm& dest, const Pcm& src, size_t offset);
+
 Pcm mix(const Pcm& a, const Pcm& b);
 Pcm concat(const std::vector<Pcm>& parts);
 

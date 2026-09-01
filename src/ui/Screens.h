@@ -62,6 +62,20 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
               const core::SaveSlot& slot, core::Vec2 mouse);
 MapAction mapHitTest(const content::Registry& reg, const core::SaveSlot& slot, core::Vec2 mouse);
 
+// --- pause overlay --------------------------------------------------------
+
+struct PauseAction {
+    enum class Kind { None, Resume, Quit, SetMusic, SetSfx };
+    Kind kind = Kind::None;
+    float value = 0.0f;  // for the slider kinds, 0..1
+};
+
+// `P` used to toggle a flag and draw the word PAUSED. There was no way to change
+// volume and no way out of a run except a small icon in the HUD band.
+void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol,
+               core::Vec2 mouse);
+PauseAction pauseHitTest(core::Vec2 mouse);
+
 // --- run results ----------------------------------------------------------
 
 void drawResults(const render::SpriteAtlas& atlas, const sim::World& w,

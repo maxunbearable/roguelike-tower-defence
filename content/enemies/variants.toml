@@ -176,50 +176,50 @@ resist = { earth = 0.675, piercing = 0.7, shock = 1.35 }
 id = "obsidian_slime"
 name = "Obsidian Slime"
 maxHp = 40.0
-armor = 3.0
+armor = 1.0
 speed = 1.6
 bounty = 8
 shardValue = 0
 flying = false
 sprite = "slime"
 tint = [168, 158, 190]
-resist = { earth = 0.85, fire = 0.85, frost = 0.85, piercing = 0.8, shock = 0.85 }
+resist = { earth = 0.92, fire = 0.92, frost = 0.92, piercing = 0.9, shock = 0.92 }
 
 [[enemy]]
 id = "obsidian_wolf"
 name = "Obsidian Wolf"
 maxHp = 55.0
-armor = 3.0
+armor = 1.0
 speed = 2.4
 bounty = 10
 shardValue = 0
 flying = false
 sprite = "wolf"
 tint = [168, 158, 190]
-resist = { earth = 0.85, fire = 0.85, frost = 0.85, piercing = 0.8, shock = 0.85 }
+resist = { earth = 0.92, fire = 0.92, frost = 0.92, piercing = 0.9, shock = 0.92 }
 
 [[enemy]]
 id = "obsidian_goblin"
 name = "Obsidian Goblin"
 maxHp = 160.0
-armor = 9.0
+armor = 7.0
 speed = 1.3
 bounty = 18
 shardValue = 1
 flying = false
 sprite = "goblin"
 tint = [168, 158, 190]
-resist = { earth = 0.51, fire = 0.85, frost = 0.85, piercing = 0.92, shock = 0.85 }
+resist = { earth = 0.51, fire = 0.92, frost = 0.92, piercing = 0.92, shock = 0.92 }
 
 [[enemy]]
 id = "obsidian_wraith"
 name = "Obsidian Wraith"
 maxHp = 34.0
-armor = 5.0
+armor = 3.0
 speed = 3.2
 bounty = 14
 shardValue = 1
 flying = false
 sprite = "wraith"
 tint = [168, 158, 190]
-resist = { earth = 1.147, fire = 0.85, frost = 0.85, piercing = 0.56, shock = 0.85 }
+resist = { earth = 1.147, fire = 0.92, frost = 0.92, piercing = 0.56, shock = 0.92 }

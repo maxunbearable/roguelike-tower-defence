@@ -34,12 +34,12 @@ path = [[0,2],[9,2],[9,5],[3,5],[3,8],[15,8],[15,4],[20,4],[20,9],[21,9]]
 [waves]
 count = 50
 countBase = 8          # wave 1 sends 8
-countPerWave = 0.40    # gentler early ramp
+countPerWave = 0.4    # gentler early ramp
 intervalBase = 0.9
 intervalDecay = 0.985  # spawns tighten as waves go on
 intervalMin = 0.30
-hpPerWave = 1.055
-hpCurveExp = 1.18  # bends the curve: gentle opening, brutal late game
+hpPerWave = 1.0467
+hpCurveExp = 1.1  # gentle opening, steep middle, and a tail the player can still match
 armorPerWave = 0.11
 bountyPerWave = 1.02
 secondaryFromWave = 5  # waves become mixed from here

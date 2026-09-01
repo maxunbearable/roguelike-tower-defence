@@ -46,6 +46,7 @@ skill trees that persist across runs.
 | Enemies | 30 definitions, with per-damage-type resistance tables |
 | Skill trees | 12, 126 nodes |
 | Damage types | 11 |
+| Music | 2 procedurally composed loops, no audio assets |
 
 Each map's roster resists a different element and is vulnerable to another, which
 is what makes five maps replayable rather than one map five times.
@@ -59,6 +60,8 @@ is what makes five maps replayable rather than one map five times.
 | Map select | Boss fight |
 |---|---|
 | ![Map select](docs/screenshots/04-map-select.png) | ![Boss](docs/screenshots/05-boss.png) |
+
+![Pause](docs/screenshots/06-pause.png)
 
 ## Architecture
 
@@ -85,6 +88,15 @@ itself constantly:
   spec measuring 79% against a row median of 23%.
 - Balance is driven by `tools/balance.py`: authored base stats plus named
   multiplier profiles, so tuning is idempotent, reversible and auditable.
+- A **reachability guardrail** asserts a fully-upgraded profile gets at least 76%
+  of the way through *every* map. The game shipped mathematically unwinnable for
+  three passes — the HP curve was `1.055 ^ (wave^1.18)`, so health multiplied 7×
+  between wave 34 and wave 50 while the player, already fully built, gained
+  nothing. This test exists so that cannot recur silently.
+- Per-map difficulty is **normalised against path length** in `tools/make_map.py`.
+  Damage dealt is proportional to how long enemies are under fire, and the five
+  routes span 38 to 68 tiles; before normalising, two maps were ~2× harder than
+  the rest.
 
 Other load-bearing decisions:
 
@@ -92,6 +104,9 @@ Other load-bearing decisions:
   `rand()` is prohibited; the RNG state is serialised into saves, so resuming a
   run continues the same random sequence.
 - **Fixed 1/60s timestep** with an accumulator, and render interpolation.
+- **Music is generated, not licensed.** `core::Music` composes two minor-key
+  loops from the same raylib-free synthesiser the sound effects use, wraps the PCM
+  in a WAV header in memory, and streams it. Nothing on disk, nothing to license.
 - **Content is data.** Towers, elements, enemies, maps, wave recipes and skill
   trees are all TOML. A new element is one TOML file, one tree, one behaviour
   file, and one line in a dispatch table.
@@ -113,10 +128,11 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 179 tests
+ctest --test-dir build          # 187 tests
 ```
 
-The suite takes a couple of minutes, dominated by the 270-combination matrix.
+The suite takes several minutes, dominated by the 270-combination matrix and
+the five full-map autoplay runs.
 
 ### Useful dev flags
 
@@ -126,6 +142,8 @@ The suite takes a couple of minutes, dominated by the 270-combination matrix.
 ./build/td_app --wave 24                # jump to a wave (boss fights)
 ./build/td_app --hub --tab 3            # a specific skill tree
 ./build/td_app --maps                   # map select
+./build/td_app --pause                  # open the pause overlay
+./build/td_app --cluster 9              # a dense block of towers
 ./build/td_app --shot out.png --after 8 # render N seconds then screenshot
 ```
 
@@ -168,14 +186,20 @@ source contradicted what search results claimed.
 Playable end to end: profile select → skill trees → map select → 50-wave run with
 bosses → results → spend shards → repeat.
 
+The whole campaign is reachable: the difficulty curve used to be
+super-exponential and made maps 2–5 unreachable content. That is fixed and pinned
+by a test — a fully-upgraded profile now gets 76%+ of the way through every map
+using only arrow towers, which is a lower bound on a real player with five tower
+types.
+
 Known gaps, honestly:
 
-- **The late difficulty curve is too steep.** A profile owning all 126 skill
-  nodes reaches roughly wave 34 of 50 and does not clear map 1, which means maps
-  2–5 and 8 of the 10 bosses are effectively unreachable. This is the next thing
-  to fix.
-- No music, no tutorial, no settings screen.
+- **No tutorial.** A new player is told what each button does, but not the shape
+  of the game.
+- The simulated player only builds arrow towers, and its element choice is
+  resistance-aware but not synergy-aware, so its difficulty readings are a
+  conservative lower bound rather than a picture of good play.
 - Element overlays are per element rather than per specialisation (earth's three
-  are bespoke; the rest share one per element).
-- The simulated player only builds arrow towers, so its difficulty readings
-  understate what a real player can field.
+  are bespoke; the other five share one per element).
+- The monster pack in the asset policy is imported for nothing yet — `EnemyDef`
+  has a `flying` flag that no enemy uses.

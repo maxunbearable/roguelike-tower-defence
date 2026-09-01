@@ -545,6 +545,86 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
 }
 
 // ==========================================================================
+// Pause overlay
+// ==========================================================================
+
+namespace {
+constexpr int kPauseW = 420, kPauseH = 328;
+int pauseX() { return (kVirtualW - kPauseW) / 2; }
+int pauseY() { return (kPlayH - kPauseH) / 2; }
+constexpr int kSliderH = 14;
+int sliderX() { return pauseX() + 40; }
+int sliderW() { return kPauseW - 80; }
+int musicY() { return pauseY() + 110; }
+int sfxY() { return pauseY() + 166; }
+constexpr int kPauseBtnH = 40;
+int resumeY() { return pauseY() + 210; }
+int quitY() { return pauseY() + 254; }
+
+// A slider's value comes from where in the track the cursor is.
+float valueAt(core::Vec2 m) {
+    return std::clamp((static_cast<float>(m.x) - static_cast<float>(sliderX())) /
+                          static_cast<float>(sliderW()),
+                      0.0f, 1.0f);
+}
+// Generous vertically: a 14px track is hard to hit precisely mid-game.
+bool onSlider(core::Vec2 m, int y) {
+    return m.x >= sliderX() - 8 && m.x <= sliderX() + sliderW() + 8 && m.y >= y - 10 &&
+           m.y <= y + kSliderH + 10;
+}
+}  // namespace
+
+PauseAction pauseHitTest(core::Vec2 m) {
+    if (onSlider(m, musicY())) return {PauseAction::Kind::SetMusic, valueAt(m)};
+    if (onSlider(m, sfxY())) return {PauseAction::Kind::SetSfx, valueAt(m)};
+    if (inRect(m, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH)) {
+        return {PauseAction::Kind::Resume};
+    }
+    if (inRect(m, pauseX() + 40, quitY(), kPauseW - 80, kPauseBtnH)) {
+        return {PauseAction::Kind::Quit};
+    }
+    return {};
+}
+
+void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol,
+               core::Vec2 mouse) {
+    DrawRectangle(0, 0, kVirtualW, kPlayH, Color{14, 12, 20, 170});
+    const auto hit = pauseHitTest(mouse);
+
+    panel(atlas, pauseX(), pauseY(), kPauseW, kPauseH);
+    ribbon(atlas, "ui_ribbon", pauseX() + 60, pauseY() + 20, kPauseW - 120);
+    centredIn("PAUSED", kVirtualW / 2, pauseY() + 28, 20, kInk);
+
+    const auto slider = [&](const char* label, float v, int y, bool hot) {
+        DrawText(label, sliderX(), y - 16, 10, kInkDim);
+        const char* pctText = TextFormat("%d%%", static_cast<int>(v * 100.0f + 0.5f));
+        DrawText(pctText, sliderX() + sliderW() - MeasureText(pctText, 10), y - 16, 10, kInk);
+        DrawRectangle(sliderX(), y, sliderW(), kSliderH, Color{150, 128, 104, 220});
+        DrawRectangle(sliderX(), y, static_cast<int>(sliderW() * v), kSliderH,
+                      hot ? Color{132, 178, 108, 255} : Color{104, 150, 90, 255});
+        DrawRectangleLines(sliderX(), y, sliderW(), kSliderH, kInk);
+        // The knob, so it reads as draggable rather than as a progress bar.
+        const int kx = sliderX() + static_cast<int>(sliderW() * v);
+        DrawRectangle(kx - 3, y - 4, 7, kSliderH + 8, Color{242, 232, 210, 255});
+        DrawRectangleLines(kx - 3, y - 4, 7, kSliderH + 8, kInk);
+    };
+    slider("MUSIC", musicVol, musicY(), hit.kind == PauseAction::Kind::SetMusic);
+    slider("SOUND", sfxVol, sfxY(), hit.kind == PauseAction::Kind::SetSfx);
+
+    button(atlas, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH,
+           hit.kind == PauseAction::Kind::Resume, false);
+    centredIn("RESUME", kVirtualW / 2, resumeY() + 14, 20, kInk);
+
+    button(atlas, pauseX() + 40, quitY(), kPauseW - 80, kPauseBtnH,
+           hit.kind == PauseAction::Kind::Quit, /*on=*/true);
+    centredIn("QUIT TO SKILL TREES", kVirtualW / 2, quitY() + 15, 10, kInk);
+
+    // Below the quit button, not on top of it: at kPauseH 300 this overlapped.
+    centredIn("the run autosaves at every build phase", kVirtualW / 2,
+              quitY() + kPauseBtnH + 12, 10, kInkDim);
+}
+
+// ==========================================================================
 // Results
 // ==========================================================================
 

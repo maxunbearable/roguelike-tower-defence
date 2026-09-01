@@ -32,6 +32,10 @@ private:
         float life = 0.0f, maxLife = 1.0f;
         int value = 0;
         bool crit = false;
+        // Tinted by damage type, so "my earth tower does nothing here" is
+        // learnable in the moment rather than three waves later.
+        Color color{245, 245, 235, 255};
+        int mark = 0;  // -1 resisted, +1 vulnerable, 0 neutral
     };
     struct Ring {
         core::Vec2 pos;
