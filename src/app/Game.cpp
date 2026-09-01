@@ -1,5 +1,7 @@
 #include "app/Game.h"
 
+#include "sim/Tutorial.h"
+
 #include <cstdio>
 
 #include "raylib.h"
@@ -44,8 +46,39 @@ void Game::hintOnce(const char* id, const std::string& text) {
 // A wave used to begin in silence: the only sign was a counter ticking over in
 // the corner. Bosses arrived the same way as trash. Announcing them is the
 // cheapest structural feedback in the game.
+bool Game::tutorialActive() const {
+    return sim::tutorialFromIndex(activeConst().meta.tutorialStep) != sim::TutorialStep::Done;
+}
+
+void Game::updateTutorial() {
+    if (!world_ || !tutorialActive()) return;
+    auto& step = active().meta.tutorialStep;
+    const auto current = sim::tutorialFromIndex(step);
+
+    // The menu being open ON A TOWER is the one thing the simulation cannot see.
+    const bool menuOnTower =
+        menu_.isOpen() && selX_ >= 0 && world_->towerAt(selX_, selY_) != entt::null;
+
+    if (sim::tutorialSatisfied(current, *world_, menuOnTower)) {
+        step = sim::tutorialToIndex(sim::tutorialNext(current));
+        sfx_.play(audio::Cue::Buy, 0.02f, 0.7f);
+        // Advance through anything the player has ALREADY done -- someone who
+        // levelled a tower before being asked to should not be told to do it.
+        int guard = 0;
+        while (guard++ < 8) {
+            const auto next = sim::tutorialFromIndex(step);
+            if (next == sim::TutorialStep::Done) break;
+            if (!sim::tutorialSatisfied(next, *world_, menuOnTower)) break;
+            step = sim::tutorialToIndex(sim::tutorialNext(next));
+        }
+    }
+}
+
 void Game::announceWaves() {
     if (!world_) return;
+    // One voice at a time. The tutorial and the wave announcer share the bottom
+    // of the screen, and the tutorial is mid-sentence.
+    if (tutorialActive()) return;
     const int wi = world_->waveIndex();
     if (wi == announcedWave_ || world_->phase() != sim::Phase::Wave) return;
     announcedWave_ = wi;
@@ -66,6 +99,9 @@ void Game::announceWaves() {
 
 void Game::updateHints() {
     if (!world_) return;
+    // The tutorial owns the player's attention while it is running; two
+    // instruction systems at once is worse than either alone.
+    if (tutorialActive()) return;
     const bool building = world_->phase() == sim::Phase::Build;
 
     if (world_->towerCount() == 0) {
@@ -786,7 +822,21 @@ void Game::updatePlaying(float frameDt) {
     }
 
     announceWaves();
+    updateTutorial();
     updateHints();
+
+    // The tutorial's SKIP button owns its own rectangle, so clicking it never
+    // also builds a tower underneath.
+    if (tutorialActive() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        const auto m = mouseVirtual();
+        if (m.x >= tutorialBox_.skipX && m.x < tutorialBox_.skipX + tutorialBox_.skipW &&
+            m.y >= tutorialBox_.skipY && m.y < tutorialBox_.skipY + tutorialBox_.skipH) {
+            active().meta.tutorialStep = sim::tutorialToIndex(sim::TutorialStep::Done);
+            persist();
+            sfx_.play(audio::Cue::Click, 0.02f, 0.5f);
+            return;
+        }
+    }
 
     // Abilities. Q and W arm; the next click on the board casts. Escape or a
     // right-click disarms, so an armed ability is never a trap.
@@ -916,6 +966,12 @@ void Game::renderCanvas(float alpha) {
             menu_.draw(renderer_.atlas(), mouseVirtual(), world_->gold());
             ui::drawHud(renderer_.atlas(), *world_, hud_, mouseVirtual());
             drawHoveredEnemy();
+            if (tutorialActive()) {
+                const auto pr = sim::tutorialPrompt(
+                    sim::tutorialFromIndex(activeConst().meta.tutorialStep));
+                tutorialBox_ = ui::drawTutorial(renderer_.atlas(), pr.title, pr.body,
+                                                mouseVirtual());
+            }
             if (hud_.menuOpen) {
                 ui::drawPause(renderer_.atlas(), active().meta.musicVolume,
                               active().meta.sfxVolume, mouseVirtual());

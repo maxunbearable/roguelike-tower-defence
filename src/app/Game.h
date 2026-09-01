@@ -109,6 +109,9 @@ private:
     void startRun(int goldOverride = -1);
     void reloadSlots();
     core::SaveSlot& active();
+    const core::SaveSlot& activeConst() const {
+        return const_cast<Game*>(this)->active();
+    }
     core::Loadout metaLoadout() const;
     void persist();
     void beginRun(bool resume, const std::string& mapId = {});
@@ -147,6 +150,10 @@ private:
     void hintOnce(const char* id, const std::string& text);
     void updateHints();
     void announceWaves();
+    // Advances the guided first run when the player has actually done the step,
+    // and returns the SKIP rectangle so the click handler can find it.
+    void updateTutorial();
+    bool tutorialActive() const;
 
     const content::Registry* registry_;
     render::PixelCanvas canvas_;
@@ -173,6 +180,7 @@ private:
     ui::RadialMenu menu_;
     MenuPage menuPage_ = MenuPage::Root;
     int announcedWave_ = -1;
+    ui::TutorialBox tutorialBox_{};
     float accumulator_ = 0.0f;
     int hoverX_ = -1;
     int hoverY_ = -1;

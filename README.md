@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 231 tests
+ctest --test-dir build          # 240 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -221,6 +221,16 @@ See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
 
+## Learning the game
+
+A guided first run, on Greenfields, in an ordinary run that counts — not a
+separate sandbox. Five steps, each gated on the player actually performing the
+action rather than on a timer or a "click to continue": build, send the wave,
+open a tower, spend gold, use an ability. It advances past anything you have
+already done, so it never asks you to do something twice, and it is skippable at
+any point. Most people who quit a game quit inside ten minutes, which makes this
+the highest-leverage part of the product.
+
 ## Abilities
 
 Two, free and on cooldowns rather than costing gold: **Strike** (Q), an immediate
@@ -294,9 +304,9 @@ rather than a wait.
 
 Known gaps, honestly:
 
-- **The tutorial is five one-shot hints, not a tutorial.** They cover building,
-  targeting, specialising, calling early and pausing, which is the shape of the
-  game — but nothing walks a new player through a first run.
+- The tutorial does not yet **point at** anything — it names the button but does
+  not highlight it, and the onboarding research asks for clear visual cues. Text
+  alone is weaker than text plus a highlight.
 - The simulated player only builds arrow towers, and its element choice is
   resistance-aware but not synergy-aware, so its difficulty readings are a
   conservative lower bound rather than a picture of good play.

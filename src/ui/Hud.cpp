@@ -400,6 +400,27 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
 
 }
 
+TutorialBox drawTutorial(const render::SpriteAtlas& atlas, const char* title, const char* body,
+                         core::Vec2 mouse) {
+    const int bw = std::max(MeasureText(body, 10) + 190, 520);
+    const int bh = 62;
+    // Bottom of the play field, not the top: on these maps the route runs along
+    // the top row, and a panel there covers the enemies the tutorial is telling
+    // the player to look at.
+    const int bx = (kVirtualW - bw) / 2, by = kPlayH - bh - 12;
+    TutorialBox box{bx, by, bw, bh, bx + bw - 84, by + 16, 68, 30};
+
+    panel(atlas, bx, by, bw, bh);
+    DrawText(title, bx + 20, by + 12, 20, kInk);
+    DrawText(body, bx + 20, by + 38, 10, kInkDim);
+
+    const bool hot = mouse.x >= box.skipX && mouse.x < box.skipX + box.skipW &&
+                     mouse.y >= box.skipY && mouse.y < box.skipY + box.skipH;
+    button(atlas, box.skipX, box.skipY, box.skipW, box.skipH, hot, false);
+    centredIn("SKIP", box.skipX + box.skipW / 2, box.skipY + 9, 10, kInkDim);
+    return box;
+}
+
 void drawPausedBanner() {
     constexpr int kH = 30;
     DrawRectangle(0, 0, kVirtualW, kH, Color{18, 16, 26, 205});

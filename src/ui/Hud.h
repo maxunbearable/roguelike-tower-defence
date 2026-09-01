@@ -52,5 +52,12 @@ HudButton hudHitTest(core::Vec2 mouse);
 // with a live cursor is otherwise indistinguishable from a hang.
 void drawPausedBanner();
 
+// The guided first run: one instruction at a time, with a way out. Returns the
+// SKIP button's rectangle so the caller can hit-test it; drawn at the top of the
+// play field so it never covers the road or the controls it is talking about.
+struct TutorialBox { int x, y, w, h, skipX, skipY, skipW, skipH; };
+TutorialBox drawTutorial(const render::SpriteAtlas& atlas, const char* title, const char* body,
+                         core::Vec2 mouse);
+
 
 }  // namespace td::ui

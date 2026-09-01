@@ -68,6 +68,10 @@ struct MetaSave {
     // fresh profile is a fresh player, and stored by ID so reordering or
     // rewording a hint never re-fires one someone has already read.
     std::set<std::string> seenHints;
+    // How far through the guided first run this profile is, as a small integer
+    // (sim::TutorialStep). Stored rather than a bare "done" flag so a player who
+    // quits halfway resumes where they were instead of starting over.
+    int tutorialStep = 0;
 };
 
 // A map is playable when it is the first, or when the one before it in `order`
