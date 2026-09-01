@@ -74,6 +74,13 @@ public:
     // Arrow is the starting tower. Every other type is bought once, at the root
     // of its own tree, so the roster a player fields is itself progression.
     bool towerUnlocked(const std::string& towerId) const;
+    // The range a freshly built tower of this type would have, skill tree
+    // included. Needed to draw a range ring BEFORE any gold is spent.
+    float buildRange(const std::string& towerId) const;
+    // The cheapest tower this profile can actually build. What the board should
+    // preview when the player is only hovering, rather than always assuming the
+    // starting tower.
+    std::string cheapestUnlockedTower() const;
     bool levelUnlocked(int level) const;
     bool elementUnlocked(const std::string& elementId) const;
     bool towerSpecUnlocked(const std::string& towerId, const std::string& spec) const;

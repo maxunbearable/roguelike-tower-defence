@@ -1,6 +1,7 @@
 #include "render/Renderer.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -505,6 +506,46 @@ void Renderer::drawAtmosphere() const {
                            Color{220, 150, 90, 14});
 }
 
+// Where towers may go. The rule -- grass yes, road no -- was invisible: the only
+// feedback was a single-tile outline that appeared under the cursor after the
+// player had already moved there, so the buildable area had to be discovered by
+// hunting with the mouse. Kingdom Rush, the reference for this project, puts its
+// build locations on the board as objects.
+//
+// There are ~150 buildable tiles here rather than Kingdom Rush's dozen, so a
+// full-strength pad on every one turns the field into graph paper. They are
+// drawn faint at rest and lifted while the player is choosing.
+void Renderer::drawBuildSites(const sim::World& w, const Cursor& cur) const {
+    const auto& m = w.map();
+    const bool lifted = cur.showSites;
+    // First attempt used 1px corner notches at alpha 26/74 and was invisible on
+    // grass at 1:1 -- confirmed by screenshot. A build site has to read as
+    // prepared ground, which means an actual pad.
+    const unsigned char fill = lifted ? 44 : 20;
+    const unsigned char line = lifted ? 104 : 50;
+    for (int y = 0; y < m.gridH; ++y) {
+        for (int x = 0; x < m.gridW; ++x) {
+            if (!m.buildableAt(x, y)) continue;
+            if (w.towerAt(x, y) != entt::null) continue;
+            const int px = x * kTile + 7, py = y * kTile + 7, sz = kTile - 14;
+            DrawRectangle(px, py, sz, sz, Color{246, 238, 214, fill});
+            // Corner ticks only, not a full border: a closed rectangle on every
+            // tile is a grid drawn over the art, while open corners read as a
+            // marked-out plot.
+            const int t = 6;
+            const Color c{250, 244, 224, line};
+            DrawRectangle(px, py, t, 1, c);
+            DrawRectangle(px, py, 1, t, c);
+            DrawRectangle(px + sz - t, py, t, 1, c);
+            DrawRectangle(px + sz - 1, py, 1, t, c);
+            DrawRectangle(px, py + sz - 1, t, 1, c);
+            DrawRectangle(px, py + sz - t, 1, t, c);
+            DrawRectangle(px + sz - t, py + sz - 1, t, 1, c);
+            DrawRectangle(px + sz - 1, py + sz - t, 1, t, c);
+        }
+    }
+}
+
 void Renderer::drawCursor(const sim::World& w, const Cursor& cur) const {
     // Selection: the range ring belongs here and nowhere else.
     if (cur.selX >= 0) {
@@ -529,13 +570,40 @@ void Renderer::drawCursor(const sim::World& w, const Cursor& cur) const {
         DrawRectangleLines(hx, hy, kTile, kTile, Color{255, 255, 255, 120});
         return;
     }
-    // A quiet outline only. A ghost tower under the cursor at all times read as
-    // "you are about to build", which is wrong when you are just moving the mouse.
-    if (cur.hoverBuildable) {
-        DrawRectangleLines(hx, hy, kTile, kTile,
-                           cur.hoverAffordable ? Color{255, 255, 255, 80}
-                                               : Color{200, 110, 100, 80});
+    if (!cur.hoverBuildable) {
+        // Say "not here" rather than saying nothing at all.
+        DrawRectangleLines(hx + 2, hy + 2, kTile - 4, kTile - 4, Color{176, 88, 72, 90});
+        return;
     }
+
+    // The range this tower WOULD have, drawn before any gold is spent, and the
+    // stretch of route it would actually cover. Coverage is the thing that makes
+    // one grass tile better than another and it was never shown.
+    const Color edge = cur.hoverAffordable ? Color{255, 244, 208, 235}
+                                           : Color{214, 118, 96, 220};
+    if (cur.previewRange > 0.0f) {
+        const float cx = (cur.hoverX + 0.5f) * kTile;
+        const float cy = (cur.hoverY + 0.5f) * kTile;
+        const float r = cur.previewRange * kTile;
+        DrawCircle(static_cast<int>(cx), static_cast<int>(cy), r,
+                   cur.hoverAffordable ? Color{255, 250, 220, 20} : Color{200, 110, 100, 18});
+        DrawCircleLines(static_cast<int>(cx), static_cast<int>(cy), r, edge);
+
+        // The covered run of route, drawn ON the route, so the player can see
+        // the answer rather than estimate it from a circle.
+        const auto& path = w.path();
+        const float total = path.totalLength();
+        for (float d = 0.0f; d < total; d += 0.12f) {
+            const auto p = path.positionAt(d);
+            const float ddx = p.x * kTile - cx, ddy = p.y * kTile - cy;
+            if (ddx * ddx + ddy * ddy > r * r) continue;
+            DrawCircle(static_cast<int>(p.x * kTile), static_cast<int>(p.y * kTile), 3.0f,
+                       Color{255, 236, 150, 190});
+        }
+    }
+    DrawRectangleLines(hx + 1, hy + 1, kTile - 2, kTile - 2, edge);
+    DrawRectangleLines(hx + 2, hy + 2, kTile - 4, kTile - 4,
+                       Color{edge.r, edge.g, edge.b, 90});
 }
 
 void Renderer::draw(const sim::World& w, float alpha, const Cursor& cur) {
@@ -551,6 +619,7 @@ void Renderer::draw(const sim::World& w, float alpha, const Cursor& cur) {
     drawGroundVariation(w.map());
     drawGoal(w.map());
     drawProps(w.map());
+    drawBuildSites(w, cur);
     drawCursor(w, cur);
     drawCorpses();
     drawEnemies(w, alpha);

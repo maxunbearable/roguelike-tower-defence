@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 218 tests
+ctest --test-dir build          # 224 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -220,6 +220,15 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## Placing a tower
+
+Buildable ground is marked on the board — quiet at rest, lifted while you are
+choosing — and hovering a site shows the **range the tower would have** and
+highlights the stretch of route that range actually covers. Coverage is the
+figure that decides whether one tile beats another, and it used to be invisible:
+the range ring only appeared once a tower already existed, so every first
+placement was blind and could only be undone at a loss.
 
 ## The screens
 

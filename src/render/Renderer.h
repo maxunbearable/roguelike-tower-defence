@@ -18,6 +18,14 @@ struct Cursor {
     int selX = -1, selY = -1;
     bool hoverBuildable = false;
     bool hoverAffordable = false;
+    // Range of the tower that WOULD be built on the hovered tile, in tiles. The
+    // ring used to appear only once a tower existed, so every first placement
+    // was made blind and could only be undone at a loss.
+    float previewRange = 0.0f;
+    // Lift the build sites out of the terrain. True while the player is actually
+    // choosing somewhere to build; at rest the pads stay quiet so the board does
+    // not read as graph paper.
+    bool showSites = false;
 };
 
 class Renderer {
@@ -43,6 +51,7 @@ private:
     void drawCorpses() const;
     void drawProjectiles(const sim::World& w, float alpha) const;
     void drawCursor(const sim::World& w, const Cursor& cur) const;
+    void drawBuildSites(const sim::World& w, const Cursor& cur) const;
     void drawAtmosphere() const;
 
     SpriteAtlas atlas_;

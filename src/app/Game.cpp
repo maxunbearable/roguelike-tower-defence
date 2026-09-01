@@ -845,10 +845,20 @@ void Game::renderCanvas(float alpha) {
             cur.hoverY = hoverY_;
             cur.selX = selX_;
             cur.selY = selY_;
+            // Pads lift while the player is actually choosing a spot: during the
+            // build phase, or whenever a menu is open on the board.
+            cur.showSites = world_->phase() == sim::Phase::Build || menu_.isOpen();
             if (hoverX_ >= 0) {
                 cur.hoverBuildable = world_->map().buildableAt(hoverX_, hoverY_) &&
                                      world_->towerAt(hoverX_, hoverY_) == entt::null;
-                cur.hoverAffordable = world_->gold() >= registry_->tower("arrow").buildCost;
+                // The cheapest tower this profile can build, not always "arrow":
+                // once the starting tower is no longer the only one, quoting its
+                // price and its range is simply wrong.
+                const std::string preview = world_->cheapestUnlockedTower();
+                if (!preview.empty() && cur.hoverBuildable) {
+                    cur.hoverAffordable = world_->gold() >= registry_->tower(preview).buildCost;
+                    cur.previewRange = world_->buildRange(preview);
+                }
             }
             renderer_.draw(*world_, alpha, cur);
             ui::drawBossBars(renderer_.atlas(), *world_);

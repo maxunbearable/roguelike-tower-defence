@@ -378,6 +378,30 @@ bool World::towerUnlocked(const std::string& towerId) const {
     return meta_.owns(towerId + ".unlock");
 }
 
+float World::buildRange(const std::string& towerId) const {
+    if (!defs_->hasTower(towerId)) return 0.0f;
+    const auto& def = defs_->tower(towerId);
+    core::Loadout lo = meta_;
+    lo.towerId = towerId;
+    lo.towerSpec.clear();
+    lo.elementId.clear();
+    lo.elementSpec.clear();
+    return statsFor(def, 1, core::resolveStats(*defs_, lo)).range;
+}
+
+std::string World::cheapestUnlockedTower() const {
+    std::string best;
+    int bestCost = 0;
+    for (const auto& [id, def] : defs_->towers()) {
+        if (!towerUnlocked(id)) continue;
+        if (best.empty() || def.buildCost < bestCost) {
+            best = id;
+            bestCost = def.buildCost;
+        }
+    }
+    return best;
+}
+
 bool World::levelUnlocked(int level) const {
     if (level <= 1) return true;  // level 1 is what building gives you
 
