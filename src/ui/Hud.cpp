@@ -16,7 +16,8 @@ namespace {
 using namespace td::render;
 using namespace td::ui::paint;
 
-constexpr float kMessageHold = 2.0f;
+// Long enough to read a teaching line, not so long it lingers over play.
+constexpr float kMessageHold = 4.5f;
 
 // Kingdom Rush keeps its controls in fixed corners rather than following the
 // cursor, so the player builds muscle memory for them. Same idea here.
@@ -35,6 +36,18 @@ constexpr int kBtnY = kHudY + 30;
 constexpr int kWaveX = 348;  // clear of a four-digit gold total at 40px
 constexpr int kIncomingX = 560;
 constexpr int kFieldedX = 900;
+
+// A hairline between zones. Research on HUD hierarchy is consistent that the
+// fastest win is making groups LOOK like groups: without these the band reads as
+// one row of floating text at four different x positions.
+void zoneRule(int x) {
+    DrawRectangle(x, kHudY + 14, 1, 62, Color{120, 100, 78, 90});
+    DrawRectangle(x + 1, kHudY + 14, 1, 62, Color{250, 238, 214, 40});
+}
+
+// Every zone gets the same small caption in the same place, so the eye can scan
+// the band by shape instead of reading it.
+void caption(const char* text, int x, Color c) { DrawText(text, x, kHudY + 14, 10, c); }
 
 bool inRect(core::Vec2 m, int x, int y, int w, int h) {
     return m.x >= x && m.y >= y && m.x < x + w && m.y < y + h;
@@ -169,15 +182,22 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
 
     // Lives and gold: the two values read under pressure, so they get the
     // largest numerals on screen rather than the same 20px as everything else.
-    atlas.drawFitted("icon_heart", 36, kHudY + 46, 26);
-    DrawText(TextFormat("%d", w.lives()), 58, kHudY + 26, 40,
-             w.lives() <= 5 ? Color{176, 54, 44, 255} : ink);
-    atlas.drawFitted("icon_coin", 178, kHudY + 46, 26);
-    DrawText(TextFormat("%d", w.gold()), 200, kHudY + 26, 40, ink);
+    caption("LIVES", 34, inkDim);
+    atlas.drawFitted("icon_heart", 36, kHudY + 50, 24);
+    DrawText(TextFormat("%d", w.lives()), 56, kHudY + 30, 40,
+             w.lives() <= 5 ? Color{206, 62, 50, 255} : ink);
+    caption("GOLD", 176, inkDim);
+    atlas.drawFitted("icon_coin", 178, kHudY + 50, 24);
+    DrawText(TextFormat("%d", w.gold()), 198, kHudY + 30, 40, ink);
+    zoneRule(kWaveX - 26);
 
-    DrawText(TextFormat("WAVE %d/%d", w.waveIndex() + 1, w.waveCount()), kWaveX, kHudY + 22, 20,
-             ink);
-    DrawText(TextFormat("%d on the field", w.aliveEnemies()), kWaveX, kHudY + 52, 10, inkDim);
+    caption("WAVE", kWaveX, inkDim);
+    DrawText(TextFormat("%d/%d", w.waveIndex() + 1, w.waveCount()), kWaveX, kHudY + 28, 32, ink);
+    // Tower count belongs here: only one of each specialisation may be fielded,
+    // so "how much board do I have" is a decision input, not trivia.
+    DrawText(TextFormat("%d on the field   %d towers", w.aliveEnemies(), w.towerCount()),
+             kWaveX, kHudY + 64, 10, inkDim);
+    zoneRule(kIncomingX - 26);
 
     // What is coming. Kingdom Rush always tells you what you are about to face,
     // which is what makes committing gold before a wave a real decision.
@@ -231,7 +251,8 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
 
     // Which specialisations are fielded right now. One of each may exist, so
     // this doubles as a reminder of what is still available to build.
-    DrawText("FIELDED", kFieldedX, kHudY + 14, 10, inkDim);
+    zoneRule(kFieldedX - 22);
+    caption("FIELDED", kFieldedX, inkDim);
     {
         auto specs = w.activeTowerSpecs();
         const auto elems = w.activeElementSpecs();
@@ -250,34 +271,47 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
                     y += 18;
                 }
                 if (y > kHudY + 70) break;  // never draw past the band
-                DrawText(sp.c_str(), x, y, 10, flat ? palette::kHudWarn : kInkWarn);
-                x += wpx + 14;
+                // A chip rather than loose text: at 10px these were five grey
+                // words in a row. The fill is LIGHT with dark ink on it -- a dark
+                // fill with the warm ink already used here rendered as a solid
+                // block with the label invisible inside it.
+                DrawRectangle(x - 4, y - 3, wpx + 8, 15, Color{226, 206, 172, 235});
+                DrawRectangleLines(x - 4, y - 3, wpx + 8, 15, Color{132, 106, 76, 210});
+                DrawText(sp.c_str(), x, y, 10, Color{72, 52, 36, 255});
+                x += wpx + 16;
             }
         }
     }
 
     if (!st.message.empty() && st.messageAge < kMessageHold) {
-        DrawText(st.message.c_str(), kWaveX, kHudY + 72, 10, Color{188, 62, 44, 255});
+        // Centred just above the band rather than tucked under the wave counter
+        // at 10px, where the tutorial lines were effectively invisible. Fades out
+        // over the last second so it never just blinks off.
+        const float left = kMessageHold - st.messageAge;
+        const float k = left < 1.0f ? left : 1.0f;
+        const auto a = static_cast<unsigned char>(235.0f * k);
+        const int tw = MeasureText(st.message.c_str(), 20);
+        const int bx = (kVirtualW - tw) / 2 - 16, by = kHudY - 42;
+        DrawRectangle(bx, by, tw + 32, 30, Color{24, 20, 30, static_cast<unsigned char>(190 * k)});
+        DrawRectangle(bx, by + 28, tw + 32, 2, Color{224, 180, 96, a});
+        DrawText(st.message.c_str(), bx + 16, by + 6, 20, Color{242, 230, 208, a});
     }
 
     const HudButton hot = hudHitTest(mouse);
 
-    // The pack ships 1/2/3 glyphs, which say the speed outright instead of a
-    // play/fast-forward icon plus a "2x" caption in the corner.
-    button(atlas, kSpeedX, kBtnY, kBtn, kBtn, hot == HudButton::Speed, false);
+    // The pack's dial glyphs read 1/2/3, so they cannot label 4x or 8x -- they
+    // would state the wrong speed. Icon plus an explicit caption instead, which
+    // is the one thing that stays true whatever the multipliers become.
+    button(atlas, kSpeedX, kBtnY, kBtn, kBtn, hot == HudButton::Speed, st.speedIndex > 0);
     {
-        const std::string dial = TextFormat("ui_icon_%02d", 4 + std::clamp(st.speedIndex, 0, 2));
-        if (atlas.has(dial)) {
-            atlas.drawFitted(dial, kSpeedX + kBtn * 0.5f, kBtnY + kBtn * 0.5f, kBtn * 0.52f,
-                             ink);
-        } else {
-            atlas.drawFitted(st.speedIndex == 0 ? "icon_play" : "icon_ffwd",
-                             kSpeedX + kBtn * 0.5f, kBtnY + kBtn * 0.5f, kBtn * 0.62f);
-            if (st.speedIndex > 0) {
-                DrawText(TextFormat("%dx", st.speedIndex + 1), kSpeedX + 3, kBtnY + kBtn - 12,
-                         10, flat ? palette::kHudWarn : kInkWarn);
-            }
-        }
+        static constexpr int kMult[4] = {1, 2, 4, 8};
+        const int mult = kMult[std::clamp(st.speedIndex, 0, 3)];
+        atlas.drawFitted(st.speedIndex == 0 ? "icon_play" : "icon_ffwd",
+                         kSpeedX + kBtn * 0.5f, kBtnY + kBtn * 0.42f, kBtn * 0.5f);
+        const char* cap = TextFormat("%dx", mult);
+        DrawText(cap, kSpeedX + (kBtn - MeasureText(cap, 10)) / 2, kBtnY + kBtn - 13, 10,
+                 st.speedIndex > 0 ? (flat ? palette::kHudWarn : kInkWarn)
+                                   : (flat ? palette::kHudDim : kInkDim));
     }
     button(atlas, kPauseX, kBtnY, kBtn, kBtn, hot == HudButton::Pause, st.paused);
     atlas.drawFitted("icon_pause", kPauseX + kBtn * 0.5f, kBtnY + kBtn * 0.5f, kBtn * 0.62f);
@@ -300,23 +334,40 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
     button(atlas, kQuitX, kBtnY, kBtn, kBtn, hot == HudButton::Quit, false);
     atlas.drawFitted("icon_back", kQuitX + kBtn * 0.5f, kBtnY + kBtn * 0.5f, kBtn * 0.62f);
 
-    // Call-the-wave button, the way Kingdom Rush pays you for impatience.
+    // Call-the-wave button, the way Kingdom Rush pays you for impatience. It is
+    // live during a running wave as well: that call stacks the next wave on top
+    // of this one and pays for the risk rather than for skipped build time.
     const bool building = w.phase() == sim::Phase::Build;
-    button(atlas, kNextX, kNextY, kNextW, kNextH, building && hot == HudButton::NextWave,
-           /*on=*/building, /*off=*/!building);
+    const bool callable = w.canCallWave();
+    button(atlas, kNextX, kNextY, kNextW, kNextH, callable && hot == HudButton::NextWave,
+           /*on=*/callable, /*off=*/!callable);
     if (building) {
         centredIn("NEXT WAVE", kNextX + kNextW / 2, kNextY + 8, 20, ink);
         centredIn(TextFormat("%.0fs   +%d gold", w.buildTimeRemaining(), w.earlyStartBonus()),
                   kNextX + kNextW / 2, kNextY + 32, 10,
                   flat ? palette::kHpFill : kInkGood);
+    } else if (callable) {
+        centredIn("CALL EARLY", kNextX + kNextW / 2, kNextY + 8, 20, ink);
+        centredIn(TextFormat("stack next wave   +%d gold", w.overlapCallBonus()),
+                  kNextX + kNextW / 2, kNextY + 32, 10,
+                  flat ? palette::kHpFill : kInkGood);
     } else {
-        centredIn("WAVE IN PROGRESS", kNextX + kNextW / 2, kNextY + 20, 10, inkDim);
+        centredIn("FINAL WAVE", kNextX + kNextW / 2, kNextY + 20, 10, inkDim);
     }
 
-    if (st.paused) {
-        const char* p = "PAUSED";
-        DrawText(p, (kVirtualW - MeasureText(p, 40)) / 2, 200, 40, palette::kHudText);
-    }
+}
+
+void drawPausedBanner() {
+    constexpr int kH = 30;
+    DrawRectangle(0, 0, kVirtualW, kH, Color{18, 16, 26, 205});
+    DrawRectangle(0, kH, kVirtualW, 2, Color{224, 180, 96, 220});
+    const char* a = "PAUSED";
+    const char* b = "build, upgrade and re-target freely   -   P to resume";
+    const int aw = MeasureText(a, 20), bw = MeasureText(b, 10);
+    const int total = aw + 18 + bw;
+    const int x = (kVirtualW - total) / 2;
+    DrawText(a, x, 5, 20, Color{240, 214, 150, 255});
+    DrawText(b, x + aw + 18, 11, 10, Color{198, 190, 178, 255});
 }
 
 }  // namespace td::ui

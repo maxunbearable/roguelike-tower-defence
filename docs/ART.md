@@ -280,3 +280,60 @@ size every tower in a block sat entirely inside all of its neighbours' pools.
 Reproduce with `--cluster N`, which places a dense block of maxed towers. Any
 future change to the light maths should be checked against a cluster, not a
 single tower — a single tower cannot show this class of bug.
+
+## Towers must be tower-shaped (2026-09-01)
+
+Tiny Swords is a village builder, not a tower defence kit. Of the 20 tower
+sprites, **only 4 used a tower silhouette**; the other 16 were `House1`,
+`House2`, `House3`, `Barracks`, `Archery` halls and `Monastery` chapels. Hence
+the complaint that the towers "is just houses not a towers" — it was accurate,
+and countable.
+
+Between both packs there are exactly **three** single-tile silhouettes a player
+would call a tower:
+
+| Silhouette | Source | Note |
+|---|---|---|
+| `BASTION` | free pack `{Colour} Buildings/Tower.png` | round tower, pale base, all 5 colours |
+| `KEEP` | full pack `Factions/Knights/Buildings/Tower/Tower_{C}.png` | crenellated drum; 4 colours only |
+| `TIMBER` | full pack `Factions/Goblins/Buildings/Wood_Tower/Wood_Tower_{C}.png` | timber platform on braces |
+
+Everything else was measured and rejected **by looking at it**, not by name:
+
+- `Monastery` — a chapel with a pitched roof and a bell turret. It is the single
+  most visually dominant sprite in the pack and it reads as a *building*. Using
+  it for 5 of 20 towers reproduced the original complaint.
+- `Castle` — 156x104 after halving, i.e. **2.4 tiles wide**, and it is a
+  twin-turreted wall section rather than one tower. It swallows its neighbours.
+  Retained only as the goal marker, which is what it is actually shaped like.
+
+Three silhouettes is one short of the four variants each tower type has, so the
+fourth is **composited**: the crenellated top 55% of `KEEP` stacked back onto
+itself, lifted 42%. Same source pixels, so palette, outline weight and lighting
+match exactly, and it reads as a taller, grander tower instead of a different
+building. Compositing beat every alternative because the missing axis was
+*height*, which is the one axis a tower is allowed to vary on.
+
+The mapping is then two independent axes, which is what makes a busy board
+legible:
+
+    COLOUR FAMILY = tower type       (arrow Blue, cannon Black, arcane Purple,
+                                      ballista Red, brazier Yellow)
+    SILHOUETTE    = variant within it (base + 3 specialisations)
+
+`Black` exists only in the free pack, so `KEEP` and `TIMBER` are desaturated and
+darkened to iron for the cannon line rather than left as the wrong colour.
+
+### The frame-pitch trap, again
+
+`Wood_Tower_*.png` is 1024x192 and looks like 8 frames of 128. It is **4 frames
+of 256** with a 130px tower centred in each, so a 128 crop cuts every tower in
+half — the bboxes alternate `(63..128)` and `(0..65)`, which is the tell. Same
+class of bug as `Barrel_Red`. Measure the pitch; never infer it from the height.
+
+### The honest limit
+
+Tiny Swords cannot give five *visually distinct tower families* with per-level
+upgrade art, because it does not contain five tower silhouettes. What it can do
+— and now does — is make every tower tower-shaped. A purpose-built tower defence
+pack is the only way past that; see `docs/ASSET-POLICY.md`.

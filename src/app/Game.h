@@ -50,6 +50,7 @@ public:
     void devMenuPage(const std::string& page) {
         if (page == "spec") showPage(MenuPage::Spec);
         else if (page == "element") showPage(MenuPage::Element);
+        else if (page == "targeting") showPage(MenuPage::Targeting);
     }
     void devSetHubTab(int tab) { hubTab_ = tab; }
     // Dev capture: skip ahead to a wave, so a boss fight can be inspected
@@ -57,14 +58,25 @@ public:
     // Dev capture: a dense block of towers, to reproduce light-pool stacking.
     void devCluster(int n) {
         if (!world_) return;
+        // Capture aid, so fund it: without this the gold deficit makes a cluster
+        // unaffordable and the screenshot shows two towers instead of nine.
+        world_->addGold(100000);
         int placed = 0;
         for (int y = 5; y <= 7 && placed < n; ++y) {
             for (int x = 6; x <= 10 && placed < n; ++x) {
                 if (world_->placeTower(x, y, "arrow") != sim::World::PlaceResult::Ok) continue;
-                while (world_->upgradeCost(x, y) > 0) world_->upgradeTower(x, y);
+                // Must test the UPGRADE, not just its cost. upgradeCost() stays
+                // positive when a level exists but is unaffordable or locked,
+                // while upgradeTower() returns false -- so testing only the cost
+                // spins forever. It did exactly that once gold got tight.
+                while (world_->upgradeCost(x, y) > 0 && world_->upgradeTower(x, y)) {
+                }
                 ++placed;
             }
         }
+        // Hand the surplus back. Leaving 100k on the clock put "GOLD 99354" in
+        // the README screenshot of a game whose whole pitch is a gold deficit.
+        world_->addGold(240 - world_->gold());
     }
 
     void devPause() { hud_.paused = true; }
@@ -99,7 +111,7 @@ private:
     void handleBuildInput();
     // The radial menu is a shallow tree: a root of categories, and one page of
     // concrete choices under each.
-    enum class MenuPage { Root, Spec, Element };
+    enum class MenuPage { Root, Spec, Element, Targeting };
 
     bool openMenuAt(int tileX, int tileY);
     void closeMenu();
@@ -117,6 +129,13 @@ private:
     std::vector<render::PostFx::Light> collectLights() const;
     void renderCanvas(float alpha);
     void say(const std::string& msg);
+    // Shows a one-off teaching line, at most once per profile ever. The game
+    // explains every button but never the shape of itself: that a tower must be
+    // maxed before it can specialise, that elements come from the trees, that a
+    // wave can be called early for gold, and that pausing does not stop you
+    // building. None of that is discoverable by clicking.
+    void hintOnce(const char* id, const std::string& text);
+    void updateHints();
 
     const content::Registry* registry_;
     render::PixelCanvas canvas_;
@@ -149,7 +168,10 @@ private:
     // 50 waves is a long map, so a fast-forward is a playability requirement
     // rather than a luxury. Multipliers stay integral so the fixed timestep is
     // unaffected -- it simply runs more ticks per frame.
-    static constexpr float kSpeeds[3] = {1.0f, 2.0f, 3.0f};
+    // 1x / 2x / 4x / 8x. Doubling rather than 1-2-3 because the point of fast
+    // forward is skipping the parts you have already solved, and 3x does not
+    // meaningfully do that on a 100-tile path.
+    static constexpr float kSpeeds[4] = {1.0f, 2.0f, 4.0f, 8.0f};
 };
 
 }  // namespace td::app

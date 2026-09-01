@@ -8,7 +8,7 @@ order = 1
 blurb = "Open meadow. Where every build starts."
 gridW = 22
 gridH = 11
-startGold = 310
+startGold = 300
 buildTime = 12.0
 
 # Open meadow. Where every build starts.
@@ -52,6 +52,10 @@ wave = 25
 enemy = "boss_ogre_warlord"
 
 [[waves.boss]]
+wave = 40
+enemy = "boss_grub_matron"
+
+[[waves.boss]]
 wave = 50
 enemy = "boss_warlord_grulk"
 
@@ -70,3 +74,11 @@ fromWave = 8
 [[waves.pool]]
 enemy = "wraith"
 fromWave = 12
+
+[[waves.pool]]
+enemy = "cryptbat"
+fromWave = 16
+
+[[waves.pool]]
+enemy = "hivewasp"
+fromWave = 20

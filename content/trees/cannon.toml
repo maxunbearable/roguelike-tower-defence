@@ -7,12 +7,22 @@ specs = ["mortar", "bombard", "siege"]
 # All three splash; what differs is how hard, how often and how far.
 
 [[node]]
+id = "cannon.unlock"
+name = "Siege Charter"
+desc = "Unlocks the Cannon: slow, heavy shells that damage a whole cluster."
+branch = "trunk"
+cost = 22
+requires = []
+pos = [0, -1]
+modifiers = [{ target = "cannon.damage", op = "mult", value = 1.05 }]
+
+[[node]]
 id = "cannon.trunk.dmg1"
 name = "Packed Charge"
 desc = "+10% shell damage"
 branch = "trunk"
-cost = 18
-requires = []
+cost = 11
+requires = ["cannon.unlock"]
 pos = [0, 0]
 modifiers = [{ target = "cannon.damage", op = "mult", value = 1.1 }]
 
@@ -21,7 +31,7 @@ id = "cannon.trunk.rate1"
 name = "Drilled Crew"
 desc = "+10% fire rate"
 branch = "trunk"
-cost = 22
+cost = 14
 requires = ["cannon.trunk.dmg1"]
 pos = [0, 1]
 modifiers = [{ target = "cannon.fireRate", op = "mult", value = 1.1 }]
@@ -31,7 +41,7 @@ id = "cannon.trunk.range1"
 name = "Longer Barrel"
 desc = "+0.5 tiles range"
 branch = "trunk"
-cost = 22
+cost = 14
 requires = ["cannon.trunk.dmg1"]
 pos = [1, 1]
 modifiers = [{ target = "cannon.range", op = "add", value = 0.5 }]
@@ -41,7 +51,7 @@ id = "cannon.mortar.core"
 name = "Mortar"
 desc = "Lobs from far off. The widest blast on the board."
 branch = "mortar"
-cost = 58
+cost = 36
 requires = ["cannon.trunk.rate1"]
 pos = [-2, 2]
 modifiers = [
@@ -59,7 +69,7 @@ id = "cannon.mortar.wide"
 name = "Airburst"
 desc = "+0.6 tiles blast radius"
 branch = "mortar"
-cost = 46
+cost = 29
 requires = ["cannon.mortar.core"]
 pos = [-3, 3]
 modifiers = [{ target = "cannon.splash.radius", op = "add", value = 0.6 }]
@@ -69,7 +79,7 @@ id = "cannon.mortar.far"
 name = "Spotter"
 desc = "+1.2 tiles range"
 branch = "mortar"
-cost = 46
+cost = 29
 requires = ["cannon.mortar.core"]
 pos = [-2, 3]
 modifiers = [{ target = "cannon.range", op = "add", value = 1.2 }]
@@ -79,7 +89,7 @@ id = "cannon.bombard.core"
 name = "Bombard"
 desc = "Rapid short-range shells. Small blasts, constantly."
 branch = "bombard"
-cost = 58
+cost = 36
 requires = ["cannon.trunk.rate1"]
 pos = [0, 2]
 modifiers = [
@@ -97,7 +107,7 @@ id = "cannon.bombard.fast"
 name = "Autoloader"
 desc = "+30% fire rate"
 branch = "bombard"
-cost = 46
+cost = 29
 requires = ["cannon.bombard.core"]
 pos = [-1, 3]
 modifiers = [{ target = "cannon.fireRate", op = "mult", value = 1.3 }]
@@ -107,7 +117,7 @@ id = "cannon.bombard.hard"
 name = "Fragmentation"
 desc = "+40% blast damage"
 branch = "bombard"
-cost = 46
+cost = 29
 requires = ["cannon.bombard.core"]
 pos = [0, 3]
 modifiers = [{ target = "cannon.splash.damagePct", op = "mult", value = 1.4 }]
@@ -117,7 +127,7 @@ id = "cannon.siege.core"
 name = "Siege"
 desc = "One enormous shell. Demolishes armour."
 branch = "siege"
-cost = 58
+cost = 36
 requires = ["cannon.trunk.range1"]
 pos = [2, 2]
 modifiers = [
@@ -134,7 +144,7 @@ id = "cannon.siege.pen"
 name = "Breaching Shot"
 desc = "+10 armour penetration: ignores that much enemy armour"
 branch = "siege"
-cost = 46
+cost = 29
 requires = ["cannon.siege.core"]
 pos = [2, 3]
 modifiers = [{ target = "cannon.armorPen", op = "add", value = 10.0 }]
@@ -144,7 +154,7 @@ id = "cannon.siege.dmg"
 name = "Siegebreaker"
 desc = "+45% shell damage"
 branch = "siege"
-cost = 46
+cost = 29
 requires = ["cannon.siege.core"]
 pos = [3, 3]
 modifiers = [{ target = "cannon.damage", op = "mult", value = 1.45 }]

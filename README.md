@@ -45,10 +45,10 @@ skill trees that persist across runs.
 | Elements | 6 — earth, fire, water, wind, shadow, light |
 | Element specialisations | 18 (3 each) |
 | **Combinations** | **270** |
-| Maps | 5, each 50 waves, each with a mid-boss and a final boss |
-| Bosses | 10 |
-| Enemies | 30 definitions, with per-damage-type resistance tables |
-| Skill trees | 12 trees, 146 nodes — the global tree alone is 23 |
+| Maps | 5, each 50 waves, with bosses at 25, 40 and 50 |
+| Bosses | 15 |
+| Enemies | 45 definitions over 14 creature sets, 6 of them flying, with per-damage-type resistance tables |
+| Skill trees | 12 trees, 150 nodes, 5057 shards — the global tree alone is 23 |
 | Damage types | 11 |
 | Audio | 2 CC0 music loops + 13 CC0 effects, committed; procedural synth as fallback |
 
@@ -90,6 +90,17 @@ itself constantly:
 - A **combination matrix** (`sim::Scenario`) runs all 270 pairings against fixed
   scenarios and asserts relational guardrails, never magic numbers. It caught a
   spec measuring 79% against a row median of 23%.
+- The same harness caught the worst bug in the project so far. `levelUnlocked()`
+  checked `owns("global.unlock.level2")`, but that string is a **flag granted by**
+  the node `global.level2` — and owned-node sets hold node ids, never granted
+  flags. So tower levels 2 and 3 were unreachable for every real player, and
+  *every existing guardrail passed* because they all used the test-only `ownAll`
+  shortcut, which bypasses the gate. It surfaced only when the meta-loop report
+  simulated buying nodes: a profile owning **all 150 nodes** stalled at wave 42
+  of 50 with every tower stuck at level 1, while `ownAll` cleared all 50. The
+  lesson is now a test (`tests/sim/test_unlock_gates.cpp`): *a gate verified only
+  through `ownAll` is not verified.* The gate is also resolved from the tree
+  rather than by node id, so a rename cannot silently seal it again.
 - Balance is driven by `tools/balance.py`: authored base stats plus named
   multiplier profiles, so tuning is idempotent, reversible and auditable.
 - A **reachability guardrail** asserts a fully-upgraded profile gets at least 76%
@@ -133,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 192 tests
+ctest --test-dir build          # 210 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -144,6 +155,27 @@ five full-map autoplay runs. Two opt-in reports are worth running by hand:
 ./build/tests/td_tests "report how many runs it takes to clear map 1" -c "[.report]"
 ```
 
+The second reports **two** purchase policies, because the answer depends far more
+on how shards are spent than on how many are earned:
+
+| policy | what it models | map 1 falls on |
+|---|---|---|
+| `greedy` | cheapest prereq-met node anywhere | not within 24 runs |
+| `planned` | pushes one line and *saves* for it | **run 21** |
+
+Those numbers moved deliberately. Map 1 fell on run 11 before the hardcore pass;
+shard income was then cut by ~60% (`kShardsPerWave` 2 → 1, map-clear 40 → 20,
+per-kill ×0.4) against node prices cut 38%, and it moved to run 21. **"Hardcore,
+limited resources" and "map 1 in 8–10 losses" are the same dial pulled opposite
+ways** — 21 is what hardcore costs, and the dial is `kShardsPerWave` in
+`src/sim/World.h` plus `nodeCost`/`shard` in `tools/balance.py`.
+
+Greedy is kept as a floor and as a warning: the six element trunks are the
+cheapest nodes in the game, so it buys all six first, and under a gold deficit
+that makes it measurably *worse* — an unlocked element invites spending scarce
+gold on imbuing instead of building, and measured waves fall from 14 to 10 over
+the opening runs.
+
 ### Useful dev flags
 
 ```sh
@@ -152,7 +184,8 @@ five full-map autoplay runs. Two opt-in reports are worth running by hand:
 ./build/td_app --wave 24                # jump to a wave (boss fights)
 ./build/td_app --hub --tab 3            # a specific skill tree
 ./build/td_app --maps                   # map select
-./build/td_app --pause                  # open the pause overlay
+./build/td_app --pause                  # open the settings overlay
+./build/td_app --menu 8 2 --menupage targeting   # a tower's targeting ring
 ./build/td_app --cluster 9              # a dense block of towers
 ./build/td_app --shot out.png --after 8 # render N seconds then screenshot
 ```
@@ -211,14 +244,39 @@ by a test — a fully-upgraded profile now gets 76%+ of the way through every ma
 using only arrow towers, which is a lower bound on a real player with five tower
 types.
 
+Balance is now measured rather than asserted: a **fresh** profile builds 15–17
+towers and dies around wave 14, a **fully upgraded** one clears all 50, and gold
+— not the simulator's tower cap — is what binds. That last point took three
+attempts to get right: cutting income further did nothing because the autoplayer
+was hitting a 34-tower ceiling on *every* profile, so the wallet was never the
+constraint. Raising build cost (`deficit` profile, cost x1.85) binds spending
+directly, where cutting bounty risks a death spiral — fewer towers means fewer
+kills means less gold.
+
+Every tower's **targeting** is the player's to set — first, last, strongest,
+weakest or closest — which is the decision a wave is actually made of. **P is a
+tactical pause**: the simulation stops but the board stays live, so you can
+build, upgrade, sell and re-target while it is frozen, and think rather than
+react. (ESC is the settings menu, which does block.) Speed runs at 1x / 2x / 4x /
+8x, and the next wave can be **called on top of a running one** for gold proportional to what is still unresolved — the only income
+source the player controls, which is what makes the gold deficit a decision
+rather than a wait.
+
 Known gaps, honestly:
 
-- **No tutorial.** A new player is told what each button does, but not the shape
-  of the game.
+- **The tutorial is five one-shot hints, not a tutorial.** They cover building,
+  targeting, specialising, calling early and pausing, which is the shape of the
+  game — but nothing walks a new player through a first run.
 - The simulated player only builds arrow towers, and its element choice is
   resistance-aware but not synergy-aware, so its difficulty readings are a
   conservative lower bound rather than a picture of good play.
 - Element overlays are per element rather than per specialisation (earth's three
   are bespoke; the other five share one per element).
-- The monster pack in the asset policy is imported for nothing yet — `EnemyDef`
-  has a `flying` flag that no enemy uses.
+- **Tower art is fixed but capped by the pack.** All 20 tower sprites now use a
+  tower silhouette; 16 of them used to be houses, barracks, archery halls and
+  chapels, because Tiny Swords is a village builder. Tiny Swords contains only
+  *three* single-tile tower silhouettes, so the fourth is composited (a second
+  crenellated drum stacked on the keep). Five genuinely distinct tower families
+  with per-upgrade-level art needs a purpose-built tower defence pack — see
+  `docs/ASSET-POLICY.md` for the two verified options and `docs/ART.md` for why
+  the chapel and the castle were rejected by looking at them.

@@ -18,6 +18,17 @@ core::Path buildPath(const content::MapDef& m) {
     return core::Path(std::move(pts));
 }
 
+const char* priorityName(TargetPriority p) {
+    switch (p) {
+        case TargetPriority::Last: return "last";
+        case TargetPriority::Strongest: return "strongest";
+        case TargetPriority::Weakest: return "weakest";
+        case TargetPriority::Closest: return "closest";
+        case TargetPriority::First: break;
+    }
+    return "first";
+}
+
 TargetPriority parsePriority(const std::string& s) {
     if (s == "last") return TargetPriority::Last;
     if (s == "strongest") return TargetPriority::Strongest;
@@ -118,7 +129,9 @@ void World::rebuildTower(entt::entity tower) {
     const auto& def = defs_->tower(tag.defId);
     const auto stats = core::resolveStats(*defs_, loadoutFor(tag));
 
-    ecs_.emplace_or_replace<TowerStats>(tower, statsFor(def, tag.level, stats));
+    auto rebuilt = statsFor(def, tag.level, stats);
+    rebuilt.priority = tag.priority;  // the player's choice outranks the def
+    ecs_.emplace_or_replace<TowerStats>(tower, rebuilt);
 
     const std::string p = def.id + ".";
     ecs_.remove<Execute>(tower);
@@ -174,6 +187,10 @@ void World::rebuildTower(entt::entity tower) {
     }
 }
 
+int World::towerCount() const {
+    return static_cast<int>(ecs_.view<const TowerTag>().size());
+}
+
 int World::aliveEnemies() const {
     int n = 0;
     ecs_.view<const EnemyTag>().each([&](auto&&...) { ++n; });
@@ -185,16 +202,48 @@ int World::earlyStartBonus() const {
     return static_cast<int>(buildTimer_) * 2;
 }
 
-void World::startNextWave() {
-    if (phase_ != Phase::Build) return;
-    if (waveIndex_ >= waveCount()) return;
+int World::overlapCallBonus() const {
+    if (phase_ != Phase::Wave) return 0;
+    // Everything still unresolved in the waves already on the field.
+    int pending = aliveEnemies();
+    for (const auto& g : groups_) pending += std::max(0, g.remaining);
+    return pending * kGoldPerPendingEnemy;
+}
 
-    addGold(earlyStartBonus());
+bool World::canCallWave() const {
+    if (phase_ == Phase::Build) return waveIndex_ < waveCount();
+    // Overlapping: the wave AFTER the one being fought must exist.
+    return phase_ == Phase::Wave && waveIndex_ + 1 < waveCount();
+}
+
+int World::callBonus() const {
+    if (phase_ == Phase::Build) return earlyStartBonus();
+    return overlapCallBonus();
+}
+
+void World::startNextWave() {
+    if (!canCallWave()) return;
+
+    // Two kinds of call. From the build phase this begins the next wave and pays
+    // for the build time skipped. From inside a running wave it stacks the next
+    // wave ON TOP, and pays for the risk instead -- nothing is skipped, so the
+    // enemies still owed by the current wave still arrive.
+    const bool overlapping = phase_ == Phase::Wave;
+    addGold(callBonus());
+    if (overlapping) ++waveIndex_;
 
     const auto& wave = map_->waves[static_cast<size_t>(waveIndex_)];
-    groups_.clear();
-    groups_.reserve(wave.groups.size());
-    for (const auto& g : wave.groups) groups_.push_back(GroupRuntime{g.count, g.startDelay});
+
+    // Drop groups that have finished spawning so this cannot grow across 50
+    // waves; anything still owing enemies is kept and keeps spawning.
+    groups_.erase(std::remove_if(groups_.begin(), groups_.end(),
+                                 [](const GroupRuntime& g) { return g.remaining <= 0; }),
+                  groups_.end());
+    groups_.reserve(groups_.size() + wave.groups.size());
+    for (const auto& g : wave.groups) {
+        groups_.push_back(GroupRuntime{g.count, g.startDelay, g.enemyId, g.interval,
+                                       g.hpMult, g.armorAdd, g.bountyMult});
+    }
 
     phase_ = Phase::Wave;
 }
@@ -213,6 +262,22 @@ void World::gainLife(int n) {
 }
 
 void World::addGold(int n) { gold_ += n; }
+
+bool World::setTowerPriority(int tileX, int tileY, TargetPriority p) {
+    const auto e = towerAt(tileX, tileY);
+    if (e == entt::null) return false;
+    ecs_.get<TowerTag>(e).priority = p;
+    if (auto* st = ecs_.try_get<TowerStats>(e)) st->priority = p;
+    return true;
+}
+
+TargetPriority World::towerPriority(int tileX, int tileY) const {
+    const auto e = towerAt(tileX, tileY);
+    if (e == entt::null) return TargetPriority::First;
+    return ecs_.get<TowerTag>(e).priority;
+}
+
+const char* World::priorityLabel(TargetPriority p) { return priorityName(p); }
 
 int World::shardsForRun() const {
     // Kills pay directly; surviving waves pays a steady rate; clearing the map
@@ -249,6 +314,7 @@ bool World::allGroupsExhausted() const {
 
 void World::spawnEnemy(const std::string& enemyId, float hpMult, float armorAdd,
                        float bountyMult) {
+    ++enemiesSpawned_;
     const auto& def = defs_->enemy(enemyId);
     const auto e = ecs_.create();
     const core::Vec2 start = path_.positionAt(0.0f);
@@ -278,6 +344,7 @@ World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& to
         return PlaceResult::OutOfBounds;
     }
     if (!defs_->hasTower(towerId)) return PlaceResult::UnknownTower;
+    if (!towerUnlocked(towerId)) return PlaceResult::Locked;
     if (!map_->buildableAt(tileX, tileY)) return PlaceResult::NotBuildable;
     if (towerAt(tileX, tileY) != entt::null) return PlaceResult::Occupied;
 
@@ -289,7 +356,8 @@ World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& to
     const core::Vec2 centre{static_cast<float>(tileX) + 0.5f, static_cast<float>(tileY) + 0.5f};
     ecs_.emplace<Position>(e, centre);
     ecs_.emplace<TileCoord>(e, tileX, tileY);
-    ecs_.emplace<TowerTag>(e, def.id, 1, def.buildCost);
+    ecs_.emplace<TowerTag>(e, def.id, 1, def.buildCost, std::string{}, std::string{},
+                           std::string{}, parsePriority(def.targetPriority));
     ecs_.emplace<Cooldown>(e, 0.0f);
     ecs_.emplace<TargetRef>(e);
     ecs_.emplace<ShotCounter>(e);
@@ -297,10 +365,31 @@ World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& to
     return PlaceResult::Ok;
 }
 
+bool World::towerUnlocked(const std::string& towerId) const {
+    // The starting tower: without one buildable tower a first run has no game.
+    if (towerId == kStartingTower) return true;
+    return meta_.owns(towerId + ".unlock");
+}
+
 bool World::levelUnlocked(int level) const {
     if (level <= 1) return true;  // level 1 is what building gives you
-    if (level == 2) return meta_.owns("global.unlock.level2");
-    return meta_.owns("global.unlock.level3");
+
+    // Resolved from the tree rather than by node id, because the node that
+    // GRANTS this is not named after it: "global.level2" grants the flag
+    // "global.unlock.level2". Checking meta_.owns(flag) -- which this did --
+    // locked levels 2 and 3 forever, since ownedNodes holds node ids and never
+    // granted flags, so nothing but the test-only ownAll shortcut passed. It
+    // measured as a profile owning ALL 150 nodes stalling at wave 42 of 50 with
+    // every tower stuck at level 1, while ownAll cleared all 50.
+    const std::string flag = level == 2 ? "global.unlock.level2" : "global.unlock.level3";
+    if (!defs_->hasTree("global")) return false;
+    for (const auto& n : defs_->tree("global").nodes) {
+        if (!meta_.owns(n.id)) continue;
+        for (const auto& m : n.modifiers) {
+            if (m.target == flag) return true;
+        }
+    }
+    return false;
 }
 
 bool World::elementUnlocked(const std::string& elementId) const {
@@ -523,8 +612,9 @@ core::RunSave World::snapshot() const {
 
     ecs_.view<const TowerTag, const TileCoord>().each(
         [&](const TowerTag& tag, const TileCoord& tc) {
-            s.towers.push_back(core::TowerSave{tc.x, tc.y, tag.level, tag.goldSpent,
-                                               tag.elementId, tag.towerSpec, tag.elementSpec});
+            s.towers.push_back(core::TowerSave{tc.x, tc.y, tag.defId, tag.level, tag.goldSpent,
+                                               tag.elementId, tag.towerSpec, tag.elementSpec,
+                                               priorityName(tag.priority)});
         });
     return s;
 }
@@ -546,14 +636,17 @@ void World::restore(const core::RunSave& s) {
     // Towers are rebuilt directly rather than replayed through the purchase
     // API, which would charge for them all over again.
     for (const auto& t : s.towers) {
-        if (!defs_->hasTower("arrow")) break;
-        const auto& def = defs_->tower("arrow");
+        // Fall back to arrow only if the saved tower no longer exists in
+        // content, which is a content change rather than a normal load.
+        const std::string wanted = defs_->hasTower(t.towerId) ? t.towerId : std::string{"arrow"};
+        if (!defs_->hasTower(wanted)) break;
+        const auto& def = defs_->tower(wanted);
         const auto e = ecs_.create();
         const core::Vec2 centre{static_cast<float>(t.x) + 0.5f, static_cast<float>(t.y) + 0.5f};
         ecs_.emplace<Position>(e, centre);
         ecs_.emplace<TileCoord>(e, t.x, t.y);
         ecs_.emplace<TowerTag>(e, def.id, t.level, t.goldSpent, t.elementId, t.towerSpec,
-                               t.elementSpec);
+                               t.elementSpec, parsePriority(t.priority));
         ecs_.emplace<Cooldown>(e, 0.0f);
         ecs_.emplace<TargetRef>(e);
         ecs_.emplace<ShotCounter>(e);

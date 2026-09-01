@@ -10,12 +10,22 @@ specs = ["pyre", "forge", "cinder"]
 # output of its neighbours.
 
 [[node]]
+id = "brazier.unlock"
+name = "Ember Charter"
+desc = "Unlocks the Brazier: very short range, relentless cadence."
+branch = "trunk"
+cost = 28
+requires = []
+pos = [0, -1]
+modifiers = [{ target = "brazier.damage", op = "mult", value = 1.05 }]
+
+[[node]]
 id = "brazier.trunk.dmg1"
 name = "Stoked Coals"
 desc = "+10% damage on every hit"
 branch = "trunk"
-cost = 18
-requires = []
+cost = 11
+requires = ["brazier.unlock"]
 pos = [0, 0]
 modifiers = [{ target = "brazier.damage", op = "mult", value = 1.1 }]
 
@@ -24,7 +34,7 @@ id = "brazier.trunk.rate1"
 name = "Bellows"
 desc = "+12% fire rate"
 branch = "trunk"
-cost = 22
+cost = 14
 requires = ["brazier.trunk.dmg1"]
 pos = [0, 1]
 modifiers = [{ target = "brazier.fireRate", op = "mult", value = 1.12 }]
@@ -34,7 +44,7 @@ id = "brazier.trunk.range1"
 name = "Tall Flame"
 desc = "+0.5 tiles range"
 branch = "trunk"
-cost = 24
+cost = 15
 requires = ["brazier.trunk.dmg1"]
 pos = [1, 1]
 modifiers = [{ target = "brazier.range", op = "add", value = 0.5 }]
@@ -44,7 +54,7 @@ id = "brazier.pyre.core"
 name = "Pyre"
 desc = "Wider reach and a splash on every hit."
 branch = "pyre"
-cost = 58
+cost = 36
 requires = ["brazier.trunk.rate1"]
 pos = [-2, 2]
 modifiers = [
@@ -62,7 +72,7 @@ id = "brazier.pyre.wide"
 name = "Roaring Blaze"
 desc = "+0.5 tiles splash radius"
 branch = "pyre"
-cost = 46
+cost = 29
 requires = ["brazier.pyre.core"]
 pos = [-3, 3]
 modifiers = [{ target = "brazier.splash.radius", op = "add", value = 0.5 }]
@@ -72,7 +82,7 @@ id = "brazier.pyre.far"
 name = "Beacon Fire"
 desc = "+1 tile of reach, for a hard-to-place tower"
 branch = "pyre"
-cost = 46
+cost = 29
 requires = ["brazier.pyre.core"]
 pos = [-2, 3]
 modifiers = [{ target = "brazier.range", op = "add", value = 1.0 }]
@@ -82,7 +92,7 @@ id = "brazier.forge.core"
 name = "Forge"
 desc = "Raises the damage and rate of every tower around it."
 branch = "forge"
-cost = 58
+cost = 36
 requires = ["brazier.trunk.rate1"]
 pos = [0, 2]
 modifiers = [
@@ -99,7 +109,7 @@ id = "brazier.forge.strong"
 name = "Master Smith"
 desc = "+12% damage to buffed towers"
 branch = "forge"
-cost = 46
+cost = 29
 requires = ["brazier.forge.core"]
 pos = [0, 3]
 modifiers = [{ target = "brazier.towerBuff.damagePct", op = "add", value = 0.12 }]
@@ -109,7 +119,7 @@ id = "brazier.forge.wide"
 name = "Great Furnace"
 desc = "+1.2 tiles buff radius"
 branch = "forge"
-cost = 46
+cost = 29
 requires = ["brazier.forge.core"]
 pos = [1, 3]
 modifiers = [{ target = "brazier.towerBuff.radius", op = "add", value = 1.2 }]
@@ -119,7 +129,7 @@ id = "brazier.cinder.core"
 name = "Cinder"
 desc = "A relentless cadence, and armour that means nothing."
 branch = "cinder"
-cost = 58
+cost = 36
 requires = ["brazier.trunk.range1"]
 pos = [2, 2]
 modifiers = [
@@ -133,7 +143,7 @@ id = "brazier.cinder.fast"
 name = "White Heat"
 desc = "+30% fire rate"
 branch = "cinder"
-cost = 46
+cost = 29
 requires = ["brazier.cinder.core"]
 pos = [2, 3]
 modifiers = [{ target = "brazier.fireRate", op = "mult", value = 1.3 }]
@@ -143,7 +153,7 @@ id = "brazier.cinder.pen"
 name = "Slagging"
 desc = "+8 armour penetration: ignores that much enemy armour"
 branch = "cinder"
-cost = 46
+cost = 29
 requires = ["brazier.cinder.core"]
 pos = [3, 3]
 modifiers = [{ target = "brazier.armorPen", op = "add", value = 8.0 }]

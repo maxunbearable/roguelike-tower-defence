@@ -19,6 +19,7 @@ struct RadialItem {
         // categories
         OpenSpec,
         OpenElement,
+        OpenTargeting,
         Back,
         // leaves
         Build,
@@ -26,6 +27,7 @@ struct RadialItem {
         AttachElement,
         TowerSpec,
         ElementSpec,
+        SetTargeting,
         Sell,
     };
 
@@ -51,6 +53,10 @@ struct StatRow {
 class RadialMenu {
 public:
     void open(int tileX, int tileY, core::Vec2 centre, std::vector<RadialItem> items);
+    // Exposed for tests: where the ring will actually be centred, given where it
+    // was asked to appear.
+    static core::Vec2 clampCentre(core::Vec2 c);
+    static float ringRadius();
     void close();
     bool isOpen() const { return open_; }
 

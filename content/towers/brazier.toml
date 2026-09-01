@@ -2,9 +2,9 @@
 id = "brazier"
 name = "Brazier"
 desc = "Very short range, relentless cadence. Placement is everything."
-buildCost = 85
+buildCost = 149
 sellRefundPct = 0.6
-damage = 7
+damage = 5.46
 fireRate = 3.2             # the fastest in the roster by a wide margin
 range = 1.89                # and the shortest, so placement is everything
 projectileSpeed = 12.0
@@ -18,13 +18,13 @@ damageType = "searing"
 specCost = 120
 
 [[level]]                  # level 2
-cost = 100
+cost = 175
 damageMult = 1.7
 rangeMult = 1.12
 fireRateMult = 1.16
 
 [[level]]                  # level 3
-cost = 180
+cost = 315
 damageMult = 2.6
 rangeMult = 1.24
 fireRateMult = 1.32

@@ -54,7 +54,7 @@ TEST_CASE("a save slot survives a JSON round trip", "[save]") {
     r.gold = 340;
     r.lives = 17;
     r.buildTimer = 7.5f;
-    r.towers.push_back({3, 1, 2, 195, "earth", "elf", "poison"});
+    r.towers.push_back({3, 1, "cannon", 2, 195, "earth", "elf", "poison", "strongest"});
     s.run = r;
 
     const auto back = core::fromJson(core::toJson(s));
@@ -65,6 +65,10 @@ TEST_CASE("a save slot survives a JSON round trip", "[save]") {
     REQUIRE(back.run->waveIndex == 12);
     REQUIRE(back.run->towers.size() == 1);
     REQUIRE(back.run->towers[0].elementSpec == "poison");
+    // A saved tower must remember WHAT it is and how it was aimed. Both used to
+    // be dropped, and restore() rebuilt everything as a level-N arrow tower.
+    REQUIRE(back.run->towers[0].towerId == "cannon");
+    REQUIRE(back.run->towers[0].priority == "strongest");
 }
 
 TEST_CASE("a slot with no run in progress round trips too", "[save]") {

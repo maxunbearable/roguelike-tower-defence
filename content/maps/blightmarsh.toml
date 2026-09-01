@@ -8,7 +8,7 @@ order = 4
 blurb = "Wide open ground with few corners: coverage matters more than depth."
 gridW = 22
 gridH = 11
-startGold = 347
+startGold = 336
 buildTime = 11.0
 
 # Wide open ground with few corners: coverage matters more than depth.
@@ -52,6 +52,10 @@ wave = 25
 enemy = "boss_plague_carrier"
 
 [[waves.boss]]
+wave = 40
+enemy = "boss_bloat_gorger"
+
+[[waves.boss]]
 wave = 50
 enemy = "boss_plague_mother"
 
@@ -70,3 +74,11 @@ fromWave = 6
 [[waves.pool]]
 enemy = "blight_wraith"
 fromWave = 9
+
+[[waves.pool]]
+enemy = "gorgemaw"
+fromWave = 12
+
+[[waves.pool]]
+enemy = "gnashmaw"
+fromWave = 16

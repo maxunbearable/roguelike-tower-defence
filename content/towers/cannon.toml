@@ -2,9 +2,9 @@
 id = "cannon"
 name = "Cannon"
 desc = "Slow, heavy shells that damage a whole cluster at once."
-buildCost = 95
+buildCost = 166
 sellRefundPct = 0.6
-damage = 34
+damage = 26.52
 fireRate = 0.55           # slow: the heavy end of the roster
 range = 2.88
 projectileSpeed = 9.0
@@ -18,13 +18,13 @@ damageType = "siege"
 specCost = 130
 
 [[level]]                 # level 2
-cost = 110
+cost = 192
 damageMult = 1.65
 rangeMult = 1.08
 fireRateMult = 1.10
 
 [[level]]                 # level 3
-cost = 195
+cost = 341
 damageMult = 2.5
 rangeMult = 1.16
 fireRateMult = 1.22

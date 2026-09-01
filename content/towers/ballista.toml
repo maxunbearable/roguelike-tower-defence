@@ -2,9 +2,9 @@
 id = "ballista"
 name = "Ballista"
 desc = "The longest reach on the board. One bolt punches through a whole rank."
-buildCost = 105
+buildCost = 184
 sellRefundPct = 0.6
-damage = 26
+damage = 20.28
 fireRate = 0.65
 range = 3.78                # the longest reach in the roster
 projectileSpeed = 20.0     # a bolt, not a lob
@@ -18,13 +18,13 @@ damageType = "impact"
 specCost = 135
 
 [[level]]                  # level 2
-cost = 120
+cost = 210
 damageMult = 1.62
 rangeMult = 1.09
 fireRateMult = 1.14
 
 [[level]]                  # level 3
-cost = 205
+cost = 359
 damageMult = 2.45
 rangeMult = 1.18
 fireRateMult = 1.28

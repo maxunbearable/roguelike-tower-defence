@@ -23,7 +23,8 @@ struct Cursor {
 class Renderer {
 public:
     void load(const content::Registry& reg);
-    void update(float dt, const std::vector<sim::VisualEvent>& events);
+    void update(float dt, const std::vector<sim::VisualEvent>& events,
+                const content::Registry& reg);
     void draw(const sim::World& w, float alpha, const Cursor& cur);
     const SpriteAtlas& atlas() const { return atlas_; }
     const TileSet& tiles() const { return tiles_; }
@@ -39,6 +40,7 @@ private:
     void drawGoal(const content::MapDef& m) const;
     void drawTowers(const sim::World& w) const;
     void drawEnemies(const sim::World& w, float alpha) const;
+    void drawCorpses() const;
     void drawProjectiles(const sim::World& w, float alpha) const;
     void drawCursor(const sim::World& w, const Cursor& cur) const;
     void drawAtmosphere() const;
@@ -46,6 +48,22 @@ private:
     SpriteAtlas atlas_;
     TileSet tiles_;
     Effects fx_;
+
+    // Death animation. The enemy entity is destroyed the instant it dies, so the
+    // corpse cannot live in the ECS -- it is a purely presentational copy of what
+    // was on screen, kept here because this is the only place that has both the
+    // atlas and the enemy definitions.
+    struct Corpse {
+        core::Vec2 pos;
+        std::string base;    // sprite base id; frames are base_0..base_(frames-1)
+        int frames = 1;      // >1 means the pack shipped a real death sequence
+        int scale = 1;
+        bool faceLeft = false;
+        float life = 0.0f;
+        float maxLife = 0.45f;
+        Color tint{255, 255, 255, 255};
+    };
+    std::vector<Corpse> corpses_;
     float time_ = 0.0f;
 };
 

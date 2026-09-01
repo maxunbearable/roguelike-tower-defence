@@ -7,6 +7,7 @@
 
 #include "render/Palette.h"
 #include "render/PixelCanvas.h"
+#include "core/RingLayout.h"
 #include "ui/Paint.h"
 
 namespace td::ui {
@@ -21,11 +22,20 @@ constexpr float kPi = 3.14159265f;
 
 }  // namespace
 
+// The ring centre, pulled inward so no button lands off the play area. The
+// geometry lives in core/RingLayout.h so it can be tested without raylib.
+core::Vec2 RadialMenu::clampCentre(core::Vec2 c) {
+    return core::clampRingCentre(c, ringRadius(), static_cast<float>(render::kVirtualW),
+                                 static_cast<float>(render::kPlayH));
+}
+
+float RadialMenu::ringRadius() { return kRing + kButton * 0.5f; }
+
 void RadialMenu::open(int tileX, int tileY, core::Vec2 centre, std::vector<RadialItem> items) {
     open_ = true;
     tileX_ = tileX;
     tileY_ = tileY;
-    centre_ = centre;
+    centre_ = clampCentre(centre);
     items_ = std::move(items);
 }
 

@@ -11,7 +11,7 @@ id = "wind.trunk.potency"
 name = "Rising Gale"
 desc = "+15% Wind effect magnitude"
 branch = "trunk"
-cost = 18
+cost = 11
 requires = []
 pos = [0, 0]
 modifiers = [{ target = "wind.potency", op = "mult", value = 1.15 }]
@@ -21,7 +21,7 @@ id = "wind.trunk.duration"
 name = "Long Squall"
 desc = "+20% Wind effect duration"
 branch = "trunk"
-cost = 22
+cost = 14
 requires = ["wind.trunk.potency"]
 pos = [0, 1]
 modifiers = [{ target = "wind.duration", op = "mult", value = 1.2 }]
@@ -31,7 +31,7 @@ id = "wind.shock.core"
 name = "Shock"
 desc = "Hits arc onward to nearby enemies."
 branch = "shock"
-cost = 56
+cost = 35
 requires = ["wind.trunk.duration"]
 pos = [-2, 2]
 modifiers = [{ target = "wind.shock.damagePct", op = "mult", value = 1.0 }]
@@ -41,7 +41,7 @@ id = "wind.shock.more"
 name = "Forked Arc"
 desc = "+2 chain jumps: each hit arcs to two more enemies"
 branch = "shock"
-cost = 44
+cost = 27
 requires = ["wind.shock.core"]
 pos = [-2, 3]
 modifiers = [{ target = "wind.shock.jumps", op = "add", value = 2.0 }]
@@ -51,7 +51,7 @@ id = "wind.shock.hard"
 name = "Conductive"
 desc = "+35% chain damage"
 branch = "shock"
-cost = 44
+cost = 27
 requires = ["wind.shock.core"]
 pos = [-3, 3]
 modifiers = [{ target = "wind.shock.damagePct", op = "mult", value = 1.35 }]
@@ -61,7 +61,7 @@ id = "wind.gust.core"
 name = "Gust"
 desc = "Hits can shove the target back down the path."
 branch = "gust"
-cost = 56
+cost = 35
 requires = ["wind.trunk.duration"]
 pos = [0, 2]
 modifiers = [{ target = "wind.gust.pushTiles", op = "mult", value = 1.0 }]
@@ -71,7 +71,7 @@ id = "wind.gust.often"
 name = "Headwind"
 desc = "+25% chance a hit shoves the target back"
 branch = "gust"
-cost = 44
+cost = 27
 requires = ["wind.gust.core"]
 pos = [0, 3]
 modifiers = [{ target = "wind.gust.chance", op = "add", value = 0.25 }]
@@ -81,7 +81,7 @@ id = "wind.gust.far"
 name = "Hurricane"
 desc = "+80% shove distance, buying more passes"
 branch = "gust"
-cost = 44
+cost = 27
 requires = ["wind.gust.core"]
 pos = [1, 3]
 modifiers = [{ target = "wind.gust.pushTiles", op = "mult", value = 1.8 }]
@@ -91,7 +91,7 @@ id = "wind.cyclone.core"
 name = "Cyclone"
 desc = "Every few shots lands as a slowing vortex."
 branch = "cyclone"
-cost = 56
+cost = 35
 requires = ["wind.trunk.duration"]
 pos = [2, 2]
 modifiers = [{ target = "wind.cyclone.damage", op = "mult", value = 1.0 }]
@@ -101,7 +101,7 @@ id = "wind.cyclone.often"
 name = "Whirlwind"
 desc = "Vortex every 2nd shot instead of 4th"
 branch = "cyclone"
-cost = 44
+cost = 27
 requires = ["wind.cyclone.core"]
 pos = [2, 3]
 modifiers = [{ target = "wind.cyclone.everyNShots", op = "set", value = 2.0 }]
@@ -111,7 +111,7 @@ id = "wind.cyclone.wide"
 name = "Maelstrom"
 desc = "+0.7 tiles vortex radius, +50% damage"
 branch = "cyclone"
-cost = 44
+cost = 27
 requires = ["wind.cyclone.core"]
 pos = [3, 3]
 modifiers = [

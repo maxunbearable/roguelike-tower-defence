@@ -30,7 +30,14 @@ constexpr float kHpMult = 34.0f;
 // punishes small frequent hits far more than large ones -- at 22 it inverted
 // "fire rate beats hit size for poison uptime", because armour rather than
 // poison was deciding the outcome. HP was what had saturated; armour was not.
-constexpr float kArmorAdd = 9.0f;
+// Rescaled from 9.0 when the deficit profile cut base tower damage to 0.78x.
+// Armour is subtracted per HIT, so its bite is a fraction of hit size: shrinking
+// every hit by 22% while holding armour fixed silently hands the advantage to
+// big slow hits, and this test inverted -- sniper 11.5% vs elf 10.0% -- for
+// exactly the reason recorded above, but from the damage side instead of the
+// armour side. The fixture's armour has to track tower damage or it stops
+// measuring poison and starts measuring armour again.
+constexpr float kArmorAdd = 7.0f;
 
 std::vector<Placement> layout(ScenarioKind kind) {
     switch (kind) {
@@ -80,11 +87,14 @@ ComboResult simulateCombo(const content::Registry& reg, const std::string& tower
     // harness was measuring the wrong thing.
     core::Loadout meta;
     meta.ownAll = false;
-    meta.ownedNodes.insert("global.unlock.level2");
-    meta.ownedNodes.insert("global.unlock.level3");
+    meta.ownedNodes.insert("global.level2");   // grants global.unlock.level2
+    meta.ownedNodes.insert("global.level3");   // grants global.unlock.level3
     for (const auto& [treeId, tree] : reg.trees()) {
         for (const auto& sp : tree.specs) meta.ownedNodes.insert(treeId + "." + sp + ".core");
     }
+    // Tower types are unlocked by a charter at the root of their tree, and this
+    // harness places every one of them.
+    for (const auto& [towerId, def] : reg.towers()) meta.ownedNodes.insert(towerId + ".unlock");
 
     World w(reg, reg.map("greenfields"), seed, meta, /*goldOverride=*/1000000);
 

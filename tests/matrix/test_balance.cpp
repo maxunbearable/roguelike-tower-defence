@@ -140,10 +140,21 @@ TEST_CASE("the meta progression outlasts a single run", "[balance]") {
         for (const auto& n : tree.nodes) treeCost += n.cost;
     }
     const auto firstRun = sim::autoPlay(reg, reg.map("greenfields"), fresh(), 1);
-    UNSCOPED_INFO("tree costs " << treeCost << ", a first run earns " << firstRun.shards);
+    const auto strongRun = sim::autoPlay(reg, reg.map("greenfields"), fullyUpgraded(), 1);
+
+    // The two bounds are measured against DIFFERENT runs on purpose. Shard
+    // income is not flat -- it rises with how far a run gets, measured at ~12x
+    // between a first run and a strong one -- so comparing the total tree cost
+    // against first-run income overstates the grind by an order of magnitude.
+    // The floor belongs against a first run (the tree must outlast run one) and
+    // the ceiling against a strong one (that is the income you actually have
+    // when buying the dear nodes at the top of the tree).
+    UNSCOPED_INFO("tree costs " << treeCost << "; a first run earns " << firstRun.shards
+                  << ", a strong run " << strongRun.shards);
     REQUIRE(firstRun.shards > 0);
-    REQUIRE(treeCost > firstRun.shards * 5);   // many runs of work
-    REQUIRE(treeCost < firstRun.shards * 60);  // but not an endless grind
+    REQUIRE(strongRun.shards > firstRun.shards);  // progress must pay
+    REQUIRE(treeCost > firstRun.shards * 5);      // many runs of work
+    REQUIRE(treeCost < strongRun.shards * 30);    // but not an endless grind
 }
 
 TEST_CASE("the difficulty curve is gentle early and steep late", "[balance]") {

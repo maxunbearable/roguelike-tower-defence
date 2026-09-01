@@ -9,17 +9,15 @@
 namespace td::sim {
 
 void runWaveSystem(World& w, float dt) {
-    const auto& wave = w.map_->waves[static_cast<size_t>(w.waveIndex_)];
-
-    for (size_t i = 0; i < w.groups_.size(); ++i) {
-        auto& rt = w.groups_[i];
+    // Each group carries its own spawn parameters, so groups belonging to two
+    // different waves can be in flight at once (an early overlap call).
+    for (auto& rt : w.groups_) {
         if (rt.remaining <= 0) continue;
         rt.timer -= dt;
         while (rt.timer <= 0.0f && rt.remaining > 0) {
-            const auto& g = wave.groups[i];
-            w.spawnEnemy(g.enemyId, g.hpMult, g.armorAdd, g.bountyMult);
+            w.spawnEnemy(rt.enemyId, rt.hpMult, rt.armorAdd, rt.bountyMult);
             --rt.remaining;
-            rt.timer += wave.groups[i].interval;
+            rt.timer += rt.interval;
         }
     }
 

@@ -160,15 +160,25 @@ questioned. Kenney's CC0 audio packs were considered and are genuinely safe, but
 synthesis was chosen because it is smaller, has no download to break, and the
 result is unambiguously yours.
 
-**No third-party art is used.** Two candidates were considered during research
-and both were deliberately rejected:
+Two candidates were considered during research. **Both verdicts below were
+revised once the licences and the art were actually checked** — the original
+entries had it backwards on both counts, which is why this file records evidence
+rather than impressions.
 
-- **Kenney's Tower Defense (Top-Down)** — genuinely CC0 and would have been
-  safe, but rejected on *artistic* grounds: 64 px art against a 32 px grid,
-  which would clash with the hand-authored 16 px sprites.
-- **free-game-assets itch.io packs** (archer towers, TD enemies) — rejected on
-  *licensing* grounds. Their terms were never verified, and packs of this kind
-  frequently restrict commercial use or redistribution.
+- **Kenney's Tower Defense (Top-Down)** — CC0, verified at source, so it is
+  legally safe. **Rejected on artistic grounds**, now confirmed by looking at it:
+  downloaded and rendered to `docs/previews/kenney-td.png`, its tilesheet is flat
+  vector-style, and its "towers" are small grey sci-fi turret bases and missile
+  launchers. It is a military/space TD kit, not a fantasy one, and nothing in it
+  can sit next to Tiny Swords. Do not revisit this one.
+- **CraftPix / free-game-assets** — the earlier rejection said the terms "were
+  never verified". They now are, at <https://craftpix.net/file-licenses/>:
+  commercial sale is permitted ("You can sell and distribute games with our
+  assets"), **no attribution is required**, modification is permitted, and
+  §2.2.1 forbids reselling or redistributing the source art files. That is the
+  *same shape* as the Tiny Swords licence, so it needs no new policy — the
+  existing `assets/sprites/*.png` gitignore already satisfies it. **Cleared.**
+  A CraftPix free pack is in fact already in use for the magic/element art.
 
 ### Fonts, if one is ever added
 
@@ -220,3 +230,46 @@ defeat.
 
 The procedural synthesiser remains as a **fallback**: if a file is missing, that
 cue is generated instead, so the game always has audio.
+
+### If five distinct tower families are wanted (open decision)
+
+Tiny Swords contains only three single-tile tower silhouettes (see
+`docs/ART.md`), so five visually distinct tower types with per-level upgrade art
+needs a purpose-built tower defence pack. Verified options, in order:
+
+1. **CraftPix "…Towers Pixel Art for Tower Defense" series** — the licence is
+   verified above and is the same shape as the one already accepted for Tiny
+   Swords, and a CraftPix free pack is already in use here for the element art,
+   so nothing new has to be cleared.
+   - *Free*: <https://craftpix.net/freebies/free-archer-towers-pixel-art-for-tower-defense/>
+     — one family only ("Set includes only the towers and one character", 461 kB),
+     so it covers the arrow line and proves the pipeline.
+   - *Paid*: the Mage, Guardian and Catapult packs in the same series. These are
+     the ones worth money, because they ship **towers at several stages of
+     development**, which maps directly onto the game's level 1/2/3 upgrades —
+     towers would visibly grow as they are upgraded, which no amount of
+     compositing can fake.
+2. **Kenney's Tower Defense (Top-Down)** — CC0, and rejected. See above: it is a
+   flat-vector sci-fi kit whose towers are grey turret bases and missile
+   launchers. Recorded so it is not researched a fourth time.
+
+Nothing needs to change in this file's policy to adopt option 1: art stays out
+of the repository and the importers stay in it.
+
+## Packs assessed 2026-09-01 (second batch)
+
+All CraftPix or CraftPix-style freebies, so the licence position is the one
+verified above: commercial sale permitted, no attribution, source art must not be
+redistributed. Verdicts are from **rendering each pack and looking at it**, which
+is the only method that has ever been right here.
+
+| Pack | Verdict |
+|---|---|
+| `Free-Monster-Enemy-Sprites-for-Tower-Defense` | **Adopted.** Ten creatures, each with an 18-frame Dying sequence. Imported by `tools/import_monsters.py`. Monsters 1-5 ship Fly/Fall and 6-10 ship Walking/Jump, which is where the five flying enemies come from. |
+| `free-pixel-magic-sprite-effects-pack` | **Worth adopting, not yet done.** Genuine pixel art: 15 effect strips of 8 frames at 72x72, plus 11 icons. The strips are the obvious fix for the documented gap that 15 of 18 element overlays are per-element rather than per-spec. The icons are usable but read more JRPG than dark fantasy -- pick from them, do not take the set. |
+| `stone-tower-game-assets` | **Not a tower pack.** The name is misleading: it is a catapult/boulder kit -- modular siege-engine bases and posts, rock debris, impact bursts -- in a soft painted style with an `FLA` (Flash) source folder, and it contains no complete tower silhouette. Rejected for towers. Its **boulders and impact bursts** are worth taking for cannon/ballista projectiles and splash effects. |
+| `free-cartoon-smoke-effects-asset-pack` | **Not assessed in depth; likely reject.** 48MB and self-described as *cartoon*, against a pixel-art game. Render it before spending time on it. |
+
+The tower situation is unchanged by this batch: see the tower section above.
+Nothing here supplies five distinct fantasy tower silhouettes with per-level
+upgrade art, so that recommendation still stands.

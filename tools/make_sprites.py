@@ -410,11 +410,39 @@ def icons():
             paint(c, {(x,y) for y in range(3,9) for x in range(ox,ox+4)
                       if (x-ox) <= (3-abs(y-5.5))*1.6}, "n")
     def pause(c): shade(c, rect(2,2,4,9) | rect(7,2,9,9), GOLD, depth=1)
+
+    # --- targeting modes ---------------------------------------------------
+    # Five icons rather than one repeated crosshair: the ring shows icons and
+    # only reveals a label on hover, so five identical buttons would be a menu
+    # you have to hover five times to read.
+    def tgt_first(c):                                 # chevrons driving forward
+        for ox in (2,6):
+            paint(c, {(x,y) for y in range(2,10) for x in range(ox,ox+4)
+                      if (x-ox) <= (4-abs(y-5.5))*1.3}, "n")
+    def tgt_last(c):                                  # the same, reversed
+        for ox in (2,6):
+            paint(c, {(x,y) for y in range(2,10) for x in range(ox,ox+4)
+                      if (ox+3-x) <= (4-abs(y-5.5))*1.3}, "n")
+    def tgt_strong(c):                                # a full bar: most health
+        paint(c, rect(1,4,10,7), "#")
+        shade(c, rect(2,5,9,6), RED, depth=1)
+    def tgt_weak(c):                                  # the same bar, nearly empty
+        paint(c, rect(1,4,10,7), "#")
+        shade(c, rect(2,5,4,6), RED, depth=1)
+    def tgt_close(c):                                 # a crosshair on this tower
+        paint(c, ellipse(5.5,5.5,4.6,4.6) - ellipse(5.5,5.5,3.2,3.2), "0")
+        paint(c, line(5,0,5,3,1) | line(5,8,5,11,1), "0")
+        paint(c, line(0,5,3,5,1) | line(8,5,11,5,1), "0")
+        paint(c, ellipse(5.5,5.5,1.2,1.2), "r")
     names = [("icon_build",build),("icon_level",level),("icon_spec",spec),("icon_gem",gem),
              ("icon_sell",sell),("icon_back",back),("icon_sniper",sniper),("icon_elf",elf),
              ("icon_hunter",hunter),("icon_poison",poison),("icon_rock",rock),
              ("icon_quake",quake),("icon_heart",heart),("icon_coin",coin),("icon_play",play),
-             ("icon_ffwd",ffwd),("icon_pause",pause)]
+             ("icon_ffwd",ffwd),("icon_pause",pause),
+             ("icon_target",tgt_close),
+             ("icon_tgt_first",tgt_first),("icon_tgt_last",tgt_last),
+             ("icon_tgt_strongest",tgt_strong),("icon_tgt_weakest",tgt_weak),
+             ("icon_tgt_closest",tgt_close)]
     return [(n, ic(f)) for n, f in names]
 
 

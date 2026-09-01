@@ -107,69 +107,101 @@ def main(base):
         sys.exit("could not find 'Tiny Swords (Free Pack)' under " + base)
     log = []
 
-    # --- towers: one whole building per specialisation ---------------------
-    # Distinct silhouettes AND distinct faction colours, so the board reads at a
-    # glance: a round keep for the plain and sniper towers, a wide hall with a
-    # roof for the two multi-archer specialisations.
-    # Shape carries the meaning, not colour. The previous mapping gave sniper
-    # the same silhouette as plain and hunter the same as elf, so the board said
-    # nothing about what a tower actually did.
-    #   plain  -> a modest house: the unspecialised starting structure
-    #   sniper -> the tall narrow keep: height reads as reach
-    #   elf    -> a timber perch: rustic and organic, not masonry
-    #   hunter -> the archery hall, targets and arrows everywhere: many shots
-    # Each tower type gets its own faction colour, and each spec its own
-    # SILHOUETTE rather than just a recolour -- a spec that looks like the base
-    # tower with a different palette does not read on a busy board.
-    # Each tower type is a faction colour; each spec within it is a different
-    # SILHOUETTE, not a recolour -- a spec that differs only in palette does not
-    # read on a busy board, which was the complaint about the first pass.
+    # --- towers: only silhouettes that actually READ as towers -------------
+    # The complaint that drove this rewrite: "towers models is just houses not a
+    # towers". It was correct and measurable -- of the 20 tower sprites, only 4
+    # used a tower silhouette; the other 16 were House1/House2/House3, Barracks,
+    # Archery halls and Monasteries, because those are what an RTS pack ships.
+    # Tiny Swords is a village builder, not a tower defence kit.
     #
-    # Castle (156px wide) and most Monasteries (132px tall) are excluded: at a
-    # 64px tile they swallow their neighbours. The arcane base keeps its
-    # Monastery deliberately, because a two-tile spire is what an arcane tower
-    # should look like.
-    towers = {
-        # arrow -- blue/purple/red archer line
-        "tower_plain":   ("Blue Buildings",   "House3.png"),    # 61x67 hut
-        "tower_sniper":  ("Purple Buildings", "Tower.png"),     # 60x92 tall keep
-        "tower_hunter":  ("Red Buildings",    "Archery.png"),   # 91x89 wide hall
-        # cannon -- black siege line
-        "tower_cannon":  ("Black Buildings",  "Barracks.png"),  # 92x93 squat fort
-        "tower_mortar":  ("Black Buildings",  "Tower.png"),     # 60x92 long reach
-        "tower_bombard": ("Black Buildings",  "House2.png"),    # 64x77 close work
-        "tower_siege":   ("Black Buildings",  "Archery.png"),   # 91x89 heavy
-        # arcane -- purple/yellow magic line
-        "tower_arcane":  ("Purple Buildings", "Monastery.png"), # 80x132 spire
-        "tower_tempest": ("Yellow Buildings", "Tower.png"),     # 60x92
-        "tower_hex":     ("Yellow Buildings", "House1.png"),    # 56x78
-        "tower_drain":   ("Yellow Buildings", "Barracks.png"),  # 92x93
-        # ballista -- red war-machine line
-        "tower_ballista": ("Red Buildings",    "Barracks.png"),  # 92x93 engine yard
-        "tower_harpoon":  ("Red Buildings",    "Tower.png"),     # 60x92 long shot
-        "tower_scorpion": ("Red Buildings",    "House2.png"),    # 64x77 rapid
-        "tower_javelin":  ("Red Buildings",    "House1.png"),    # 56x78 impact
-        # brazier -- the fire line
-        "tower_brazier":  ("Yellow Buildings", "House3.png"),    # 61x67 small fire
-        "tower_pyre":     ("Yellow Buildings", "Archery.png"),   # 91x89 wide blaze
-        "tower_forge":    ("Yellow Buildings", "Monastery.png"), # 80x132 chimney
-        "tower_cinder":   ("Yellow Buildings", "House2.png"),    # 64x77 relentless
-    }
-    for name, (faction, f) in towers.items():
-        p = os.path.join(free, "Buildings", faction, f)
-        if os.path.exists(p):
-            log.append(save(half(trim(Image.open(p).convert("RGBA"))), name))
+    # Between the two packs there are exactly FOUR silhouettes a player would
+    # call a tower, which is also exactly how many variants each tower type has
+    # (base + 3 specialisations). So:
+    #
+    #     COLOUR FAMILY  = tower type   (5 types, 5 faction palettes)
+    #     SILHOUETTE     = which variant within that type
+    #
+    # Every tower on the board is therefore tower-shaped, its type is readable
+    # from palette, and its specialisation from outline. Nothing is a house.
+    KEEP, BASTION, TWINKEEP, TIMBER = "keep", "bastion", "twinkeep", "timber"
 
-    # The elf perch comes from the goblin wood tower, which is the only timber
-    # tower in either pack. Its first frame only; the sheet is an animation.
-    if cc0:
-        for colour in ("Blue", "Yellow", "Purple", "Red"):
-            wt = os.path.join(cc0, "Factions", "Goblins", "Buildings", "Wood_Tower",
-                              f"Wood_Tower_{colour}.png")
-            if os.path.exists(wt):
-                sheet = Image.open(wt).convert("RGBA")
-                log.append(save(half(trim(sheet.crop((0, 0, 256, sheet.height)))), "tower_elf"))
-                break
+    def iron(im):
+        """Desaturates and darkens to stand in for the missing 'Black' family.
+
+        The free pack has five faction colours but the full pack's Tower and
+        Wood_Tower ship only four, and the cannon line is the black one.
+        """
+        px = im.load()
+        for y in range(im.height):
+            for x in range(im.width):
+                r, g, b, a = px[x, y]
+                if a == 0:
+                    continue
+                grey = int(0.299 * r + 0.587 * g + 0.114 * b)
+                px[x, y] = (int(grey * 0.62), int(grey * 0.64), int(grey * 0.74), a)
+        return im
+
+    def silhouette(shape, colour):
+        """One tower sprite. Returns None if the source is unavailable."""
+        src = colour if colour != "Black" else "Blue"  # recoloured below
+        if shape == BASTION:
+            p = os.path.join(free, "Buildings", f"{colour} Buildings", "Tower.png")
+            return Image.open(p).convert("RGBA") if os.path.exists(p) else None
+        if not cc0:
+            return None
+        if shape == TWINKEEP:
+            # There is no fourth tower silhouette in either pack: Monastery is a
+            # chapel with a pitched roof (it read as a house, which was the whole
+            # complaint) and Castle is 156px -- 2.4 tiles -- of twin-turreted
+            # wall. So stack a second crenellated drum on the keep. Same source
+            # pixels, so palette and lighting match exactly, and the result reads
+            # as a taller, grander tower rather than a different building.
+            base = silhouette(KEEP, colour)
+            if base is None:
+                return None
+            base = trim(base)
+            w, h = base.size
+            drum = base.crop((0, 0, w, int(h * 0.55)))  # the crenellated top
+            out = Image.new("RGBA", (w, h + int(h * 0.42)), (0, 0, 0, 0))
+            out.paste(base, (0, int(h * 0.42)), base)
+            out.alpha_composite(drum, (0, 0))
+            return out
+        if shape == KEEP:
+            p = os.path.join(cc0, "Factions", "Knights", "Buildings", "Tower",
+                             f"Tower_{src}.png")
+            if not os.path.exists(p):
+                return None
+            im = Image.open(p).convert("RGBA")
+        else:  # TIMBER -- the goblin wood tower, an ANIMATION strip.
+            p = os.path.join(cc0, "Factions", "Goblins", "Buildings", "Wood_Tower",
+                             f"Wood_Tower_{src}.png")
+            if not os.path.exists(p):
+                return None
+            sheet = Image.open(p).convert("RGBA")
+            # Frame pitch is 256, not the 128 the image height suggests: the
+            # tower is 130px wide and sits centred, so a 128 crop cuts it in
+            # half. Measured from the alpha gutters, same trap as Barrel_Red.
+            im = sheet.crop((0, 0, 256, sheet.height))
+        return iron(im) if colour == "Black" else im
+
+    # colour family per tower type, then the four variants in slot order.
+    tower_families = {
+        "arrow":    ("Blue",   [("tower_plain",   BASTION), ("tower_sniper",  KEEP),
+                                ("tower_elf",     TIMBER),  ("tower_hunter",  TWINKEEP)]),
+        "cannon":   ("Black",  [("tower_cannon",  BASTION), ("tower_mortar",  KEEP),
+                                ("tower_bombard", TIMBER),  ("tower_siege",   TWINKEEP)]),
+        "arcane":   ("Purple", [("tower_arcane",  TWINKEEP),   ("tower_tempest", KEEP),
+                                ("tower_hex",     BASTION), ("tower_drain",   TIMBER)]),
+        "ballista": ("Red",    [("tower_ballista", TIMBER), ("tower_harpoon", KEEP),
+                                ("tower_scorpion", BASTION), ("tower_javelin", TWINKEEP)]),
+        "brazier":  ("Yellow", [("tower_brazier", BASTION), ("tower_pyre",    TWINKEEP),
+                                ("tower_forge",   KEEP),    ("tower_cinder",  TIMBER)]),
+    }
+    for _type, (colour, variants) in tower_families.items():
+        for name, shape in variants:
+            im = silhouette(shape, colour)
+            if im is not None:
+                log.append(save(half(trim(im)), name))
 
     # The castle makes a far better goal marker than a blue circle.
     castle = os.path.join(free, "Buildings", "Blue Buildings", "Castle.png")

@@ -16,6 +16,7 @@ std::string toJson(const SaveSlot& slot) {
     j["profileName"] = slot.profileName;
 
     j["meta"]["shards"] = slot.meta.shards;
+    j["meta"]["seenHints"] = slot.meta.seenHints;
     j["meta"]["runsPlayed"] = slot.meta.runsPlayed;
     j["meta"]["bestWave"] = slot.meta.bestWave;
     j["meta"]["ownedNodes"] = std::vector<std::string>(slot.meta.ownedNodes.begin(),
@@ -39,6 +40,8 @@ std::string toJson(const SaveSlot& slot) {
         for (const auto& t : r.towers) {
             jr["towers"].push_back({{"x", t.x},
                                     {"y", t.y},
+                                    {"towerId", t.towerId},
+                                    {"priority", t.priority},
                                     {"level", t.level},
                                     {"goldSpent", t.goldSpent},
                                     {"elementId", t.elementId},
@@ -76,6 +79,7 @@ SaveSlot fromJson(const std::string& text) {
     if (j.contains("meta")) {
         const auto& m = j["meta"];
         s.meta.shards = m.value("shards", 0);
+        s.meta.seenHints = m.value("seenHints", std::set<std::string>{});
         s.meta.runsPlayed = m.value("runsPlayed", 0);
         s.meta.bestWave = m.value("bestWave", 0);
         s.meta.musicVolume = m.value("musicVolume", 0.5f);
@@ -107,6 +111,9 @@ SaveSlot fromJson(const std::string& text) {
                 TowerSave t;
                 t.x = jt.value("x", 0);
                 t.y = jt.value("y", 0);
+                // Defaults keep pre-existing saves loadable.
+                t.towerId = jt.value("towerId", std::string{"arrow"});
+                t.priority = jt.value("priority", std::string{"first"});
                 t.level = jt.value("level", 1);
                 t.goldSpent = jt.value("goldSpent", 0);
                 t.elementId = jt.value("elementId", std::string{});

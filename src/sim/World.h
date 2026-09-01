@@ -23,8 +23,22 @@ namespace td::sim {
 
 inline constexpr float kFixedDt = 1.0f / 60.0f;
 inline constexpr int kStartingLives = 20;
-inline constexpr int kShardsPerWave = 2;
-inline constexpr int kShardsPerMapClear = 40;
+// Shard payout is the rate the WHOLE meta progression turns at, and it is
+// deliberately mean: shards are the one resource that survives a run, so if they
+// accumulate freely nothing else being scarce matters. Raising this to 7 was
+// tried and reverted -- the stall it was meant to fix came from a broken level
+// gate, not from income. Halved again for the hardcore pass.
+// Read alongside nodeCost in tools/balance.py: node PRICES are down 38% while
+// income is down ~50%, so each shard buys more but there are fewer of them.
+inline constexpr int kShardsPerWave = 1;
+// The one tower every profile can build from its first run.
+inline constexpr const char* kStartingTower = "arrow";
+inline constexpr int kShardsPerMapClear = 20;
+// Gold per unresolved enemy when the next wave is called on top of a running
+// one. This is a SKILL income source, and the only one the player controls, so
+// it matters under the gold deficit: a board that is comfortably ahead can turn
+// that slack into money, and misjudging it costs lives rather than gold.
+inline constexpr int kGoldPerPendingEnemy = 3;
 
 // Sandbox runs every combat system but no wave logic, so scenarios can be set
 // up by hand and measured. It is how the combination matrix is tested.
@@ -57,6 +71,9 @@ public:
     // Levelling, imbuing and specialising are all gated on owning the relevant
     // node, so the meta progression is what turns plain level-1 towers into a
     // real board rather than being a pile of passive percentages.
+    // Arrow is the starting tower. Every other type is bought once, at the root
+    // of its own tree, so the roster a player fields is itself progression.
+    bool towerUnlocked(const std::string& towerId) const;
     bool levelUnlocked(int level) const;
     bool elementUnlocked(const std::string& elementId) const;
     bool towerSpecUnlocked(const std::string& towerId, const std::string& spec) const;
@@ -77,6 +94,10 @@ public:
     Phase phase() const { return phase_; }
     bool waveInProgress() const { return phase_ == Phase::Wave; }
     int aliveEnemies() const;
+    int towerCount() const;
+    // Cumulative spawns for the whole run. Exists so tests can prove an early
+    // overlap call does not quietly discard the rest of the current wave.
+    int enemiesSpawned() const { return enemiesSpawned_; }
 
     // Shards are the meta currency: they survive the run that earned them and
     // are spent in the skill trees between runs.
@@ -85,7 +106,10 @@ public:
     void addShards(int n) { shardsEarned_ += n; }
 
     // --- tower management -------------------------------------------------
-    enum class PlaceResult { Ok, NotBuildable, Occupied, TooPoor, OutOfBounds, UnknownTower };
+    enum class PlaceResult {
+        Ok, NotBuildable, Occupied, TooPoor, OutOfBounds, UnknownTower,
+        Locked,  // the tower type has not been unlocked in the skill tree
+    };
     PlaceResult placeTower(int tileX, int tileY, const std::string& towerId);
     bool upgradeTower(int tileX, int tileY);
 
@@ -117,6 +141,15 @@ public:
 
     float buildTimeRemaining() const { return buildTimer_; }
     int earlyStartBonus() const;
+    // Gold for calling the next wave ON TOP of one still running. Pays for the
+    // risk taken, so it scales with how much of the current wave is still
+    // unresolved -- enemies alive plus enemies yet to spawn. 0 outside a wave.
+    int overlapCallBonus() const;
+    // True when there is a further wave that could be called right now, either
+    // from the build phase or on top of a running wave.
+    bool canCallWave() const;
+    // Gold the NextWave button would pay right now, whichever kind of call it is.
+    int callBonus() const;
     void startNextWave();
     void enterSandbox() { phase_ = Phase::Sandbox; }
     // Dev capture only: drop straight onto a wave without playing the ones
@@ -147,6 +180,13 @@ public:
     // Shadow's siphon can hand a life back. Capped at the starting count so a
     // long run cannot bank an unlosable buffer.
     void gainLife(int n);
+
+    // Targeting. Five modes were implemented in the targeting system and
+    // validated at content load from the day it was written, but were authored
+    // per tower and frozen for the whole run -- the player could never pick one.
+    bool setTowerPriority(int tileX, int tileY, TargetPriority p);
+    TargetPriority towerPriority(int tileX, int tileY) const;
+    static const char* priorityLabel(TargetPriority p);
     void addGold(int n);
     bool spendGold(int n);
     void spawnEnemy(const std::string& enemyId, float hpMult = 1.0f, float armorAdd = 0.0f,
@@ -171,12 +211,22 @@ private:
     int shardsEarned_ = 0;
     int gold_ = 0;
     int waveIndex_ = 0;
+    int enemiesSpawned_ = 0;
     Phase phase_ = Phase::Build;
     float buildTimer_ = 0.0f;
 
+    // Carries its OWN spawn parameters rather than indexing into
+    // map_->waves[waveIndex_].groups[i]. That indexing is what made overlapping
+    // waves impossible: calling the next wave early while one is still running
+    // needs two waves spawning at once, and an index can only name one.
     struct GroupRuntime {
         int remaining = 0;
         float timer = 0.0f;
+        std::string enemyId;
+        float interval = 1.0f;
+        float hpMult = 1.0f;
+        float armorAdd = 0.0f;
+        float bountyMult = 1.0f;
     };
     std::vector<GroupRuntime> groups_;
     std::vector<VisualEvent> events_;

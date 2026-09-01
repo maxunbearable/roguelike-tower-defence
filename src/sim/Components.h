@@ -52,6 +52,11 @@ struct TowerTag {
     std::string elementId;
     std::string towerSpec;
     std::string elementSpec;
+    // The PLAYER's targeting choice, which is why it lives here and not on
+    // TowerStats: statsFor() re-reads targetPriority from the tower definition,
+    // and rebuildTower() runs on every upgrade, imbue and specialisation. Held
+    // on the stats it would be silently reset the next time the tower changed.
+    TargetPriority priority = TargetPriority::First;
 };
 
 class ElementBehavior;

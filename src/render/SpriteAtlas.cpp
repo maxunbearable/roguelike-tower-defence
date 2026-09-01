@@ -86,11 +86,17 @@ void SpriteAtlas::draw(const std::string& id, float cx, float cy, Color tint) co
                 static_cast<int>(std::lround(cy - t->height * 0.5f)), tint);
 }
 
-void SpriteAtlas::drawFoot(const std::string& id, float cx, float by, Color tint) const {
+void SpriteAtlas::drawFoot(const std::string& id, float cx, float by, Color tint,
+                           bool flipX) const {
     const auto* t = get(id);
     if (!t) return;
-    DrawTexture(*t, static_cast<int>(std::lround(cx - t->width * 0.5f)),
-                static_cast<int>(std::lround(by - t->height)), tint);
+    const float w = static_cast<float>(t->width);
+    const float h = static_cast<float>(t->height);
+    // A negative source WIDTH is how raylib mirrors; it keeps the destination
+    // rectangle and therefore the foot anchor unchanged.
+    const Rectangle src{0, 0, flipX ? -w : w, h};
+    const Rectangle dst{std::round(cx - w * 0.5f), std::round(by - h), w, h};
+    DrawTexturePro(*t, src, dst, Vector2{0, 0}, 0.0f, tint);
 }
 
 void SpriteAtlas::drawFitted(const std::string& id, float cx, float cy, float maxSide,
@@ -109,16 +115,17 @@ void SpriteAtlas::drawFitted(const std::string& id, float cx, float cy, float ma
 }
 
 void SpriteAtlas::drawFootScaled(const std::string& id, float cx, float by, int scale,
-                                 Color tint) const {
+                                 Color tint, bool flipX) const {
     const auto* t = get(id);
     if (!t) return;
     if (scale <= 1) {
-        drawFoot(id, cx, by, tint);
+        drawFoot(id, cx, by, tint, flipX);
         return;
     }
     const float w = static_cast<float>(t->width * scale);
     const float h = static_cast<float>(t->height * scale);
-    const Rectangle src{0, 0, static_cast<float>(t->width), static_cast<float>(t->height)};
+    const float sw = static_cast<float>(t->width);
+    const Rectangle src{0, 0, flipX ? -sw : sw, static_cast<float>(t->height)};
     const Rectangle dst{std::round(cx - w * 0.5f), std::round(by - h), w, h};
     DrawTexturePro(*t, src, dst, Vector2{0, 0}, 0.0f, tint);
 }

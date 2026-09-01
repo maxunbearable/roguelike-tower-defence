@@ -74,10 +74,60 @@ void Renderer::load(const content::Registry& reg) {
     tiles_.generate(kTile);
 }
 
-void Renderer::update(float dt, const std::vector<sim::VisualEvent>& events) {
+void Renderer::update(float dt, const std::vector<sim::VisualEvent>& events,
+                      const content::Registry& reg) {
     time_ += dt;
     fx_.consume(events);
     fx_.update(dt);
+
+    // A death used to be particles only: the sprite vanished on the same frame it
+    // died, so kills read as a puff with nothing dying in it. Keep a copy of the
+    // sprite around to fall over and fade.
+    for (const auto& e : events) {
+        if (e.kind != sim::VisualEvent::Kind::Death) continue;
+        if (!reg.hasEnemy(e.tag)) continue;
+        const auto& def = reg.enemy(e.tag);
+        Corpse c;
+        c.pos = e.pos;
+        // The monster pack ships an 18-frame Dying sequence per creature, cut to
+        // 6 by tools/import_monsters.py. Prefer it; fall back to holding frame 0
+        // of the walk cycle for the creatures that have no death art, which
+        // still sinks and fades rather than vanishing.
+        const std::string die = def.spriteId() + "_die";
+        const int dieFrames = atlas_.frameCount(die);
+        c.base = dieFrames > 0 ? die : def.spriteId();
+        c.frames = dieFrames > 0 ? dieFrames : 1;
+        c.maxLife = dieFrames > 0 ? 0.6f : 0.45f;
+        c.scale = def.spriteScale;
+        c.faceLeft = e.dir.x < 0.0f;
+        c.tint = Color{static_cast<unsigned char>(def.tintR),
+                       static_cast<unsigned char>(def.tintG),
+                       static_cast<unsigned char>(def.tintB), 255};
+        corpses_.push_back(c);
+    }
+    for (auto& c : corpses_) c.life += dt;
+    corpses_.erase(std::remove_if(corpses_.begin(), corpses_.end(),
+                                  [](const Corpse& c) { return c.life >= c.maxLife; }),
+                   corpses_.end());
+}
+
+void Renderer::drawCorpses() const {
+    for (const auto& c : corpses_) {
+        const float t = std::clamp(c.life / c.maxLife, 0.0f, 1.0f);
+        // Sink into the ground, drain to a bruised grey and fade. Sinking rather
+        // than only fading is what makes it read as dying instead of teleporting.
+        const float sink = (c.frames > 1 ? 1.5f : 6.0f) * t * static_cast<float>(c.scale);
+        const unsigned char a = static_cast<unsigned char>(255.0f * (1.0f - t * t));
+        const float drain = 1.0f - 0.45f * t;
+        const Color tint{static_cast<unsigned char>(c.tint.r * drain),
+                         static_cast<unsigned char>(c.tint.g * drain),
+                         static_cast<unsigned char>(c.tint.b * drain), a};
+        // Play the sequence once and hold the last frame; looping a death reads
+        // as the creature dying repeatedly.
+        const int f = std::min(c.frames - 1, static_cast<int>(t * static_cast<float>(c.frames)));
+        atlas_.drawFootScaled(c.base + "_" + std::to_string(f), c.pos.x * kTile,
+                              c.pos.y * kTile + sink, c.scale, tint, c.faceLeft);
+    }
 }
 
 void Renderer::drawTerrain(const content::MapDef& m) const {
@@ -334,6 +384,20 @@ void Renderer::drawEnemies(const sim::World& w, float alpha) const {
         const float cx = p.x * kTile;
         const float cy = p.y * kTile;
 
+        // Which way is this enemy facing? Every sprite in the pack is drawn
+        // walking to the RIGHT, so on the leftward legs of a serpentine route an
+        // unflipped sprite reads as walking backwards -- which is exactly what it
+        // looked like. Sampled from the PATH rather than from the frame's
+        // movement delta, because the delta is zero whenever an enemy is frozen
+        // or fully slowed, and a stationary enemy would then flicker or face the
+        // wrong way. The window straddles the enemy so corners resolve cleanly,
+        // and a purely vertical leg leaves dx at 0, which keeps the last facing
+        // rather than snapping.
+        const auto& route = w.path();
+        const float ahead = route.positionAt(pf.distance + 0.6f).x;
+        const float behind = route.positionAt(pf.distance - 0.6f).x;
+        const bool faceLeft = ahead < behind;
+
         const auto& edef = w.defs().enemy(tag.defId);
         const bool flying = edef.flying;
         const int frames = std::max(1, atlas_.frameCount(edef.spriteId()));
@@ -369,14 +433,15 @@ void Renderer::drawEnemies(const sim::World& w, float alpha) const {
         // Anchored so the baked shadow's centre lands on the path, which is
         // where the unit is standing; the feet sit at the top of that shadow.
         const float footY = cy + hover + kEnemyShadowInset * static_cast<float>(edef.spriteScale);
-        atlas_.drawFootScaled(sprite, cx, footY, edef.spriteScale, tint);
+        atlas_.drawFootScaled(sprite, cx, footY, edef.spriteScale, tint, faceLeft);
 
         // Additive white pass reads as a flash without needing a shader.
         if (const auto* f = r.try_get<sim::HitFlash>(e)) {
             BeginBlendMode(BLEND_ADDITIVE);
             const float k = std::clamp(f->remaining / 0.08f, 0.0f, 1.0f);
             atlas_.drawFootScaled(sprite, cx, footY, edef.spriteScale,
-                                  Color{255, 255, 255, static_cast<unsigned char>(190 * k)});
+                                  Color{255, 255, 255, static_cast<unsigned char>(190 * k)},
+                                  faceLeft);
             EndBlendMode();
         }
 
@@ -487,6 +552,7 @@ void Renderer::draw(const sim::World& w, float alpha, const Cursor& cur) {
     drawGoal(w.map());
     drawProps(w.map());
     drawCursor(w, cur);
+    drawCorpses();
     drawEnemies(w, alpha);
     drawTowers(w);
     drawProjectiles(w, alpha);

@@ -8,7 +8,7 @@ order = 2
 blurb = "Three long straights: good for reach, punishing for short range."
 gridW = 22
 gridH = 11
-startGold = 322
+startGold = 312
 buildTime = 12.0
 
 # Three long straights: good for reach, punishing for short range.
@@ -52,6 +52,10 @@ wave = 25
 enemy = "boss_cinder_brute"
 
 [[waves.boss]]
+wave = 40
+enemy = "boss_cinder_fiend"
+
+[[waves.boss]]
 wave = 50
 enemy = "boss_cinder_colossus"
 
@@ -70,3 +74,11 @@ fromWave = 7
 [[waves.pool]]
 enemy = "ash_wraith"
 fromWave = 11
+
+[[waves.pool]]
+enemy = "emberimp"
+fromWave = 14
+
+[[waves.pool]]
+enemy = "hornfiend"
+fromWave = 18

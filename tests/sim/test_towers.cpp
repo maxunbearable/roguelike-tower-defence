@@ -35,10 +35,16 @@ TEST_CASE("placing deducts gold and selling refunds a fraction", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
     const int before = w.gold();
+    // Read the cost rather than hardcoding it: tools/balance.py scales build
+    // costs per profile, and this test is about the bookkeeping, not the price.
+    const int cost = reg.tower("arrow").buildCost;
     REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
-    REQUIRE(w.gold() == before - 60);
+    REQUIRE(w.gold() == before - cost);
+    const int refund = w.sellValue(1, 0);
+    REQUIRE(refund > 0);
+    REQUIRE(refund < cost);  // selling is a loss, never a free move
     REQUIRE(w.sellTower(1, 0));
-    REQUIRE(w.gold() == before - 60 + 36);  // 60 * 0.6
+    REQUIRE(w.gold() == before - cost + refund);
     REQUIRE((w.towerAt(1, 0) == entt::null));  // parens: Catch2 vs EnTT null_t ambiguity
     REQUIRE_FALSE(w.sellTower(1, 0));
 }
@@ -65,12 +71,14 @@ TEST_CASE("upgrading raises level and applies the authored multiplier", "[towers
     const auto t = w.towerAt(1, 0);
     const float baseDamage = w.reg().get<sim::TowerStats>(t).damage;
 
-    REQUIRE(w.upgradeCost(1, 0) == 75);
+    // Authored level costs, read from content: balance profiles scale them.
+    const auto& def = reg.tower("arrow");
+    REQUIRE(w.upgradeCost(1, 0) == def.levels[0].cost);
     REQUIRE(w.upgradeTower(1, 0));
     REQUIRE(w.reg().get<sim::TowerTag>(t).level == 2);
     REQUIRE(w.reg().get<sim::TowerStats>(t).damage == baseDamage * 1.6f);
 
-    REQUIRE(w.upgradeCost(1, 0) == 140);
+    REQUIRE(w.upgradeCost(1, 0) == def.levels[1].cost);
     REQUIRE(w.upgradeTower(1, 0));
     REQUIRE(w.reg().get<sim::TowerTag>(t).level == 3);
     // multipliers are absolute against base, not cumulative

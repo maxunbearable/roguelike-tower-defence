@@ -35,6 +35,33 @@ void Game::say(const std::string& msg) {
     hud_.messageAge = 0.0f;
 }
 
+void Game::hintOnce(const char* id, const std::string& text) {
+    auto& seen = active().meta.seenHints;
+    if (!seen.insert(id).second) return;  // already shown to this profile
+    say(text);
+}
+
+void Game::updateHints() {
+    if (!world_) return;
+    const bool building = world_->phase() == sim::Phase::Build;
+
+    if (world_->towerCount() == 0) {
+        hintOnce("build", "Click any green tile to build a tower.");
+        return;  // one lesson at a time; the rest mean nothing without a tower
+    }
+    hintOnce("targeting", "Click a tower to set what it shoots first.");
+
+    if (building && world_->canCallWave()) {
+        hintOnce("callearly", "Call the wave early for bonus gold - the timer is money.");
+    }
+    if (!building) {
+        hintOnce("pause", "P pauses the wave. You can still build while paused.");
+    }
+    if (world_->atMaxLevel(selX_, selY_)) {
+        hintOnce("specialise", "Max level: this tower can now be specialised.");
+    }
+}
+
 core::Vec2 Game::mouseVirtual() const {
     const Vector2 m = GetMousePosition();
     return canvas_.windowToVirtual({m.x, m.y});
@@ -268,6 +295,39 @@ std::string specDesc(const content::Registry& reg, const std::string& treeId,
 
 // Builds one page of the menu from what is actually legal right now, so the
 // menu can never offer something the world would reject.
+namespace {
+
+// The five targeting modes, in the order they are offered. Each detail line says
+// what the mode is FOR, not what it literally does -- "first" is meaningless
+// until you know it is the leak-stopper.
+struct TargetingMode {
+    sim::TargetPriority mode;
+    const char* label;
+    const char* icon;
+    const char* detail;
+};
+constexpr TargetingMode kTargetingModes[] = {
+    {sim::TargetPriority::First, "First", "icon_tgt_first",
+     "The enemy nearest your goal. The safe default: it stops leaks."},
+    {sim::TargetPriority::Last, "Last", "icon_tgt_last",
+     "The enemy furthest from your goal. Softens a wave before it arrives."},
+    {sim::TargetPriority::Strongest, "Strongest", "icon_tgt_strongest",
+     "Most health remaining. Aims at the thing that actually threatens you."},
+    {sim::TargetPriority::Weakest, "Weakest", "icon_tgt_weakest",
+     "Least health remaining. Finishes the wounded and thins a crowd fast."},
+    {sim::TargetPriority::Closest, "Closest", "icon_tgt_closest",
+     "Nearest to this tower. Least travel time, so the fewest wasted shots."},
+};
+
+const char* targetingName(sim::TargetPriority p) {
+    for (const auto& m : kTargetingModes) {
+        if (m.mode == p) return m.label;
+    }
+    return "First";
+}
+
+}  // namespace
+
 std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage page) const {
     using A = ui::RadialItem::Action;
     std::vector<ui::RadialItem> items;
@@ -283,7 +343,14 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
         for (const auto& [id, def] : registry_->towers()) {
             const std::string art =
                 renderer_.atlas().has("tower_" + id) ? "tower_" + id : "tower_plain";
-            items.push_back({A::Build, art, def.name, def.desc, id, def.buildCost, true, true});
+            const bool open = world_->towerUnlocked(id);
+            // Locked towers still show, greyed: seeing what the tree would buy
+            // you is the point of having a tree.
+            items.push_back({A::Build, art, def.name,
+                             open ? def.desc
+                                  : "Locked. Buy the charter at the root of the " + def.name +
+                                        " tree to unlock it.",
+                             id, def.buildCost, true, open});
         }
         return items;
     }
@@ -321,6 +388,15 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
                                        : (elemSpecs.empty() ? "Element fully specialised."
                                                             : "Choose the element's power."),
                              "", 0, true, elementAvailable});
+            // Targeting was implemented in the sim and unreachable from the UI.
+            // It is the one decision a player can revisit mid-wave without
+            // spending anything, which is what makes a wave something to play
+            // rather than something to watch.
+            items.push_back({A::OpenTargeting, "icon_target", "Targeting",
+                             std::string("Currently: ") +
+                                 targetingName(world_->towerPriority(tileX, tileY)) +
+                                 ". Choose which enemy this tower shoots.",
+                             "", 0, true, true});
             items.push_back({A::Sell, "icon_sell", "Remove",
                              "Refunds " + std::to_string(world_->sellValue(tileX, tileY)) +
                                  " gold, " +
@@ -328,6 +404,17 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
                                      registry_->tower(tag.defId).sellRefundPct * 100.0f)) +
                                  "% of everything invested.",
                              "", 0, true, true});
+            break;
+        }
+        case MenuPage::Targeting: {
+            const auto current = world_->towerPriority(tileX, tileY);
+            for (const auto& [mode, label, icon, detail] : kTargetingModes) {
+                const bool active = mode == current;
+                items.push_back({A::SetTargeting, icon,
+                                 active ? std::string("> ") + label : std::string(label),
+                                 detail, sim::World::priorityLabel(mode), 0, true, !active});
+            }
+            items.push_back({A::Back, "icon_back", "Back", "", "", 0, true, true});
             break;
         }
         case MenuPage::Spec: {
@@ -373,6 +460,13 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
 }
 
 void Game::showPage(MenuPage page) {
+    // No selection means there is nothing to show a menu ABOUT. Without this the
+    // ring opened at tile (-1,-1), i.e. pixel (-32,-32), and the new clamping
+    // dutifully parked it in the top-left corner -- a menu about nothing.
+    if (selX_ < 0 || selY_ < 0) {
+        closeMenu();
+        return;
+    }
     menuPage_ = page;
     auto items = buildMenuItems(selX_, selY_, page);
     if (items.empty()) {
@@ -457,6 +551,9 @@ void Game::refreshMenuInfo() {
     rows.push_back(row("fire rate", st.fireRate, next.fireRate, 1));
     rows.push_back(row("dps", dpsOf(st), previewing ? dpsOf(next) : 0.0f, 0));
     rows.push_back(row("range", st.range, next.range, 1));
+    // Text, not a number, so it cannot use row(); the panel is the only place a
+    // player can see how this tower is aimed without opening the menu.
+    rows.push_back(ui::StatRow{"targeting", targetingName(world_->towerPriority(selX_, selY_)), {}});
     if (st.projectileCount > 1) {
         rows.push_back(row("shots", static_cast<float>(st.projectileCount),
                            static_cast<float>(next.projectileCount), 0));
@@ -505,7 +602,20 @@ void Game::applyMenuItem(const ui::RadialItem& item) {
     switch (item.action) {
         case A::OpenSpec:    if (item.enabled) showPage(MenuPage::Spec); return;
         case A::OpenElement: if (item.enabled) showPage(MenuPage::Element); return;
+        case A::OpenTargeting: showPage(MenuPage::Targeting); return;
         case A::Back:        showPage(MenuPage::Root); return;
+        case A::SetTargeting:
+            // Free and instant: retargeting is a tactical decision, not a
+            // purchase, so it must never cost gold or a build slot.
+            for (const auto& m : kTargetingModes) {
+                if (item.arg == sim::World::priorityLabel(m.mode)) {
+                    world_->setTowerPriority(x, y, m.mode);
+                    break;
+                }
+            }
+            sfx_.play(audio::Cue::Click, 0.02f, 0.6f);
+            showPage(MenuPage::Targeting);  // stay put, so the tick moves visibly
+            return;
         case A::Sell:
             world_->sellTower(x, y);
             sfx_.play(audio::Cue::Sell);
@@ -562,11 +672,11 @@ void Game::handleBuildInput() {
     if (!inPlay) {
         switch (ui::hudHitTest(v)) {
             case ui::HudButton::NextWave:
-                if (world_->phase() == sim::Phase::Build) sfx_.play(audio::Cue::WaveStart, 0.02f);
+                if (world_->canCallWave()) sfx_.play(audio::Cue::WaveStart, 0.02f);
                 world_->startNextWave();
                 return;
             case ui::HudButton::Speed:
-                hud_.speedIndex = (hud_.speedIndex + 1) % 3;
+                hud_.speedIndex = (hud_.speedIndex + 1) % 4;
                 sfx_.play(audio::Cue::Click);
                 return;
             case ui::HudButton::Pause:
@@ -607,13 +717,15 @@ void Game::handleBuildInput() {
 }
 
 void Game::updatePlaying(float frameDt) {
-    if (IsKeyPressed(KEY_P) || (hud_.paused && IsKeyPressed(KEY_ESCAPE))) {
-        hud_.paused = !hud_.paused;
-    }
+    // P is the tactical pause; ESC is the settings modal. They used to be the
+    // same key and the same screen, which meant the only way to stop and think
+    // was to open a menu that covered the board and refused all input.
+    if (IsKeyPressed(KEY_P)) hud_.paused = !hud_.paused;
+    if (IsKeyPressed(KEY_ESCAPE)) hud_.menuOpen = !hud_.menuOpen;
 
-    // The pause overlay owns the cursor while it is up: without this, clicking
+    // The settings modal owns the cursor while it is up: without this, clicking
     // RESUME would also place a tower on the tile underneath it.
-    if (hud_.paused) {
+    if (hud_.menuOpen) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             const auto act = ui::pauseHitTest(mouseVirtual());
             switch (act.kind) {
@@ -632,23 +744,25 @@ void Game::updatePlaying(float frameDt) {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             const auto act = ui::pauseHitTest(mouseVirtual());
             if (act.kind == ui::PauseAction::Kind::Resume) {
-                hud_.paused = false;
+                hud_.menuOpen = false;
             } else if (act.kind == ui::PauseAction::Kind::Quit) {
-                hud_.paused = false;
+                hud_.menuOpen = false;
                 persist();  // volumes and the autosaved run
                 reloadSlots();
                 screen_ = Screen::Hub;
                 return;
             }
         }
-        return;  // frozen: no simulation, no build input
+        return;  // frozen and modal: settings only
     }
 
+    updateHints();
     handleBuildInput();
     if (IsKeyPressed(KEY_SPACE)) world_->startNextWave();
-    if (IsKeyPressed(KEY_F)) hud_.speedIndex = (hud_.speedIndex + 1) % 3;
+    if (IsKeyPressed(KEY_F)) hud_.speedIndex = (hud_.speedIndex + 1) % 4;
 
-    const float scaled = hud_.paused ? 0.0f : frameDt * kSpeeds[hud_.speedIndex];
+    const float scaled =
+        (hud_.paused || hud_.menuOpen) ? 0.0f : frameDt * kSpeeds[hud_.speedIndex];
     accumulator_ += scaled;
     if (accumulator_ > 0.25f) accumulator_ = 0.25f;  // spiral-of-death guard
     while (accumulator_ >= sim::kFixedDt) {
@@ -659,7 +773,7 @@ void Game::updatePlaying(float frameDt) {
     hud_.messageAge += frameDt;
     {
         const auto events = world_->drainEvents();
-        renderer_.update(scaled, events);
+        renderer_.update(scaled, events, *registry_);
         sfx_.handle(events);
     }
 
@@ -742,9 +856,13 @@ void Game::renderCanvas(float alpha) {
             menu_.draw(renderer_.atlas(), mouseVirtual(), world_->gold());
             ui::drawHud(renderer_.atlas(), *world_, hud_, mouseVirtual());
             drawHoveredEnemy();
-            if (hud_.paused) {
+            if (hud_.menuOpen) {
                 ui::drawPause(renderer_.atlas(), active().meta.musicVolume,
                               active().meta.sfxVolume, mouseVirtual());
+            } else if (hud_.paused) {
+                // A slim banner, not a curtain: the whole point of the tactical
+                // pause is that the board stays readable and clickable.
+                ui::drawPausedBanner();
             }
             break;
         }

@@ -11,7 +11,7 @@ id = "shadow.trunk.potency"
 name = "Gathering Dark"
 desc = "+15% Shadow effect magnitude"
 branch = "trunk"
-cost = 20
+cost = 12
 requires = []
 pos = [0, 0]
 modifiers = [{ target = "shadow.potency", op = "mult", value = 1.15 }]
@@ -21,7 +21,7 @@ id = "shadow.trunk.duration"
 name = "Long Night"
 desc = "+20% Shadow effect duration"
 branch = "trunk"
-cost = 24
+cost = 15
 requires = ["shadow.trunk.potency"]
 pos = [0, 1]
 modifiers = [{ target = "shadow.duration", op = "mult", value = 1.2 }]
@@ -31,7 +31,7 @@ id = "shadow.wither.core"
 name = "Wither"
 desc = "Hits permanently weaken the target for the whole wave."
 branch = "wither"
-cost = 58
+cost = 36
 requires = ["shadow.trunk.duration"]
 pos = [-2, 2]
 modifiers = [{ target = "shadow.wither.pctPerHit", op = "mult", value = 1.0 }]
@@ -41,7 +41,7 @@ id = "shadow.wither.fast"
 name = "Rot"
 desc = "+60% withering per hit"
 branch = "wither"
-cost = 46
+cost = 29
 requires = ["shadow.wither.core"]
 pos = [-2, 3]
 modifiers = [{ target = "shadow.wither.pctPerHit", op = "mult", value = 1.6 }]
@@ -51,7 +51,7 @@ id = "shadow.wither.deep"
 name = "Consumption"
 desc = "Raises the withering cap to 65%"
 branch = "wither"
-cost = 46
+cost = 29
 requires = ["shadow.wither.core"]
 pos = [-3, 3]
 modifiers = [{ target = "shadow.wither.maxPct", op = "set", value = 0.65 }]
@@ -61,7 +61,7 @@ id = "shadow.siphon.core"
 name = "Siphon"
 desc = "Kills sometimes return a life, and always a little gold."
 branch = "siphon"
-cost = 58
+cost = 36
 requires = ["shadow.trunk.duration"]
 pos = [0, 2]
 modifiers = [{ target = "shadow.siphon.lifeChance", op = "mult", value = 1.0 }]
@@ -71,7 +71,7 @@ id = "shadow.siphon.often"
 name = "Blood Price"
 desc = "+3% chance to reclaim a life"
 branch = "siphon"
-cost = 46
+cost = 29
 requires = ["shadow.siphon.core"]
 pos = [0, 3]
 modifiers = [{ target = "shadow.siphon.lifeChance", op = "add", value = 0.03 }]
@@ -81,7 +81,7 @@ id = "shadow.siphon.gold"
 name = "Grave Tithe"
 desc = "+3 gold per kill this tower lands"
 branch = "siphon"
-cost = 46
+cost = 29
 requires = ["shadow.siphon.core"]
 pos = [1, 3]
 modifiers = [{ target = "shadow.siphon.goldPerKill", op = "add", value = 3.0 }]
@@ -91,7 +91,7 @@ id = "shadow.rift.core"
 name = "Rift"
 desc = "A kill tears a rift that keeps burning what follows."
 branch = "rift"
-cost = 58
+cost = 36
 requires = ["shadow.trunk.duration"]
 pos = [2, 2]
 modifiers = [{ target = "shadow.rift.dps", op = "mult", value = 1.0 }]
@@ -101,7 +101,7 @@ id = "shadow.rift.hard"
 name = "Void Tear"
 desc = "+50% rift damage"
 branch = "rift"
-cost = 46
+cost = 29
 requires = ["shadow.rift.core"]
 pos = [2, 3]
 modifiers = [{ target = "shadow.rift.dps", op = "mult", value = 1.5 }]
@@ -111,7 +111,7 @@ id = "shadow.rift.wide"
 name = "Yawning Gate"
 desc = "+0.7 tiles rift radius, +2s duration"
 branch = "rift"
-cost = 46
+cost = 29
 requires = ["shadow.rift.core"]
 pos = [3, 3]
 modifiers = [

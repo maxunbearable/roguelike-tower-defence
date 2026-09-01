@@ -8,7 +8,7 @@ order = 5
 blurb = "The last map. Heavily armoured, resistant to everything, and long."
 gridW = 22
 gridH = 11
-startGold = 359
+startGold = 348
 buildTime = 11.0
 
 # The last map. Heavily armoured, resistant to everything, and long.
@@ -52,6 +52,10 @@ wave = 25
 enemy = "boss_gate_sentinel"
 
 [[waves.boss]]
+wave = 40
+enemy = "boss_void_tyrant"
+
+[[waves.boss]]
 wave = 50
 enemy = "boss_gate_warden"
 
@@ -70,3 +74,15 @@ fromWave = 6
 [[waves.pool]]
 enemy = "obsidian_wraith"
 fromWave = 9
+
+[[waves.pool]]
+enemy = "voidgazer"
+fromWave = 12
+
+[[waves.pool]]
+enemy = "tombgrub"
+fromWave = 15
+
+[[waves.pool]]
+enemy = "bloodgnat"
+fromWave = 19

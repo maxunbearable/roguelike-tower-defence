@@ -15,11 +15,19 @@ inline constexpr int kSlotCount = 3;
 // One placed tower, exactly as much as is needed to rebuild it.
 struct TowerSave {
     int x = 0, y = 0;
+    // Which tower this IS. Its absence was a data-loss bug: restore() hardcoded
+    // "arrow", so every saved cannon, arcane spire, ballista and brazier came
+    // back as an arrow tower. Harmless while arrow was the only tower; not once
+    // the others became unlockable purchases. Defaults to "arrow" so saves
+    // written before this field still load.
+    std::string towerId = "arrow";
     int level = 1;
     int goldSpent = 0;
     std::string elementId;
     std::string towerSpec;
     std::string elementSpec;
+    // The player's targeting choice, by name. See sim::TargetPriority.
+    std::string priority = "first";
 };
 
 // A run paused between waves. Runs are only ever saved during a build phase,
@@ -56,6 +64,10 @@ struct MetaSave {
     // thing the game has; there is no separate settings file.
     float musicVolume = 0.5f;
     float sfxVolume = 0.85f;
+    // One-shot tutorial hints already shown. Per profile rather than global so a
+    // fresh profile is a fresh player, and stored by ID so reordering or
+    // rewording a hint never re-fires one someone has already read.
+    std::set<std::string> seenHints;
 };
 
 // A map is playable when it is the first, or when the one before it in `order`

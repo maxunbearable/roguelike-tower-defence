@@ -16,8 +16,15 @@ enum class HudButton { None, NextWave, Speed, Pause, Quit, Mute };
 struct HudState {
     std::string message;
     float messageAge = 99.0f;
-    int speedIndex = 0;  // 0 = 1x, 1 = 2x, 2 = 3x
+    int speedIndex = 0;  // index into Game::kSpeeds: 1x / 2x / 4x / 8x
+    // Two different things, deliberately. `paused` is a TACTICAL pause: the
+    // simulation stops but the board stays live and the player can still build,
+    // upgrade, sell and retarget. That is the single most-cited lesson in the
+    // tower defence design writing -- a game that tests thinking rather than
+    // reflexes should let you stop and think without also taking your hands off
+    // the controls. `menuOpen` is the settings modal, which does block.
     bool paused = false;
+    bool menuOpen = false;
     bool muted = false;
 };
 
@@ -36,6 +43,11 @@ void drawBossBars(const render::SpriteAtlas& atlas, const sim::World& w);
 void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudState& st,
              core::Vec2 mouse);
 HudButton hudHitTest(core::Vec2 mouse);
+
+// The tactical pause indicator: a band across the top of the play field saying
+// the game is stopped AND that the player can still act, because a frozen board
+// with a live cursor is otherwise indistinguishable from a hang.
+void drawPausedBanner();
 
 
 }  // namespace td::ui

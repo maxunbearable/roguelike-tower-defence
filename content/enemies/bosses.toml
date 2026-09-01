@@ -23,8 +23,8 @@ name = "Ogre Warlord"
 maxHp = 640.0
 armor = 12.0
 speed = 0.95
-bounty = 84
-shardValue = 8
+bounty = 81
+shardValue = 3
 flying = false
 boss = true
 sprite = "goblin"        # warm ogre hide
@@ -37,8 +37,8 @@ name = "Warlord Grulk"
 maxHp = 1200.0
 armor = 22.0
 speed = 0.85
-bounty = 210
-shardValue = 20
+bounty = 204
+shardValue = 8
 flying = false
 boss = true
 sprite = "wraith"        # blood-red warlord
@@ -52,8 +52,8 @@ name = "Cinder Brute"
 maxHp = 700.0
 armor = 14.0
 speed = 1.0
-bounty = 98
-shardValue = 9
+bounty = 95
+shardValue = 4
 flying = false
 boss = true
 sprite = "goblin"        # ember-lit
@@ -67,8 +67,8 @@ name = "Cinder Colossus"
 maxHp = 1320.0
 armor = 26.0
 speed = 0.8
-bounty = 230
-shardValue = 22
+bounty = 224
+shardValue = 9
 flying = false
 boss = true
 sprite = "wraith"        # molten
@@ -83,8 +83,8 @@ name = "Rime Stalker"
 maxHp = 660.0
 armor = 10.0
 speed = 1.25
-bounty = 98
-shardValue = 9
+bounty = 95
+shardValue = 4
 flying = false
 boss = true
 sprite = "wolf"        # frost-rimed
@@ -98,8 +98,8 @@ name = "Rime Tyrant"
 maxHp = 1280.0
 armor = 24.0
 speed = 0.85
-bounty = 230
-shardValue = 22
+bounty = 224
+shardValue = 9
 flying = false
 boss = true
 sprite = "wraith"        # glacial
@@ -114,8 +114,8 @@ name = "Plague Carrier"
 maxHp = 720.0
 armor = 11.0
 speed = 1.05
-bounty = 101
-shardValue = 10
+bounty = 98
+shardValue = 4
 flying = false
 boss = true
 sprite = "slime"        # swollen with rot
@@ -129,8 +129,8 @@ name = "Plague Mother"
 maxHp = 1380.0
 armor = 20.0
 speed = 0.8
-bounty = 237
-shardValue = 23
+bounty = 231
+shardValue = 9
 flying = false
 boss = true
 sprite = "goblin"        # blighted matriarch
@@ -145,8 +145,8 @@ name = "Gate Sentinel"
 maxHp = 820.0
 armor = 26.0
 speed = 0.9
-bounty = 118
-shardValue = 12
+bounty = 115
+shardValue = 5
 flying = false
 boss = true
 sprite = "wraith"        # obsidian-plated
@@ -160,11 +160,102 @@ name = "Gate Warden"
 maxHp = 1650.0
 armor = 38.0
 speed = 0.75
-bounty = 294
-shardValue = 30
+bounty = 285
+shardValue = 12
 flying = false
 boss = true
 sprite = "wraith"        # the last gate
 tint = [150, 138, 186]
 spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { piercing = 0.82, fire = 0.88, frost = 0.88, earth = 0.88, shock = 0.88, siege = 1.2 }
+
+# --- wave-40 bosses -------------------------------------------------------
+#
+# A third boss per map, between the wave-25 mid-boss and the wave-50 final. The
+# gap from 25 to 50 was the longest stretch of the run with no set-piece in it.
+#
+# These use the MONSTER sprites rather than a retinted troop, so a boss no longer
+# looks like a big goblin -- and each one is the creature its map's roster is
+# built around, drawn at 2x.
+#
+# HP sits between the mid-boss and the final: at wave 40 the curve is well short
+# of its wave-50 value, so ~2.2x a mid-boss base is about 5x a regular enemy of
+# that wave. Each resists its map's favoured element, like every other boss here.
+
+[[enemy]]
+id = "boss_grub_matron"
+name = "Grub Matron"
+maxHp = 1180.0
+armor = 26.0
+speed = 0.85
+bounty = 129
+shardValue = 3
+flying = false
+boss = true
+sprite = "tombgrub"
+tint = [214, 206, 196]
+spriteScale = 2
+resist = { piercing = 0.55, siege = 0.7, fire = 1.25 }
+
+[[enemy]]
+id = "boss_cinder_fiend"
+name = "Cinder Fiend"
+maxHp = 1240.0
+armor = 28.0
+speed = 0.9
+bounty = 134
+shardValue = 3
+flying = false
+boss = true
+sprite = "hornfiend"
+tint = [255, 176, 150]
+spriteScale = 2
+resist = { fire = 0.45, frost = 1.3 }
+
+[[enemy]]
+id = "boss_rime_crawler"
+name = "Rime Crawler"
+maxHp = 1210.0
+armor = 27.0
+speed = 1.0
+bounty = 131
+shardValue = 3
+flying = false
+boss = true
+sprite = "palecrawler"
+tint = [196, 226, 244]
+spriteScale = 2
+resist = { frost = 0.45, fire = 1.3 }
+
+[[enemy]]
+id = "boss_bloat_gorger"
+name = "Bloat Gorger"
+maxHp = 1300.0
+armor = 30.0
+speed = 0.8
+bounty = 139
+shardValue = 3
+flying = false
+boss = true
+sprite = "gorgemaw"
+tint = [176, 214, 150]
+spriteScale = 2
+resist = { earth = 0.45, shock = 1.3 }
+
+# The one flying boss. It follows the same path as everything else -- the flag
+# changes how it is drawn and animated, not where it goes -- but it is the first
+# boss that is not a heavy walker, and the obsidian roster is the arcane one.
+[[enemy]]
+id = "boss_void_tyrant"
+name = "Void Tyrant"
+maxHp = 1270.0
+armor = 24.0
+speed = 1.05
+bounty = 137
+shardValue = 3
+flying = true
+boss = true
+sprite = "voidgazer"
+tint = [206, 186, 244]
+spriteScale = 2
+resist = { arcane = 0.4, siege = 1.3 }

@@ -367,7 +367,16 @@ void runDeathSystem(World& w, float dt) {
     }
     for (size_t i = 0; i < dead.size(); ++i) {
         if (const auto* p = r.try_get<Position>(dead[i])) {
-            w.emit({VisualEvent::Kind::Death, p->v, {}, 0.0f, false,
+            // Facing travels with the event so the corpse does not flip on death.
+            // Same window as the renderer uses for a live enemy.
+            float face = 1.0f;
+            if (const auto* pf = r.try_get<PathFollower>(dead[i])) {
+                const auto& route = w.path();
+                if (route.positionAt(pf->distance + 0.6f).x < route.positionAt(pf->distance - 0.6f).x) {
+                    face = -1.0f;
+                }
+            }
+            w.emit({VisualEvent::Kind::Death, p->v, {face, 0.0f}, 0.0f, false,
                     r.get<EnemyTag>(dead[i]).defId});
         }
         w.addGold(bounties[i]);

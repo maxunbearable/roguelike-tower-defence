@@ -25,9 +25,13 @@ TEST_CASE("enemies load with their stats", "[content]") {
 TEST_CASE("the arrow tower loads with two upgrade levels", "[content]") {
     const auto r = loaded();
     const auto& t = r.tower("arrow");
-    REQUIRE(t.buildCost == 60);
+    // Costs are asserted as RELATIONSHIPS, not literals: tools/balance.py
+    // applies a cost multiplier per profile, and a loader test must not fail
+    // because the game was rebalanced. It is here to prove the file parsed.
+    REQUIRE(t.buildCost > 0);
     REQUIRE(t.levels.size() == 2);
-    REQUIRE(t.levels[1].cost == 140);
+    REQUIRE(t.levels[0].cost > 0);
+    REQUIRE(t.levels[1].cost > t.levels[0].cost);  // upgrades get dearer
     REQUIRE(t.targetPriority == "first");
 }
 
