@@ -26,6 +26,9 @@ struct Cursor {
     // choosing somewhere to build; at rest the pads stay quiet so the board does
     // not read as graph paper.
     bool showSites = false;
+    // Which ability is waiting for a target, as an index into sim::Ability, or
+    // -1. Drives the footprint drawn under the cursor.
+    int armedAbility = -1;
 };
 
 class Renderer {
@@ -52,6 +55,7 @@ private:
     void drawProjectiles(const sim::World& w, float alpha) const;
     void drawCursor(const sim::World& w, const Cursor& cur) const;
     void drawBuildSites(const sim::World& w, const Cursor& cur) const;
+    void drawAbilities(const sim::World& w, const Cursor& cur) const;
     void drawAtmosphere() const;
 
     SpriteAtlas atlas_;

@@ -40,6 +40,32 @@ inline constexpr int kShardsPerMapClear = 20;
 // that slack into money, and misjudging it costs lives rather than gold.
 inline constexpr int kGoldPerPendingEnemy = 3;
 
+// The two player abilities. Every game in this genre has a pair of these -- in
+// Kingdom Rush they are Rain of Fire and Reinforcements -- and they are what
+// makes a wave something the player PLAYS rather than watches. This game had
+// none: once the towers were placed there was nothing to do until the next build
+// phase.
+//
+// Both are free and on a cooldown rather than costing gold. That is deliberate
+// under the gold deficit: they are the one form of agency scarcity cannot take
+// away, so a losing board is never simply a spectator.
+enum class Ability { Strike, Ward };
+inline constexpr int kAbilityCount = 2;
+
+// Strike: an immediate blast at a point. Damage scales with the WAVE's health
+// multiplier, because a flat number is a panic button on wave 3 and confetti on
+// wave 50 -- enemy health rises about 55x across a map.
+inline constexpr float kStrikeCooldown = 24.0f;
+inline constexpr float kStrikeRadius = 2.3f;
+inline constexpr float kStrikeBaseDamage = 42.0f;
+
+// Ward: a field that holds enemies inside it. No damage at all, so it is a
+// tempo tool rather than a second damage source -- it buys the towers time.
+inline constexpr float kWardCooldown = 30.0f;
+inline constexpr float kWardRadius = 2.6f;
+inline constexpr float kWardSlowPct = 0.55f;
+inline constexpr float kWardDuration = 6.0f;
+
 // Sandbox runs every combat system but no wave logic, so scenarios can be set
 // up by hand and measured. It is how the combination matrix is tested.
 enum class Phase { Build, Wave, Cleared, Defeated, Sandbox };
@@ -200,6 +226,23 @@ public:
     // long run cannot bank an unlosable buffer.
     void gainLife(int n);
 
+    // --- player abilities --------------------------------------------------
+    bool abilityReady(Ability a) const;
+    float abilityCooldown(Ability a) const;      // seconds remaining, 0 when ready
+    static float abilityCooldownMax(Ability a);
+    // Casts at a board position in TILE coordinates. False when still cooling
+    // down or when the run is not in a state that accepts a cast.
+    bool castAbility(Ability a, core::Vec2 target);
+
+    struct WardField {
+        core::Vec2 pos;
+        float radius = 0.0f;
+        float pct = 0.0f;
+        float remaining = 0.0f;
+    };
+    const std::vector<WardField>& wards() const { return wards_; }
+    void updateAbilities(float dt);
+
     // Targeting. Five modes were implemented in the targeting system and
     // validated at content load from the day it was written, but were authored
     // per tower and frozen for the whole run -- the player could never pick one.
@@ -232,6 +275,8 @@ private:
     int waveIndex_ = 0;
     int enemiesSpawned_ = 0;
     RunStats stats_;
+    float abilityCd_[kAbilityCount] = {0.0f, 0.0f};
+    std::vector<WardField> wards_;
     Phase phase_ = Phase::Build;
     float buildTimer_ = 0.0f;
 

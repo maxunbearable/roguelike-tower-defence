@@ -41,6 +41,29 @@ void Game::hintOnce(const char* id, const std::string& text) {
     say(text);
 }
 
+// A wave used to begin in silence: the only sign was a counter ticking over in
+// the corner. Bosses arrived the same way as trash. Announcing them is the
+// cheapest structural feedback in the game.
+void Game::announceWaves() {
+    if (!world_) return;
+    const int wi = world_->waveIndex();
+    if (wi == announcedWave_ || world_->phase() != sim::Phase::Wave) return;
+    announcedWave_ = wi;
+
+    // Name the boss if this wave carries one -- "BOSS" alone tells the player
+    // less than the thing's name, and every boss here resists something.
+    if (wi >= 0 && wi < static_cast<int>(world_->map().waves.size())) {
+        for (const auto& g : world_->map().waves[static_cast<size_t>(wi)].groups) {
+            if (!registry_->hasEnemy(g.enemyId)) continue;
+            const auto& def = registry_->enemy(g.enemyId);
+            if (!def.boss) continue;
+            say(def.name + " approaches");
+            return;
+        }
+    }
+    say(TextFormat("Wave %d", wi + 1));
+}
+
 void Game::updateHints() {
     if (!world_) return;
     const bool building = world_->phase() == sim::Phase::Build;
@@ -679,6 +702,12 @@ void Game::handleBuildInput() {
                 hud_.speedIndex = (hud_.speedIndex + 1) % 4;
                 sfx_.play(audio::Cue::Click);
                 return;
+            case ui::HudButton::Strike:
+                hud_.armed = hud_.armed == 0 ? -1 : 0;
+                return;
+            case ui::HudButton::Ward:
+                hud_.armed = hud_.armed == 1 ? -1 : 1;
+                return;
             case ui::HudButton::Pause:
                 hud_.paused = !hud_.paused;
                 sfx_.play(audio::Cue::Click);
@@ -756,7 +785,27 @@ void Game::updatePlaying(float frameDt) {
         return;  // frozen and modal: settings only
     }
 
+    announceWaves();
     updateHints();
+
+    // Abilities. Q and W arm; the next click on the board casts. Escape or a
+    // right-click disarms, so an armed ability is never a trap.
+    if (IsKeyPressed(KEY_Q)) hud_.armed = hud_.armed == 0 ? -1 : 0;
+    if (IsKeyPressed(KEY_W)) hud_.armed = hud_.armed == 1 ? -1 : 1;
+    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) hud_.armed = -1;
+    if (hud_.armed >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        const auto m = mouseVirtual();
+        if (m.y < render::kPlayH) {
+            const core::Vec2 tile{m.x / render::kTile, m.y / render::kTile};
+            const auto which = static_cast<sim::Ability>(hud_.armed);
+            if (world_->castAbility(which, tile)) {
+                sfx_.play(which == sim::Ability::Strike ? audio::Cue::Quake : audio::Cue::Buy);
+                hud_.armed = -1;
+                return;  // the click was the cast, not a build
+            }
+        }
+    }
+
     handleBuildInput();
     if (IsKeyPressed(KEY_SPACE)) world_->startNextWave();
     if (IsKeyPressed(KEY_F)) hud_.speedIndex = (hud_.speedIndex + 1) % 4;
@@ -848,6 +897,7 @@ void Game::renderCanvas(float alpha) {
             // Pads lift while the player is actually choosing a spot: during the
             // build phase, or whenever a menu is open on the board.
             cur.showSites = world_->phase() == sim::Phase::Build || menu_.isOpen();
+            cur.armedAbility = hud_.armed;
             if (hoverX_ >= 0) {
                 cur.hoverBuildable = world_->map().buildableAt(hoverX_, hoverY_) &&
                                      world_->towerAt(hoverX_, hoverY_) == entt::null;

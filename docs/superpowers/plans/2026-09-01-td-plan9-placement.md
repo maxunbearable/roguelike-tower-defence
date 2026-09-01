@@ -135,3 +135,70 @@ outline for tiles that cannot take a tower at all, and the affordability colour
 now reads from the cheapest **unlocked** tower rather than hardcoding `arrow` —
 which had been quoting the wrong price and the wrong range ever since tower types
 became unlockable.
+
+---
+
+# Addendum — Plan 10: the missing pillar
+
+Written in the same round, after the seventh "still very raw" arrived with no
+answer to the choice I had offered. Seven identical messages with no specific
+feedback is a delegation, and the phrase is "a lot of **basic** improvements" —
+plural. Every previous round I did one narrow thing.
+
+## What the research settled
+
+- [Kingdom Rush](https://support.ironhidegames.com/support/solutions/articles/4000223620-kingdom-rush-battles-beginners-guide)
+  ships two player abilities — Rain of Fire and Reinforcements. "Spells are cast
+  by dragging and dropping them onto the field, **requiring active engagement
+  from the player during gameplay**... why active player participation with these
+  abilities is essential rather than passive observation."
+- [Game feel and juice](https://egmatic.com/blog/how-to-make-your-game-feel-good)
+  and [the perils of over-juicing](https://www.wayline.io/blog/the-perils-of-over-juicing)
+  — "A common mistake is prioritizing polish before fixing core issues... only
+  then does juice amplify what is already working."
+
+That second point is what decided the order. My instinct was transitions and
+screen polish; the research says a missing *mechanic* outranks it. And this game
+had **no active abilities at all**: once the towers were placed, there was
+nothing to do until the next build phase. That is the pillar.
+
+## What was built
+
+**Strike** — an immediate blast, 24s cooldown. Damage is scaled by the current
+wave's health multiplier, because enemy health rises about 55x across a map and a
+flat number would be a panic button on wave 3 and confetti on wave 50. Falls off
+to 55% at the rim, so aiming matters.
+
+**Ward** — a field that holds enemies, 30s cooldown, no damage at all. A tempo
+tool rather than a second damage source, so it does not quietly invalidate the
+balance measurements. Re-applied every tick with a short duration rather than
+stamped once, so enemies walking *into* a live ward are caught and enemies
+leaving recover.
+
+Both are **free and on cooldowns rather than costing gold** — deliberate under
+the gold deficit. They are the one form of agency scarcity cannot take away, so
+a losing board is never purely a spectator.
+
+Cooldowns run during the build phase too, or calling the next wave early would
+have been a way to freeze them.
+
+Plus wave announcements, naming the boss when one is coming — waves used to begin
+in silence, with a counter ticking over in a corner as the only sign, and a boss
+arrived exactly like trash.
+
+## Notes
+
+Tests assert observable effects — enemies lose health, enemies travel less far —
+rather than reading back cooldown fields, because a test that only checks what it
+wrote would pass on an ability that did nothing.
+
+Two things were caught by looking rather than reasoning, continuing the pattern:
+the ward's first icon was a red bar that read as a health bar, and the Q/W key
+hints were drawn onto the button border where they could not be read. A
+`--abilities` dev flag now casts both so the board visuals can be inspected;
+every round so far has had at least one effect that was correct in code and
+invisible on screen.
+
+**Still not done:** abilities are not yet in the skill trees. They should
+eventually be upgradable there like everything else, which is the natural next
+step and the reason the constants live in one place.

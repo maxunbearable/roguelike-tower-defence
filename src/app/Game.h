@@ -81,6 +81,16 @@ public:
 
     void devPause() { hud_.paused = true; }
 
+    // Capture aid: fire both abilities at known spots so their board visuals can
+    // be looked at. Every previous round has had at least one effect that was
+    // correct in code and invisible on screen.
+    void devCastAbilities() {
+        if (!world_) return;
+        world_->castAbility(sim::Ability::Ward, world_->path().positionAt(14.0f));
+        world_->castAbility(sim::Ability::Strike, world_->path().positionAt(6.0f));
+        hud_.armed = 0;  // and leave one armed, to show the targeting footprint
+    }
+
     void devJumpToWave(int wave) {
         if (world_) world_->devSetWave(wave);
     }
@@ -136,6 +146,7 @@ private:
     // building. None of that is discoverable by clicking.
     void hintOnce(const char* id, const std::string& text);
     void updateHints();
+    void announceWaves();
 
     const content::Registry* registry_;
     render::PixelCanvas canvas_;
@@ -161,6 +172,7 @@ private:
     int selY_ = -1;
     ui::RadialMenu menu_;
     MenuPage menuPage_ = MenuPage::Root;
+    int announcedWave_ = -1;
     float accumulator_ = 0.0f;
     int hoverX_ = -1;
     int hoverY_ = -1;

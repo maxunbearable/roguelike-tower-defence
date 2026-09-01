@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 224 tests
+ctest --test-dir build          # 231 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -220,6 +220,16 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## Abilities
+
+Two, free and on cooldowns rather than costing gold: **Strike** (Q), an immediate
+blast whose damage scales with the wave's own health multiplier so it means the
+same thing on wave 3 and wave 50, and **Ward** (W), a field that holds enemies
+and deals no damage at all. They are deliberately free — under a gold deficit
+they are the one form of agency scarcity cannot take away, so a losing board is
+never purely a spectator. Before them, once your towers were placed there was
+nothing to do until the next build phase.
 
 ## Placing a tower
 

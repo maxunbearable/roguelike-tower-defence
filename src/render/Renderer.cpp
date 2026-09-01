@@ -546,7 +546,35 @@ void Renderer::drawBuildSites(const sim::World& w, const Cursor& cur) const {
     }
 }
 
+// Ward fields that are currently holding enemies, and the footprint of an armed
+// ability under the cursor. An ability with no visible area is a guess.
+void Renderer::drawAbilities(const sim::World& w, const Cursor& cur) const {
+    for (const auto& wd : w.wards()) {
+        const float x = wd.pos.x * kTile, y = wd.pos.y * kTile, r = wd.radius * kTile;
+        // Fade as it runs out, so its remaining life is readable from the board.
+        const float k = std::clamp(wd.remaining / sim::kWardDuration, 0.0f, 1.0f);
+        DrawCircle(static_cast<int>(x), static_cast<int>(y), r,
+                   Color{110, 180, 230, static_cast<unsigned char>(46 * k)});
+        DrawCircleLines(static_cast<int>(x), static_cast<int>(y), r,
+                        Color{170, 220, 255, static_cast<unsigned char>(200 * k)});
+        DrawCircleLines(static_cast<int>(x), static_cast<int>(y), r * 0.72f,
+                        Color{170, 220, 255, static_cast<unsigned char>(90 * k)});
+    }
+
+    if (cur.armedAbility < 0 || cur.hoverX < 0) return;
+    const bool strike = cur.armedAbility == static_cast<int>(sim::Ability::Strike);
+    const float r = (strike ? sim::kStrikeRadius : sim::kWardRadius) * kTile;
+    const float x = (cur.hoverX + 0.5f) * kTile, y = (cur.hoverY + 0.5f) * kTile;
+    const Color c = strike ? Color{255, 170, 90, 255} : Color{140, 200, 245, 255};
+    DrawCircle(static_cast<int>(x), static_cast<int>(y), r, Color{c.r, c.g, c.b, 40});
+    DrawCircleLines(static_cast<int>(x), static_cast<int>(y), r, c);
+    DrawCircleLines(static_cast<int>(x), static_cast<int>(y), r - 1, c);
+}
+
 void Renderer::drawCursor(const sim::World& w, const Cursor& cur) const {
+    // An armed ability owns the cursor: showing build feedback underneath it
+    // would say the click is going to place a tower, which it is not.
+    if (cur.armedAbility >= 0) return;
     // Selection: the range ring belongs here and nowhere else.
     if (cur.selX >= 0) {
         const auto e = w.towerAt(cur.selX, cur.selY);
@@ -623,6 +651,7 @@ void Renderer::draw(const sim::World& w, float alpha, const Cursor& cur) {
     drawCursor(w, cur);
     drawCorpses();
     drawEnemies(w, alpha);
+    drawAbilities(w, cur);
     drawTowers(w);
     drawProjectiles(w, alpha);
     fx_.drawWorldLayer();

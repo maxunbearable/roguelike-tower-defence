@@ -11,7 +11,7 @@ namespace td::ui {
 
 // Clickable regions the HUD owns. Returned by hitTest so input handling lives
 // with the game rather than being buried in drawing code.
-enum class HudButton { None, NextWave, Speed, Pause, Quit, Mute };
+enum class HudButton { None, NextWave, Speed, Pause, Quit, Mute, Strike, Ward };
 
 struct HudState {
     std::string message;
@@ -26,6 +26,9 @@ struct HudState {
     bool paused = false;
     bool menuOpen = false;
     bool muted = false;
+    // Which ability is armed and waiting for a target on the board, as an index
+    // into sim::Ability; -1 for none.
+    int armed = -1;
 };
 
 // A prominent bar per living boss, across the top of the play field. A boss has

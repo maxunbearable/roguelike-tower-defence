@@ -35,7 +35,12 @@ constexpr int kBtnY = kHudY + 30;
 // what is coming, what is fielded, controls.
 constexpr int kWaveX = 348;  // clear of a four-digit gold total at 40px
 constexpr int kIncomingX = 560;
-constexpr int kFieldedX = 900;
+constexpr int kFieldedX = 940;
+// The abilities sit in the band, not in the control cluster: they are things you
+// DO, like building, rather than settings like mute and speed.
+constexpr int kAbilW = 46, kAbilH = 46;
+constexpr int kAbilX = 772, kAbilY = kHudY + 26;
+int abilX(int i) { return kAbilX + i * (kAbilW + 12); }
 
 // A hairline between zones. Research on HUD hierarchy is consistent that the
 // fastest win is making groups LOOK like groups: without these the band reads as
@@ -58,6 +63,8 @@ bool inRect(core::Vec2 m, int x, int y, int w, int h) {
 HudButton hudHitTest(core::Vec2 m) {
     if (inRect(m, kNextX, kNextY, kNextW, kNextH)) return HudButton::NextWave;
     if (inRect(m, kSpeedX, kBtnY, kBtn, kBtn)) return HudButton::Speed;
+    if (inRect(m, abilX(0), kAbilY, kAbilW, kAbilH)) return HudButton::Strike;
+    if (inRect(m, abilX(1), kAbilY, kAbilW, kAbilH)) return HudButton::Ward;
     if (inRect(m, kPauseX, kBtnY, kBtn, kBtn)) return HudButton::Pause;
     if (inRect(m, kMuteX, kBtnY, kBtn, kBtn)) return HudButton::Mute;
     if (inRect(m, kQuitX, kBtnY, kBtn, kBtn)) return HudButton::Quit;
@@ -251,6 +258,42 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
 
     // Which specialisations are fielded right now. One of each may exist, so
     // this doubles as a reminder of what is still available to build.
+    // --- abilities ---------------------------------------------------------
+    zoneRule(kAbilX - 24);
+    caption("ABILITIES", kAbilX, inkDim);
+    {
+        // hudHitTest is pure and cheap; the shared `hot` is computed further
+        // down with the control cluster.
+        const HudButton over = hudHitTest(mouse);
+        struct Abil { sim::Ability id; const char* icon; const char* key; HudButton btn; };
+        const Abil abils[] = {
+            {sim::Ability::Strike, "icon_quake", "Q", HudButton::Strike},
+            {sim::Ability::Ward, "icon_gem", "W", HudButton::Ward},
+        };
+        for (int i = 0; i < 2; ++i) {
+            const auto& ab = abils[i];
+            const float cd = w.abilityCooldown(ab.id);
+            const bool ready = w.abilityReady(ab.id);
+            const bool armed = st.armed == static_cast<int>(ab.id);
+            const int bx = abilX(i);
+            button(atlas, bx, kAbilY, kAbilW, kAbilH, over == ab.btn, armed, !ready);
+            atlas.drawFitted(ab.icon, bx + kAbilW * 0.5f, kAbilY + kAbilH * 0.45f, kAbilW * 0.5f,
+                             ready ? WHITE : Color{150, 142, 130, 220});
+            if (!ready) {
+                // A top-down sweep, so "how much longer" is readable without
+                // reading the number.
+                const float frac = cd / sim::World::abilityCooldownMax(ab.id);
+                const int h = static_cast<int>(kAbilH * frac);
+                DrawRectangle(bx, kAbilY + kAbilH - h, kAbilW, h, Color{18, 16, 26, 150});
+                const char* secs = TextFormat("%d", static_cast<int>(cd + 0.99f));
+                DrawText(secs, bx + (kAbilW - MeasureText(secs, 20)) / 2, kAbilY + 12, 20,
+                         Color{246, 232, 200, 235});
+            }
+            DrawText(ab.key, bx + kAbilW - 9, kAbilY + kAbilH - 13, 10,
+                     armed ? Color{255, 236, 170, 255} : Color{92, 74, 56, 220});
+        }
+    }
+
     zoneRule(kFieldedX - 22);
     caption("FIELDED", kFieldedX, inkDim);
     {

@@ -1,5 +1,7 @@
 #include "sim/World.h"
 
+#include "sim/AreaEffects.h"
+
 #include <algorithm>
 
 #include "sim/ElementBehavior.h"
@@ -263,6 +265,68 @@ void World::gainLife(int n) {
 }
 
 void World::addGold(int n) { gold_ += n; }
+
+float World::abilityCooldownMax(Ability a) {
+    return a == Ability::Strike ? kStrikeCooldown : kWardCooldown;
+}
+
+float World::abilityCooldown(Ability a) const {
+    return abilityCd_[static_cast<size_t>(a)];
+}
+
+bool World::abilityReady(Ability a) const {
+    if (phase_ != Phase::Wave && phase_ != Phase::Build) return false;
+    return abilityCooldown(a) <= 0.0f;
+}
+
+bool World::castAbility(Ability a, core::Vec2 target) {
+    if (!abilityReady(a)) return false;
+    abilityCd_[static_cast<size_t>(a)] = abilityCooldownMax(a);
+
+    if (a == Ability::Strike) {
+        // Scaled by the current wave's health multiplier so the ability keeps
+        // the same MEANING all run: roughly one wave-appropriate enemy's worth
+        // of damage, spread over everything in the blast.
+        float scale = 1.0f;
+        const int wi = std::clamp(waveIndex_, 0, waveCount() - 1);
+        if (wi >= 0 && wi < static_cast<int>(map_->waves.size()) &&
+            !map_->waves[static_cast<size_t>(wi)].groups.empty()) {
+            scale = map_->waves[static_cast<size_t>(wi)].groups.front().hpMult;
+        }
+        // Falloff to 55% at the rim: a blast should reward being aimed.
+        areaDamage(*this, target, kStrikeRadius, kStrikeBaseDamage * scale, "siege",
+                   0.55f);
+        emit({VisualEvent::Kind::Quake, target, {}, kStrikeRadius, false, "strike"});
+        return true;
+    }
+
+    wards_.push_back(WardField{target, kWardRadius, kWardSlowPct, kWardDuration});
+    emit({VisualEvent::Kind::Build, target, {}, kWardRadius, false, "ward"});
+    return true;
+}
+
+// Cooldowns and ward fields. Called from tick() for both the build phase and a
+// running wave: a cooldown that only ran during waves would make calling the
+// next wave early a way to freeze it.
+void World::updateAbilities(float dt) {
+    for (auto& cd : abilityCd_) cd = std::max(0.0f, cd - dt);
+
+    for (auto& wd : wards_) {
+        wd.remaining -= dt;
+        if (wd.remaining <= 0.0f) continue;
+        // Re-applied every tick with a short duration rather than stamped once:
+        // enemies that walk INTO a live ward must be caught, and enemies that
+        // leave must recover shortly after rather than staying slowed.
+        for (const auto e : enemiesWithin(*this, wd.pos, wd.radius)) {
+            auto& sl = ecs_.get_or_emplace<Slowed>(e);
+            sl.pct = std::max(sl.pct, wd.pct);
+            sl.remaining = std::max(sl.remaining, 0.2f);
+        }
+    }
+    wards_.erase(std::remove_if(wards_.begin(), wards_.end(),
+                                [](const WardField& wd) { return wd.remaining <= 0.0f; }),
+                 wards_.end());
+}
 
 bool World::setTowerPriority(int tileX, int tileY, TargetPriority p) {
     const auto e = towerAt(tileX, tileY);
@@ -701,6 +765,7 @@ void World::tick(float dt) {
     }
 
     if (phase_ == Phase::Build) {
+        updateAbilities(dt);
         buildTimer_ -= dt;
         if (buildTimer_ <= 0.0f) {
             buildTimer_ = 0.0f;
@@ -709,6 +774,7 @@ void World::tick(float dt) {
         return;
     }
 
+    updateAbilities(dt);
     runWaveSystem(*this, dt);
     runStatusSystem(*this, dt);
     runMovementSystem(*this, dt);
