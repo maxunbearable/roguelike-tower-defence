@@ -1,6 +1,7 @@
 [element]
 id = "water"
 name = "Water"
+desc = "Control. Slows and freezes, and pays extra against what is already slowed."
 damageType = "frost"
 attachCost = 75
 specCost = 95

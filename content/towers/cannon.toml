@@ -1,6 +1,7 @@
 [tower]
 id = "cannon"
 name = "Cannon"
+desc = "Slow, heavy shells that damage a whole cluster at once."
 buildCost = 95
 sellRefundPct = 0.6
 damage = 34

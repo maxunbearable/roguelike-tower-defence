@@ -1,6 +1,7 @@
 [tower]
 id = "ballista"
 name = "Ballista"
+desc = "The longest reach on the board. One bolt punches through a whole rank."
 buildCost = 105
 sellRefundPct = 0.6
 damage = 26

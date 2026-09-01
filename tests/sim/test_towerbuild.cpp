@@ -33,8 +33,8 @@ static void maxOut(sim::World& w, int x, int y) {
 TEST_CASE("a freshly built tower has no element and no specs", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    REQUIRE(w.placeTower(1, 1, "arrow") == sim::World::PlaceResult::Ok);
-    const auto& tag = w.reg().get<sim::TowerTag>(w.towerAt(1, 1));
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
+    const auto& tag = w.reg().get<sim::TowerTag>(w.towerAt(1, 0));
     REQUIRE(tag.elementId.empty());
     REQUIRE(tag.towerSpec.empty());
     REQUIRE(tag.elementSpec.empty());
@@ -45,34 +45,34 @@ TEST_CASE("a freshly built tower has no element and no specs", "[build]") {
 TEST_CASE("an element must be attached before it can be specialised", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    REQUIRE(w.availableElementSpecs(1, 1).empty());
-    REQUIRE_FALSE(w.specialiseElement(1, 1, "poison"));
+    w.placeTower(1, 0, "arrow");
+    REQUIRE(w.availableElementSpecs(1, 0).empty());
+    REQUIRE_FALSE(w.specialiseElement(1, 0, "poison"));
 
-    REQUIRE(w.attachElement(1, 1, "earth"));
-    REQUIRE(w.availableElementSpecs(1, 1).size() == 3);
-    REQUIRE(w.specialiseElement(1, 1, "poison"));
+    REQUIRE(w.attachElement(1, 0, "earth"));
+    REQUIRE(w.availableElementSpecs(1, 0).size() == 3);
+    REQUIRE(w.specialiseElement(1, 0, "poison"));
 }
 
 TEST_CASE("each purchase costs gold and is recorded for refunds", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
     const int start = w.gold();
-    w.placeTower(1, 1, "arrow");
+    w.placeTower(1, 0, "arrow");
     const int afterBuild = w.gold();
     REQUIRE(afterBuild == start - reg.tower("arrow").buildCost);
 
-    REQUIRE(w.attachElement(1, 1, "earth"));
+    REQUIRE(w.attachElement(1, 0, "earth"));
     REQUIRE(w.gold() == afterBuild - reg.element("earth").attachCost);
 
-    maxOut(w, 1, 1);
+    maxOut(w, 1, 0);
     const int beforeSpec = w.gold();
-    REQUIRE(w.specialiseTower(1, 1, "elf"));
+    REQUIRE(w.specialiseTower(1, 0, "elf"));
     REQUIRE(w.gold() == beforeSpec - reg.tower("arrow").specCost);
 
     const int invested = start - w.gold();
     const int beforeSell = w.gold();
-    REQUIRE(w.sellTower(1, 1));
+    REQUIRE(w.sellTower(1, 0));
     // Refund is proportional to EVERYTHING invested, not just the build cost.
     REQUIRE(w.gold() - beforeSell ==
             static_cast<int>(static_cast<float>(invested) * reg.tower("arrow").sellRefundPct));
@@ -81,9 +81,9 @@ TEST_CASE("each purchase costs gold and is recorded for refunds", "[build]") {
 TEST_CASE("an element cannot be attached twice", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    REQUIRE(w.attachElement(1, 1, "earth"));
-    REQUIRE_FALSE(w.attachElement(1, 1, "earth"));
+    w.placeTower(1, 0, "arrow");
+    REQUIRE(w.attachElement(1, 0, "earth"));
+    REQUIRE_FALSE(w.attachElement(1, 0, "earth"));
 }
 
 TEST_CASE("a specialisation is unique on the map", "[build]") {
@@ -91,26 +91,26 @@ TEST_CASE("a specialisation is unique on the map", "[build]") {
     // The decision is which pairings to field, not one spec for the whole run.
     const auto reg = loadReg();
     auto w = rich(reg);
-    for (int x : {1, 2, 3, 4}) w.placeTower(x, 1, "arrow");
-    for (int x : {1, 2, 3, 4}) maxOut(w, x, 1);
+    for (int x : {1, 2, 3, 4}) w.placeTower(x, 0, "arrow");
+    for (int x : {1, 2, 3, 4}) maxOut(w, x, 0);
 
-    auto avail = w.availableTowerSpecs(1, 1);
+    auto avail = w.availableTowerSpecs(1, 0);
     REQUIRE(avail.size() == 3);
     REQUIRE(has(avail, "sniper"));
     REQUIRE(has(avail, "elf"));
     REQUIRE(has(avail, "hunter"));
 
-    REQUIRE(w.specialiseTower(1, 1, "elf"));
+    REQUIRE(w.specialiseTower(1, 0, "elf"));
     REQUIRE(w.towerSpecInUse("elf"));
 
     // Elf is now taken, but the other two are still open on another tower.
-    avail = w.availableTowerSpecs(2, 1);
+    avail = w.availableTowerSpecs(4, 0);
     REQUIRE(avail.size() == 2);
     REQUIRE_FALSE(has(avail, "elf"));
-    REQUIRE_FALSE(w.specialiseTower(2, 1, "elf"));
+    REQUIRE_FALSE(w.specialiseTower(4, 0, "elf"));
 
-    REQUIRE(w.specialiseTower(2, 1, "sniper"));
-    REQUIRE(w.specialiseTower(3, 1, "hunter"));
+    REQUIRE(w.specialiseTower(4, 0, "sniper"));
+    REQUIRE(w.specialiseTower(3, 0, "hunter"));
 
     // All three fielded: a fourth tower has nothing left to become.
     REQUIRE(w.availableTowerSpecs(4, 1).empty());
@@ -120,23 +120,23 @@ TEST_CASE("a specialisation is unique on the map", "[build]") {
 TEST_CASE("selling a specialised tower frees its specialisation", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    w.placeTower(2, 1, "arrow");
-    maxOut(w, 1, 1);
-    maxOut(w, 2, 1);
-    REQUIRE(w.specialiseTower(1, 1, "elf"));
-    REQUIRE_FALSE(has(w.availableTowerSpecs(2, 1), "elf"));
+    w.placeTower(1, 0, "arrow");
+    w.placeTower(4, 0, "arrow");
+    maxOut(w, 1, 0);
+    maxOut(w, 4, 0);
+    REQUIRE(w.specialiseTower(1, 0, "elf"));
+    REQUIRE_FALSE(has(w.availableTowerSpecs(4, 0), "elf"));
 
-    REQUIRE(w.sellTower(1, 1));
+    REQUIRE(w.sellTower(1, 0));
     REQUIRE_FALSE(w.towerSpecInUse("elf"));
-    REQUIRE(has(w.availableTowerSpecs(2, 1), "elf"));  // available again
+    REQUIRE(has(w.availableTowerSpecs(4, 0), "elf"));  // available again
 }
 
 TEST_CASE("unspecialised arrow towers are unlimited", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
     for (int x = 1; x <= 12; ++x) {
-        REQUIRE(w.placeTower(x, 1, "arrow") == sim::World::PlaceResult::Ok);
+        REQUIRE(w.placeTower(x, 0, "arrow") == sim::World::PlaceResult::Ok);
     }
     REQUIRE(w.activeTowerSpecs().empty());
 }
@@ -145,16 +145,16 @@ TEST_CASE("an element power is unique on the map too", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
     for (int x : {1, 2, 3, 4}) {
-        w.placeTower(x, 1, "arrow");
-        w.attachElement(x, 1, "earth");
+        w.placeTower(x, 0, "arrow");
+        w.attachElement(x, 0, "earth");
     }
-    REQUIRE(w.specialiseElement(1, 1, "quake"));
+    REQUIRE(w.specialiseElement(1, 0, "quake"));
     REQUIRE(w.elementSpecInUse("quake"));
-    REQUIRE_FALSE(has(w.availableElementSpecs(2, 1), "quake"));
-    REQUIRE_FALSE(w.specialiseElement(2, 1, "quake"));
+    REQUIRE_FALSE(has(w.availableElementSpecs(4, 0), "quake"));
+    REQUIRE_FALSE(w.specialiseElement(4, 0, "quake"));
 
-    REQUIRE(w.specialiseElement(2, 1, "poison"));
-    REQUIRE(w.specialiseElement(3, 1, "rock"));
+    REQUIRE(w.specialiseElement(4, 0, "poison"));
+    REQUIRE(w.specialiseElement(3, 0, "rock"));
     REQUIRE(w.availableElementSpecs(4, 1).empty());
 }
 
@@ -167,11 +167,11 @@ TEST_CASE("all three pairings can be fielded at once", "[build]") {
     const char* elemSpecs[3] = {"poison", "rock", "quake"};
     for (int i = 0; i < 3; ++i) {
         const int x = 1 + i;
-        w.placeTower(x, 1, "arrow");
-        maxOut(w, x, 1);
-        REQUIRE(w.attachElement(x, 1, "earth"));
-        REQUIRE(w.specialiseTower(x, 1, towerSpecs[i]));
-        REQUIRE(w.specialiseElement(x, 1, elemSpecs[i]));
+        w.placeTower(x, 0, "arrow");
+        maxOut(w, x, 0);
+        REQUIRE(w.attachElement(x, 0, "earth"));
+        REQUIRE(w.specialiseTower(x, 0, towerSpecs[i]));
+        REQUIRE(w.specialiseElement(x, 0, elemSpecs[i]));
     }
     REQUIRE(w.activeTowerSpecs().size() == 3);
     REQUIRE(w.activeElementSpecs().size() == 3);
@@ -180,23 +180,23 @@ TEST_CASE("all three pairings can be fielded at once", "[build]") {
 TEST_CASE("a tower cannot be specialised twice", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    maxOut(w, 1, 1);
-    REQUIRE(w.specialiseTower(1, 1, "hunter"));
-    REQUIRE(w.availableTowerSpecs(1, 1).empty());
-    REQUIRE_FALSE(w.specialiseTower(1, 1, "hunter"));
+    w.placeTower(1, 0, "arrow");
+    maxOut(w, 1, 0);
+    REQUIRE(w.specialiseTower(1, 0, "hunter"));
+    REQUIRE(w.availableTowerSpecs(1, 0).empty());
+    REQUIRE_FALSE(w.specialiseTower(1, 0, "hunter"));
 }
 
 TEST_CASE("specialising visibly changes the tower's stats", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    maxOut(w, 1, 1);
-    const auto t = w.towerAt(1, 1);
+    w.placeTower(1, 0, "arrow");
+    maxOut(w, 1, 0);
+    const auto t = w.towerAt(1, 0);
     const float baseRate = w.reg().get<sim::TowerStats>(t).fireRate;
     const float baseDamage = w.reg().get<sim::TowerStats>(t).damage;
 
-    REQUIRE(w.specialiseTower(1, 1, "elf"));
+    REQUIRE(w.specialiseTower(1, 0, "elf"));
     const auto& after = w.reg().get<sim::TowerStats>(t);
     REQUIRE(after.fireRate > baseRate * 2.0f);   // elf is the rate spec
     REQUIRE(after.damage < baseDamage);          // paid for with damage
@@ -206,14 +206,14 @@ TEST_CASE("specialising visibly changes the tower's stats", "[build]") {
 TEST_CASE("the element behaviour attaches only once a spec is chosen", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
-    const auto t = w.towerAt(1, 1);
+    w.placeTower(1, 0, "arrow");
+    const auto t = w.towerAt(1, 0);
     REQUIRE_FALSE(w.reg().all_of<sim::ElementRef>(t));
 
-    w.attachElement(1, 1, "earth");
+    w.attachElement(1, 0, "earth");
     REQUIRE_FALSE(w.reg().all_of<sim::ElementRef>(t));  // element but no spec yet
 
-    w.specialiseElement(1, 1, "poison");
+    w.specialiseElement(1, 0, "poison");
     REQUIRE(w.reg().all_of<sim::ElementRef>(t));
     REQUIRE(w.reg().get<sim::ElementRef>(t).behavior != nullptr);
 }
@@ -227,10 +227,10 @@ TEST_CASE("each element power gets its own behaviour instance", "[build]") {
     std::vector<const void*> behaviours;
     for (int i = 0; i < 3; ++i) {
         const int x = 1 + i;
-        w.placeTower(x, 1, "arrow");
-        REQUIRE(w.attachElement(x, 1, "earth"));
-        REQUIRE(w.specialiseElement(x, 1, specs[i]));
-        const auto t = w.towerAt(x, 1);
+        w.placeTower(x, 0, "arrow");
+        REQUIRE(w.attachElement(x, 0, "earth"));
+        REQUIRE(w.specialiseElement(x, 0, specs[i]));
+        const auto t = w.towerAt(x, 0);
         REQUIRE(w.reg().all_of<sim::ElementRef>(t));
         const auto* b = w.reg().get<sim::ElementRef>(t).behavior;
         REQUIRE(b != nullptr);
@@ -244,7 +244,7 @@ TEST_CASE("each element power gets its own behaviour instance", "[build]") {
 TEST_CASE("an unspecialised tower still fights, just plainly", "[build]") {
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(3, 1, "arrow");
+    w.placeTower(3, 0, "arrow");
     w.startNextWave();
     const int before = w.gold();
     for (int i = 0; i < static_cast<int>(50.0f / sim::kFixedDt); ++i) w.tick(sim::kFixedDt);
@@ -256,10 +256,10 @@ TEST_CASE("purchases are unaffordable when gold runs out", "[build]") {
     // Just enough for the tower itself and nothing more.
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{},
                  /*goldOverride=*/reg.tower("arrow").buildCost);
-    REQUIRE(w.placeTower(1, 1, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
     REQUIRE(w.gold() == 0);
-    REQUIRE_FALSE(w.attachElement(1, 1, "earth"));
-    REQUIRE_FALSE(w.specialiseTower(1, 1, "elf"));  // unaffordable AND unlevelled
+    REQUIRE_FALSE(w.attachElement(1, 0, "earth"));
+    REQUIRE_FALSE(w.specialiseTower(1, 0, "elf"));  // unaffordable AND unlevelled
     REQUIRE(w.activeTowerSpecs().empty());  // a failed purchase must not commit anything
 }
 
@@ -267,20 +267,20 @@ TEST_CASE("a tower must be fully levelled before it can specialise", "[build]") 
     // The upgrade path is the commitment; specialising is what it buys.
     const auto reg = loadReg();
     auto w = rich(reg);
-    w.placeTower(1, 1, "arrow");
+    w.placeTower(1, 0, "arrow");
 
-    REQUIRE_FALSE(w.atMaxLevel(1, 1));
-    REQUIRE(w.availableTowerSpecs(1, 1).empty());
-    REQUIRE(w.towerSpecCost(1, 1) == -1);
-    REQUIRE_FALSE(w.specialiseTower(1, 1, "elf"));
+    REQUIRE_FALSE(w.atMaxLevel(1, 0));
+    REQUIRE(w.availableTowerSpecs(1, 0).empty());
+    REQUIRE(w.towerSpecCost(1, 0) == -1);
+    REQUIRE_FALSE(w.specialiseTower(1, 0, "elf"));
 
-    REQUIRE(w.upgradeTower(1, 1));                 // level 2
-    REQUIRE_FALSE(w.atMaxLevel(1, 1));
-    REQUIRE(w.availableTowerSpecs(1, 1).empty());  // still not enough
+    REQUIRE(w.upgradeTower(1, 0));                 // level 2
+    REQUIRE_FALSE(w.atMaxLevel(1, 0));
+    REQUIRE(w.availableTowerSpecs(1, 0).empty());  // still not enough
 
-    REQUIRE(w.upgradeTower(1, 1));                 // level 3 = max
-    REQUIRE(w.atMaxLevel(1, 1));
-    REQUIRE(w.availableTowerSpecs(1, 1).size() == 3);
-    REQUIRE(w.towerSpecCost(1, 1) > 0);
-    REQUIRE(w.specialiseTower(1, 1, "elf"));
+    REQUIRE(w.upgradeTower(1, 0));                 // level 3 = max
+    REQUIRE(w.atMaxLevel(1, 0));
+    REQUIRE(w.availableTowerSpecs(1, 0).size() == 3);
+    REQUIRE(w.towerSpecCost(1, 0) > 0);
+    REQUIRE(w.specialiseTower(1, 0, "elf"));
 }

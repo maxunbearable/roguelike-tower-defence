@@ -368,23 +368,27 @@ void Renderer::drawEnemies(const sim::World& w, float alpha) const {
 
         // Anchored so the baked shadow's centre lands on the path, which is
         // where the unit is standing; the feet sit at the top of that shadow.
-        const float footY = cy + hover + kEnemyShadowInset;
-        atlas_.drawFoot(sprite, cx, footY, tint);
+        const float footY = cy + hover + kEnemyShadowInset * static_cast<float>(edef.spriteScale);
+        atlas_.drawFootScaled(sprite, cx, footY, edef.spriteScale, tint);
 
         // Additive white pass reads as a flash without needing a shader.
         if (const auto* f = r.try_get<sim::HitFlash>(e)) {
             BeginBlendMode(BLEND_ADDITIVE);
             const float k = std::clamp(f->remaining / 0.08f, 0.0f, 1.0f);
-            atlas_.drawFoot(sprite, cx, footY,
-                            Color{255, 255, 255, static_cast<unsigned char>(190 * k)});
+            atlas_.drawFootScaled(sprite, cx, footY, edef.spriteScale,
+                                  Color{255, 255, 255, static_cast<unsigned char>(190 * k)});
             EndBlendMode();
         }
 
         if (hp.hp < hp.maxHp && hp.maxHp > 0.0f) {
             const float frac = std::clamp(hp.hp / hp.maxHp, 0.0f, 1.0f);
             const auto* tex = atlas_.get(sprite);
-            const float top = footY - (tex ? tex->height : 24);
-            const int bw = 26, bx = static_cast<int>(cx) - bw / 2;
+            const float top = footY - static_cast<float>((tex ? tex->height : 24) *
+                                                         edef.spriteScale);
+            // A wider bar on a wider sprite, or a boss gets a 26px bar over a
+            // 90px body.
+            const int bw = 26 * edef.spriteScale;
+            const int bx = static_cast<int>(cx) - bw / 2;
             const int by = static_cast<int>(top) - 8;
             DrawRectangle(bx - 1, by - 1, bw + 2, 6, Color{0, 0, 0, 180});
             DrawRectangle(bx, by, static_cast<int>(bw * frac), 4,

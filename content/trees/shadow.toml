@@ -79,7 +79,7 @@ modifiers = [{ target = "shadow.siphon.lifeChance", op = "add", value = 0.03 }]
 [[node]]
 id = "shadow.siphon.gold"
 name = "Grave Tithe"
-desc = "+3 gold per kill"
+desc = "+3 gold per kill this tower lands"
 branch = "siphon"
 cost = 46
 requires = ["shadow.siphon.core"]

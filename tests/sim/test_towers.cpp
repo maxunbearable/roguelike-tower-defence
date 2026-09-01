@@ -20,27 +20,27 @@ static void advance(sim::World& w, float s) {
 TEST_CASE("placement obeys buildability, occupancy and bounds", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
-    REQUIRE(w.placeTower(1, 1, "arrow") == sim::World::PlaceResult::Ok);
-    REQUIRE(w.placeTower(1, 1, "arrow") == sim::World::PlaceResult::Occupied);
-    REQUIRE(w.placeTower(5, 2, "arrow") == sim::World::PlaceResult::NotBuildable);   // path
-    REQUIRE(w.placeTower(0, 2, "arrow") == sim::World::PlaceResult::NotBuildable);   // spawn
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Occupied);
+    REQUIRE(w.placeTower(5, 1, "arrow") == sim::World::PlaceResult::NotBuildable);   // path
+    REQUIRE(w.placeTower(0, 1, "arrow") == sim::World::PlaceResult::NotBuildable);   // spawn
     REQUIRE(w.placeTower(-1, 0, "arrow") == sim::World::PlaceResult::OutOfBounds);
     REQUIRE(w.placeTower(30, 0, "arrow") == sim::World::PlaceResult::OutOfBounds);
     // A deliberately non-existent id. This used to say "ballista", which became
     // a real tower.
-    REQUIRE(w.placeTower(2, 1, "no_such_tower") == sim::World::PlaceResult::UnknownTower);
+    REQUIRE(w.placeTower(4, 0, "no_such_tower") == sim::World::PlaceResult::UnknownTower);
 }
 
 TEST_CASE("placing deducts gold and selling refunds a fraction", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
     const int before = w.gold();
-    REQUIRE(w.placeTower(1, 1, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
     REQUIRE(w.gold() == before - 60);
-    REQUIRE(w.sellTower(1, 1));
+    REQUIRE(w.sellTower(1, 0));
     REQUIRE(w.gold() == before - 60 + 36);  // 60 * 0.6
-    REQUIRE((w.towerAt(1, 1) == entt::null));  // parens: Catch2 vs EnTT null_t ambiguity
-    REQUIRE_FALSE(w.sellTower(1, 1));
+    REQUIRE((w.towerAt(1, 0) == entt::null));  // parens: Catch2 vs EnTT null_t ambiguity
+    REQUIRE_FALSE(w.sellTower(1, 0));
 }
 
 TEST_CASE("gold runs out", "[towers]") {
@@ -52,39 +52,39 @@ TEST_CASE("gold runs out", "[towers]") {
     const int affordable = w.gold() / cost;
     REQUIRE(affordable >= 1);
     for (int i = 0; i < affordable; ++i) {
-        REQUIRE(w.placeTower(1 + i, 1, "arrow") == sim::World::PlaceResult::Ok);
+        REQUIRE(w.placeTower(1 + i, 0, "arrow") == sim::World::PlaceResult::Ok);
     }
     REQUIRE(w.gold() < cost);
-    REQUIRE(w.placeTower(1 + affordable, 1, "arrow") == sim::World::PlaceResult::TooPoor);
+    REQUIRE(w.placeTower(1 + affordable, 0, "arrow") == sim::World::PlaceResult::TooPoor);
 }
 
 TEST_CASE("upgrading raises level and applies the authored multiplier", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/1000);
-    w.placeTower(1, 1, "arrow");
-    const auto t = w.towerAt(1, 1);
+    w.placeTower(1, 0, "arrow");
+    const auto t = w.towerAt(1, 0);
     const float baseDamage = w.reg().get<sim::TowerStats>(t).damage;
 
-    REQUIRE(w.upgradeCost(1, 1) == 75);
-    REQUIRE(w.upgradeTower(1, 1));
+    REQUIRE(w.upgradeCost(1, 0) == 75);
+    REQUIRE(w.upgradeTower(1, 0));
     REQUIRE(w.reg().get<sim::TowerTag>(t).level == 2);
     REQUIRE(w.reg().get<sim::TowerStats>(t).damage == baseDamage * 1.6f);
 
-    REQUIRE(w.upgradeCost(1, 1) == 140);
-    REQUIRE(w.upgradeTower(1, 1));
+    REQUIRE(w.upgradeCost(1, 0) == 140);
+    REQUIRE(w.upgradeTower(1, 0));
     REQUIRE(w.reg().get<sim::TowerTag>(t).level == 3);
     // multipliers are absolute against base, not cumulative
     REQUIRE(w.reg().get<sim::TowerStats>(t).damage == baseDamage * 2.4f);
 
-    REQUIRE(w.upgradeCost(1, 1) == -1);  // no level 4 authored
-    REQUIRE_FALSE(w.upgradeTower(1, 1));
+    REQUIRE(w.upgradeCost(1, 0) == -1);  // no level 4 authored
+    REQUIRE_FALSE(w.upgradeTower(1, 0));
 }
 
 TEST_CASE("a tower kills enemies walking past it and earns bounty", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
-    w.placeTower(3, 1, "arrow");  // flanks the y=2 path run
-    w.placeTower(6, 1, "arrow");
+    w.placeTower(3, 0, "arrow");  // flanks the y=2 path run
+    w.placeTower(6, 0, "arrow");
     const int goldAfterBuilding = w.gold();
     w.startNextWave();
     advance(w, 50.0f);
@@ -93,23 +93,48 @@ TEST_CASE("a tower kills enemies walking past it and earns bounty", "[towers]") 
 }
 
 TEST_CASE("towers do not shoot beyond their range", "[towers]") {
+    // This used to place a tower in a "far corner" and assert the whole wave
+    // leaked. Once the routes were lengthened into dense serpentines there is no
+    // longer ANY buildable tile out of range of the path, so the premise became
+    // impossible. It now measures range directly, which is what it was ever
+    // really about.
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
-    w.placeTower(28, 0, "arrow");  // far corner; nothing on wave 1 comes within 3.5 tiles
-    const int lives = w.lives();
-    w.startNextWave();
-    advance(w, 50.0f);
-    REQUIRE(w.lives() == lives - 8);  // every slime leaked, so nothing was shot
+    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
+    const auto tower = w.towerAt(1, 0);
+    const float range = w.reg().get<sim::TowerStats>(tower).range;
+    const core::Vec2 tpos = w.reg().get<sim::Position>(tower).v;
+
+    w.enterSandbox();
+    w.spawnEnemy("goblin", 40.0f);
+    entt::entity e = entt::null;
+    w.reg().view<const sim::EnemyTag>().each([&](entt::entity x, const sim::EnemyTag&) {
+        if (e == entt::null) e = x;
+    });
+    REQUIRE((e != entt::null));
+
+    // Park it a long way along the route and hold it still, so the only question
+    // is whether the tower reaches.
+    w.reg().get<sim::PathFollower>(e).distance = 55.0f;
+    w.reg().get<sim::Speed>(e).base = 0.0f;
+    for (int i = 0; i < 4; ++i) w.tick(sim::kFixedDt);  // settle its position
+
+    const core::Vec2 epos = w.reg().get<sim::Position>(e).v;
+    REQUIRE(core::distance(tpos, epos) > range);  // the premise, asserted not assumed
+
+    const float before = w.reg().get<sim::Health>(e).hp;
+    advance(w, 3.0f);
+    REQUIRE(w.reg().get<sim::Health>(e).hp == before);
 }
 
 TEST_CASE("targeting first picks the enemy furthest along the path", "[towers]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1);
-    w.placeTower(3, 1, "arrow");
+    w.placeTower(3, 0, "arrow");
     w.startNextWave();
     advance(w, 6.0f);  // several slimes strung out along the route
 
-    const auto t = w.towerAt(3, 1);
+    const auto t = w.towerAt(3, 0);
     const auto target = w.reg().get<sim::TargetRef>(t).e;
     REQUIRE((target != entt::null));
 
@@ -127,8 +152,8 @@ TEST_CASE("combat stays deterministic for a fixed seed", "[towers]") {
     const auto reg = loadReg();
     auto run = [&] {
         sim::World w(reg, reg.map("greenfields"), 777);
-        w.placeTower(3, 1, "arrow");
-        w.placeTower(6, 1, "arrow");
+        w.placeTower(3, 0, "arrow");
+        w.placeTower(6, 0, "arrow");
         w.startNextWave();
         advance(w, 40.0f);
         return std::make_pair(w.gold(), w.lives());

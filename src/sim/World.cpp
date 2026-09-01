@@ -297,6 +297,31 @@ World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& to
     return PlaceResult::Ok;
 }
 
+bool World::levelUnlocked(int level) const {
+    if (level <= 1) return true;  // level 1 is what building gives you
+    if (level == 2) return meta_.owns("global.unlock.level2");
+    return meta_.owns("global.unlock.level3");
+}
+
+bool World::elementUnlocked(const std::string& elementId) const {
+    // Owning ANY node of an element's tree grants the right to imbue it; the
+    // tree's root is the cheapest way in.
+    if (meta_.ownAll) return true;
+    if (!defs_->hasTree(elementId)) return false;
+    for (const auto& n : defs_->tree(elementId).nodes) {
+        if (meta_.owns(n.id)) return true;
+    }
+    return false;
+}
+
+bool World::towerSpecUnlocked(const std::string& towerId, const std::string& spec) const {
+    return meta_.owns(towerId + "." + spec + ".core");
+}
+
+bool World::elementSpecUnlocked(const std::string& elementId, const std::string& spec) const {
+    return meta_.owns(elementId + "." + spec + ".core");
+}
+
 int World::upgradeCost(int tileX, int tileY) const {
     const auto e = towerAt(tileX, tileY);
     if (e == entt::null) return -1;
@@ -304,6 +329,8 @@ int World::upgradeCost(int tileX, int tileY) const {
     const auto& def = defs_->tower(tag.defId);
     const int idx = tag.level - 1;  // level 1 buys levels[0]
     if (idx < 0 || idx >= static_cast<int>(def.levels.size())) return -1;
+    // Gated: an unbought level is not for sale at any price.
+    if (!levelUnlocked(tag.level + 1)) return -1;
     return def.levels[static_cast<size_t>(idx)].cost;
 }
 
@@ -397,6 +424,8 @@ std::vector<std::string> World::availableTowerSpecs(int tileX, int tileY) const 
     // Only specs nobody else is already using.
     std::vector<std::string> out;
     for (const auto& spec : defs_->tree(tag.defId).specs) {
+        // Unlocked by the tree AND not already fielded elsewhere on the map.
+        if (!towerSpecUnlocked(tag.defId, spec)) continue;
         if (!towerSpecInUse(spec)) out.push_back(spec);
     }
     return out;
@@ -411,6 +440,7 @@ std::vector<std::string> World::availableElementSpecs(int tileX, int tileY) cons
 
     std::vector<std::string> out;
     for (const auto& spec : defs_->tree(tag.elementId).specs) {
+        if (!elementSpecUnlocked(tag.elementId, spec)) continue;
         if (!elementSpecInUse(spec)) out.push_back(spec);
     }
     return out;
@@ -422,6 +452,7 @@ bool World::attachElement(int tileX, int tileY, const std::string& elementId) {
     auto& tag = ecs_.get<TowerTag>(e);
     if (!tag.elementId.empty()) return false;  // one element per tower
     if (!defs_->hasElement(elementId)) return false;
+    if (!elementUnlocked(elementId)) return false;  // gated on its skill tree
 
     const int cost = defs_->element(elementId).attachCost;
     if (!spendGold(cost)) return false;
@@ -461,12 +492,21 @@ bool World::specialiseElement(int tileX, int tileY, const std::string& spec) {
     return true;
 }
 
+int World::sellValue(int tileX, int tileY) const {
+    const auto e = towerAt(tileX, tileY);
+    if (e == entt::null) return 0;
+    const auto& tag = ecs_.get<TowerTag>(e);
+    const auto& def = defs_->tower(tag.defId);
+    return static_cast<int>(static_cast<float>(tag.goldSpent) * def.sellRefundPct);
+}
+
 bool World::sellTower(int tileX, int tileY) {
     const auto e = towerAt(tileX, tileY);
     if (e == entt::null) return false;
     const auto& tag = ecs_.get<TowerTag>(e);
     const auto& def = defs_->tower(tag.defId);
-    addGold(static_cast<int>(static_cast<float>(tag.goldSpent) * def.sellRefundPct));
+    (void)def;
+    addGold(sellValue(tileX, tileY));
     ecs_.destroy(e);
     return true;
 }

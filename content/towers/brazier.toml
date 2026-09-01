@@ -1,6 +1,7 @@
 [tower]
 id = "brazier"
 name = "Brazier"
+desc = "Very short range, relentless cadence. Placement is everything."
 buildCost = 85
 sellRefundPct = 0.6
 damage = 7

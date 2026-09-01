@@ -58,6 +58,13 @@ PROFILES = {
     "lean": dict(damage=0.72, fireRate=0.72, range=0.82, armorPen=0.8,
                  startGold=0.68, bounty=0.75),
 
+    # A hard gold deficit. Paths are now ~2x longer, which roughly doubles how
+    # much damage a board deals, so the economy can carry a much tighter squeeze
+    # than "tight" without the death spiral that 0.68/0.75 produced on the old
+    # short routes.
+    "scarce": dict(damage=1.0, fireRate=1.0, range=0.9, armorPen=1.0,
+                   startGold=0.62, bounty=0.7),
+
     # Gold deficit only: stats near intent, range slightly in, income tight. The
     # gold cut alone is a large nerf because bounty income COMPOUNDS -- fewer
     # towers means fewer kills means less gold. Measured: dropping start gold to

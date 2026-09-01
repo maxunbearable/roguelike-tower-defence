@@ -50,7 +50,7 @@ modifiers = [{ target = "light.sear.flatPerHit", op = "mult", value = 1.7 }]
 [[node]]
 id = "light.sear.more"
 name = "Zeal"
-desc = "+5 flat sear per hit"
+desc = "+5 flat sear damage per hit, before any resistance"
 branch = "sear"
 cost = 46
 requires = ["light.sear.core"]

@@ -52,6 +52,15 @@ public:
     const content::Registry& defs() const { return *defs_; }
     core::Rng& rng() { return rng_; }
     const core::Loadout& meta() const { return meta_; }
+
+    // --- what the skill tree permits -------------------------------------
+    // Levelling, imbuing and specialising are all gated on owning the relevant
+    // node, so the meta progression is what turns plain level-1 towers into a
+    // real board rather than being a pile of passive percentages.
+    bool levelUnlocked(int level) const;
+    bool elementUnlocked(const std::string& elementId) const;
+    bool towerSpecUnlocked(const std::string& towerId, const std::string& spec) const;
+    bool elementSpecUnlocked(const std::string& elementId, const std::string& spec) const;
     // A specialisation is UNIQUE ON THE MAP: one sniper, one elf, one hunter,
     // and as many plain arrow towers as you like. The interesting decision is
     // therefore which three pairings you field, not one choice you are stuck
@@ -93,6 +102,9 @@ public:
     std::vector<std::string> availableTowerSpecs(int tileX, int tileY) const;
     std::vector<std::string> availableElementSpecs(int tileX, int tileY) const;
     bool sellTower(int tileX, int tileY);
+    // What selling would actually pay. The menu said "refunds part of
+    // everything invested", which is not a number anyone can act on.
+    int sellValue(int tileX, int tileY) const;
     entt::entity towerAt(int tileX, int tileY) const;
     int upgradeCost(int tileX, int tileY) const;  // -1 if not upgradable
     // A tower must be fully levelled before it may specialise. Levelling is the

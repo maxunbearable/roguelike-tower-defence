@@ -28,6 +28,9 @@ struct EnemyDef {
     std::string sprite;
     // Multiplied into the sprite's colour. 255,255,255 is untouched.
     int tintR = 255, tintG = 255, tintB = 255;
+    // Whole-number sprite magnification. Bosses draw at 2 so they read as a
+    // boss on sight; anything fractional would resample the pixel art.
+    int spriteScale = 1;
 
     const std::string& spriteId() const { return sprite.empty() ? id : sprite; }
 
@@ -70,6 +73,9 @@ struct TowerLevel {
 struct TowerDef {
     std::string id;
     std::string name;
+    // One line on what this tower is FOR, shown in the build ring. Content, not
+    // a hardcoded table in the UI layer.
+    std::string desc;
     int buildCost = 0;
     float sellRefundPct = 0.0f;
     float damage = 0.0f;
@@ -93,6 +99,7 @@ struct TowerDef {
 struct ElementDef {
     std::string id;
     std::string name;
+    std::string desc;  // what imbuing this element buys you
     std::string damageType = "physical";
     int attachCost = 0;
     int specCost = 0;

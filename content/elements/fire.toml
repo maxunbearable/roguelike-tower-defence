@@ -1,6 +1,7 @@
 [element]
 id = "fire"
 name = "Fire"
+desc = "Raw damage: one spec for heavy hits, one for crowds, one to strip resistance."
 damageType = "fire"
 attachCost = 80
 specCost = 100

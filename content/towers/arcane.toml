@@ -1,6 +1,7 @@
 [tower]
 id = "arcane"
 name = "Arcane Spire"
+desc = "Support: chains between targets, curses them, or pays gold for kills."
 buildCost = 110
 sellRefundPct = 0.6
 damage = 18

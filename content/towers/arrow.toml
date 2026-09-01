@@ -1,6 +1,7 @@
 [tower]
 id = "arrow"
 name = "Arrow Tower"
+desc = "A steady, cheap shot. Everything else builds on it."
 buildCost = 60
 sellRefundPct = 0.6
 damage = 12

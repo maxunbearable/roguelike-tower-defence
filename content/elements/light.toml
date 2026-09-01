@@ -1,6 +1,7 @@
 [element]
 id = "light"
 name = "Light"
+desc = "The answer to a map built to resist you. Ignores resistance outright."
 damageType = "radiant"
 attachCost = 100
 specCost = 120

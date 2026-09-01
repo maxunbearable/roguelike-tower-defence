@@ -60,7 +60,7 @@ modifiers = [
 [[node]]
 id = "arrow.sniper.pen"
 name = "Armour Piercer"
-desc = "+4 armour penetration"
+desc = "+4 armour penetration: ignores that much enemy armour"
 branch = "sniper"
 cost = 42
 requires = ["arrow.sniper.core"]
@@ -70,7 +70,7 @@ modifiers = [{ target = "arrow.armorPen", op = "add", value = 4.0 }]
 [[node]]
 id = "arrow.sniper.crit"
 name = "Steady Hand"
-desc = "+15% crit chance, +0.5 crit multiplier"
+desc = "+15% crit chance and +0.5 crit multiplier"
 branch = "sniper"
 cost = 42
 requires = ["arrow.sniper.core"]
@@ -142,7 +142,7 @@ modifiers = [
 [[node]]
 id = "arrow.hunter.spread"
 name = "Wider Volley"
-desc = "+1 arrow per shot"
+desc = "+1 arrow per shot, widening the spread"
 branch = "hunter"
 cost = 42
 requires = ["arrow.hunter.core"]
@@ -152,7 +152,7 @@ modifiers = [{ target = "arrow.projectileCount", op = "add", value = 1.0 }]
 [[node]]
 id = "arrow.hunter.pierce"
 name = "Bodkin Points"
-desc = "+1 pierce"
+desc = "+1 pierce: each arrow passes through one more enemy"
 branch = "hunter"
 cost = 42
 requires = ["arrow.hunter.core"]

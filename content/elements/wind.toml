@@ -1,6 +1,7 @@
 [element]
 id = "wind"
 name = "Wind"
+desc = "Reach. Arcs to targets you never aimed at, or shoves them back down the path."
 damageType = "shock"
 attachCost = 85
 specCost = 105

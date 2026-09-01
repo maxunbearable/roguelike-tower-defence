@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     int jumpWave = 0;
     int cluster = 0;
     bool pauseIt = false;
+    const char* menuPage = nullptr;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--shot") == 0 && i + 1 < argc) shotPath = argv[++i];
         else if (std::strcmp(argv[i], "--after") == 0 && i + 1 < argc)
@@ -71,6 +72,8 @@ int main(int argc, char** argv) {
                 menuY = std::atoi(argv[++i]);
             }
         }
+        else if (std::strcmp(argv[i], "--menupage") == 0 && i + 1 < argc)
+            menuPage = argv[++i];
         else if (std::strcmp(argv[i], "--pause") == 0)
             pauseIt = true;
         else if (std::strcmp(argv[i], "--cluster") == 0 && i + 1 < argc)
@@ -118,6 +121,7 @@ int main(int argc, char** argv) {
     if (menuAt) {
         game.requestStart(/*demoTowers=*/true);
         game.devOpenMenu(menuX, menuY);
+        if (menuPage) game.devMenuPage(menuPage);
     }
     if (mapsScreen) game.devShowMaps();
     if (results) game.devShowResults(/*award=*/126);

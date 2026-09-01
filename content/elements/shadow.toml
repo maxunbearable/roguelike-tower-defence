@@ -1,6 +1,7 @@
 [element]
 id = "shadow"
 name = "Shadow"
+desc = "Attrition and economy. Weakens permanently, and pays for itself in gold and lives."
 damageType = "void"
 attachCost = 95
 specCost = 115

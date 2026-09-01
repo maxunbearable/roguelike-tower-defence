@@ -19,7 +19,7 @@ modifiers = [{ target = "ballista.damage", op = "mult", value = 1.1 }]
 [[node]]
 id = "ballista.trunk.pierce1"
 name = "Barbed Heads"
-desc = "+1 pierce"
+desc = "+1 pierce: the bolt passes through one more enemy"
 branch = "trunk"
 cost = 24
 requires = ["ballista.trunk.dmg1"]
@@ -54,7 +54,7 @@ modifiers = [
 [[node]]
 id = "ballista.harpoon.pierce"
 name = "Through and Through"
-desc = "+3 pierce"
+desc = "+3 pierce: the bolt punches through three more ranks"
 branch = "harpoon"
 cost = 46
 requires = ["ballista.harpoon.core"]
@@ -98,7 +98,7 @@ modifiers = [{ target = "ballista.fireRate", op = "mult", value = 1.35 }]
 [[node]]
 id = "ballista.scorpion.crit"
 name = "Marksman's Eye"
-desc = "+15% crit chance, +0.6 crit multiplier"
+desc = "+15% crit chance and +0.6 crit multiplier"
 branch = "scorpion"
 cost = 46
 requires = ["ballista.scorpion.core"]

@@ -78,6 +78,7 @@ std::vector<EnemyDef> loadEnemies(const std::filesystem::path& file) {
         e.flying = require<bool>(n, file, "flying");
         e.boss = n["boss"].value<bool>().value_or(false);
         e.sprite = n["sprite"].value<std::string>().value_or(std::string{});
+        e.spriteScale = std::max(1, static_cast<int>(n["spriteScale"].value<int64_t>().value_or(1)));
         if (const auto* tint = t->get("tint") ? t->get("tint")->as_array() : nullptr) {
             if (tint->size() == 3) {
                 const auto ch = [&](size_t i) {
@@ -109,6 +110,7 @@ TowerDef loadTower(const std::filesystem::path& file) {
     TowerDef d;
     d.id = require<std::string>(n, file, "id");
     d.name = require<std::string>(n, file, "name");
+    d.desc = n["desc"].value<std::string>().value_or(std::string{});
     d.buildCost = static_cast<int>(require<int64_t>(n, file, "buildCost"));
     d.sellRefundPct = requireFloat(n, file, "sellRefundPct");
     d.damage = requireFloat(n, file, "damage");

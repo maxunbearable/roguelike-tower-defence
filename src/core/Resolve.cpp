@@ -61,6 +61,9 @@ std::set<std::string> knownStatPaths(const content::Registry& reg) {
     std::set<std::string> out;
     out.insert("global.startGold");
     out.insert("global.lives");
+    // Unlock flags: what a tower is permitted to do, bought in the global tree.
+    out.insert("global.unlock.level2");
+    out.insert("global.unlock.level3");
     for (const auto& [id, t] : reg.towers()) {
         // Trait parameter paths live here too. A spec grants its trait with a
         // `flag` modifier and then tunes it through these, so every new trait

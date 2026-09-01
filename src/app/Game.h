@@ -45,6 +45,12 @@ public:
     void showSpriteSheet() { screen_ = Screen::SpriteSheet; }
     // Dev capture: the two screens that otherwise need live input to reach.
     void devOpenMenu(int tileX, int tileY) { openMenuAt(tileX, tileY); }
+    // Dev capture: the Specialise / Element sub-pages, which otherwise need a
+    // click to reach.
+    void devMenuPage(const std::string& page) {
+        if (page == "spec") showPage(MenuPage::Spec);
+        else if (page == "element") showPage(MenuPage::Element);
+    }
     void devSetHubTab(int tab) { hubTab_ = tab; }
     // Dev capture: skip ahead to a wave, so a boss fight can be inspected
     // without playing 25 waves to reach it.

@@ -115,11 +115,55 @@ def main(base):
     # brazier: a small hot ember.
     save(to_size(fire, 13), "proj_brazier", log)
 
+    # --- one icon per element SPEC -----------------------------------------
+    # 18 specs from 3 shapes x 6 element hues. Shape says WHICH spec within the
+    # element, hue says which element, so a spec is identifiable in the ring and
+    # in its skill-tree node without any per-spec artwork.
+    ball = fire
+    spell = spell_f
+    arrow_src = None
+    _a = sorted(g for g in glob.glob(os.path.join(root, "Fire Arrow", "PNG", "*.png"))
+                if "__MACOSX" not in g)
+    if _a:
+        arrow_src = Image.open(_a[0]).convert("RGBA")
+
+    # Hue rotation per element, measured from the orange source.
+    ELEMENT_HUE = {
+        "earth":  (0.28, 0.85, 0.92),
+        "fire":   (0.00, 1.00, 1.00),
+        "water":  (0.52, 0.90, 1.00),
+        "wind":   (0.45, 0.40, 1.15),
+        "shadow": (0.72, 0.80, 0.70),
+        "light":  (0.08, 0.45, 1.15),
+    }
+    # Spec order must match each element tree's `specs` list.
+    ELEMENT_SPECS = {
+        "earth":  ["poison", "rock", "quake"],
+        "fire":   ["burn", "blast", "melt"],
+        "water":  ["chill", "shatter", "freeze"],
+        "wind":   ["shock", "gust", "cyclone"],
+        "shadow": ["wither", "siphon", "rift"],
+        "light":  ["sear", "judgement", "beacon"],
+    }
+    shapes = [ball, spell, arrow_src]
+    for elem, specs in ELEMENT_SPECS.items():
+        h, sa, v = ELEMENT_HUE[elem]
+        for i, spec in enumerate(specs):
+            src = shapes[i % len(shapes)]
+            if src is None:
+                continue
+            # earth already has three bespoke overlays and icons; do not clobber.
+            if elem == "earth":
+                continue
+            save(to_size(shift(src, h, sa, v), 20), f"icon_{spec}", log)
+            save(to_size(shift(src, h, sa, v), 24), f"enchant_{spec}", log)
+
     # --- element overlays for the specs that had none -----------------------
     # One per element rather than per spec: the spec is already named on the
     # stats panel, and 18 hand-authored overlays is not a thing this pack can
     # give. The overlay says WHICH ELEMENT is imbued, which is the readable bit.
     overlays = {
+        "enchant_earth": (spell_f, 0.28, 0.85, 0.92),
         "enchant_fire": (spell_f, 0.0, 1.0, 1.0),
         "enchant_water": (spell_f, 0.52, 0.9, 1.0),
         "enchant_wind": (spell_f, 0.45, 0.4, 1.15),

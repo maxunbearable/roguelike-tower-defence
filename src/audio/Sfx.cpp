@@ -1,6 +1,7 @@
 #include "audio/Sfx.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "core/Synth.h"
 
@@ -97,17 +98,66 @@ Sound soundFrom(const Pcm& pcm) {
 
 Sfx::~Sfx() { unload(); }
 
+namespace {
+
+// The file each cue prefers, relative to assets/audio/sfx. These are CC0, so
+// unlike the sprites they can live in the repository.
+//
+// I cannot audition audio, so this mapping is a considered guess rather than a
+// mix decision. It is deliberately a lookup by FILENAME: swapping any cue is
+// dropping a different .ogg in with that name, no rebuild and no code change.
+const char* fileFor(Cue c) {
+    switch (c) {
+        case Cue::Shoot: return "shoot.ogg";
+        case Cue::Hit: return "hit.ogg";
+        case Cue::Crit: return "crit.ogg";
+        case Cue::Death: return "death.ogg";
+        case Cue::Quake: return "quake.ogg";
+        case Cue::Leak: return "leak.ogg";
+        case Cue::Build: return "build.ogg";
+        case Cue::Sell: return "sell.ogg";
+        case Cue::Click: return "click.ogg";
+        case Cue::Buy: return "buy.ogg";
+        case Cue::WaveStart: return "wavestart.ogg";
+        case Cue::Defeat: return "defeat.ogg";
+        case Cue::Victory: return "victory.ogg";
+    }
+    return nullptr;
+}
+
+}  // namespace
+
 void Sfx::load() {
     if (loaded_) return;
+    const std::filesystem::path dir = std::filesystem::path(TD_ASSET_DIR) / "audio" / "sfx";
+    int fromFile = 0, fromSynth = 0;
+
     for (const Cue c : {Cue::Shoot, Cue::Hit, Cue::Crit, Cue::Death, Cue::Quake, Cue::Leak,
                         Cue::Build, Cue::Sell, Cue::Click, Cue::Buy, Cue::WaveStart, Cue::Defeat,
                         Cue::Victory}) {
+        Voices v;
+        const char* name = fileFor(c);
+        const auto path = name ? dir / name : dir;
+
+        // Prefer the recorded sound; fall back to the synthesiser so the game
+        // still has audio with no assets present.
+        if (name && std::filesystem::exists(path)) {
+            const Sound base = LoadSound(path.string().c_str());
+            if (base.frameCount > 0) {
+                v.pool.push_back(base);
+                for (int i = 1; i < poolSizeFor(c); ++i) v.pool.push_back(LoadSoundAlias(base));
+                cues_[c] = std::move(v);
+                ++fromFile;
+                continue;
+            }
+        }
         const Pcm pcm = synth(c);
         if (pcm.empty()) continue;
-        Voices v;
         for (int i = 0; i < poolSizeFor(c); ++i) v.pool.push_back(soundFrom(pcm));
         cues_[c] = std::move(v);
+        ++fromSynth;
     }
+    TraceLog(LOG_INFO, "sfx: %d cues from files, %d synthesised", fromFile, fromSynth);
     loaded_ = true;
 }
 

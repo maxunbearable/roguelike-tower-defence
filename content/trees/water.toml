@@ -99,7 +99,7 @@ modifiers = [{ target = "water.freeze.chance", op = "mult", value = 1.0 }]
 [[node]]
 id = "water.freeze.often"
 name = "Flash Frost"
-desc = "+6% freeze chance"
+desc = "+6% chance a hit freezes the target outright"
 branch = "freeze"
 cost = 44
 requires = ["water.freeze.core"]

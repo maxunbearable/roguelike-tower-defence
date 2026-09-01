@@ -19,6 +19,10 @@ Most tower defence games give you a tower list. This one gives you a **matrix**.
   becomes poison, rock, or earthquake.
 - Only **one of each specialisation may exist on the map at a time**, so a run is
   a sequence of commitments, not a shopping list.
+- **Everything above is unlocked by the skill tree.** Levelling a tower past 1,
+  imbuing an element and specialising at all are all bought permanently, so a
+  first run fields plain level-1 towers and the meta progression is what turns
+  them into a real board.
 
 The combinations are the game. A tower spec changes *numbers and geometry*
 (damage size, fire rate, how many projectiles); an element spec changes *events*
@@ -44,9 +48,9 @@ skill trees that persist across runs.
 | Maps | 5, each 50 waves, each with a mid-boss and a final boss |
 | Bosses | 10 |
 | Enemies | 30 definitions, with per-damage-type resistance tables |
-| Skill trees | 12, 126 nodes |
+| Skill trees | 12 trees, 146 nodes — the global tree alone is 23 |
 | Damage types | 11 |
-| Music | 2 procedurally composed loops, no audio assets |
+| Audio | 2 CC0 music loops + 13 CC0 effects, committed; procedural synth as fallback |
 
 Each map's roster resists a different element and is vulnerable to another, which
 is what makes five maps replayable rather than one map five times.
@@ -93,10 +97,11 @@ itself constantly:
   three passes — the HP curve was `1.055 ^ (wave^1.18)`, so health multiplied 7×
   between wave 34 and wave 50 while the player, already fully built, gained
   nothing. This test exists so that cannot recur silently.
-- Per-map difficulty is **normalised against path length** in `tools/make_map.py`.
-  Damage dealt is proportional to how long enemies are under fire, and the five
-  routes span 38 to 68 tiles; before normalising, two maps were ~2× harder than
-  the rest.
+- Per-map difficulty is **normalised against path length** in `tools/make_map.py`,
+  which solves each map's HP curve from a declared target, its actual tile count
+  and its wave-50 enemy count. Damage dealt is proportional to how long enemies
+  are under fire, so changing a route would otherwise silently change how hard a
+  map is. Before normalising, two maps were ~2× harder than the rest.
 
 Other load-bearing decisions:
 
@@ -128,11 +133,16 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 187 tests
+ctest --test-dir build          # 192 tests
 ```
 
-The suite takes several minutes, dominated by the 270-combination matrix and
-the five full-map autoplay runs.
+The suite takes several minutes, dominated by the 270-combination matrix and the
+five full-map autoplay runs. Two opt-in reports are worth running by hand:
+
+```sh
+./build/tests/td_tests "print the combination matrix" -c "[.report]"
+./build/tests/td_tests "report how many runs it takes to clear map 1" -c "[.report]"
+```
 
 ### Useful dev flags
 
@@ -147,13 +157,22 @@ the five full-map autoplay runs.
 ./build/td_app --shot out.png --after 8 # render N seconds then screenshot
 ```
 
-## Art assets
+## Assets
 
-**The game art is not in this repository, by design.**
+**Audio is in the repository. Art is not.** Both follow from the licences: the
+audio is CC0, which permits redistribution; the sprite packs permit use and
+modification in a shipped game but forbid redistributing the source art.
 
-The sprites are derived from commercial-friendly asset packs whose licences
-permit use and modification in a shipped game but **forbid redistribution of the
-source art**. Committing them would breach that, so `assets/sprites/*.png` is
+### Audio — committed
+
+Two CC0 music loops from OpenGameArt and 13 CC0 effects from Kenney. Sound
+effects are looked up by filename (`assets/audio/sfx/<cue>.ogg`), so any cue can
+be replaced by dropping in a different `.ogg` — no rebuild. The procedural
+synthesiser remains as a fallback for any missing file.
+
+### Art — not committed
+
+Committing the sprites would breach their licences, so `assets/sprites/*.png` is
 gitignored and the importers are committed instead:
 
 ```sh

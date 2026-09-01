@@ -12,7 +12,7 @@ specs = ["pyre", "forge", "cinder"]
 [[node]]
 id = "brazier.trunk.dmg1"
 name = "Stoked Coals"
-desc = "+10% damage"
+desc = "+10% damage on every hit"
 branch = "trunk"
 cost = 18
 requires = []
@@ -70,7 +70,7 @@ modifiers = [{ target = "brazier.splash.radius", op = "add", value = 0.5 }]
 [[node]]
 id = "brazier.pyre.far"
 name = "Beacon Fire"
-desc = "+1 tile range"
+desc = "+1 tile of reach, for a hard-to-place tower"
 branch = "pyre"
 cost = 46
 requires = ["brazier.pyre.core"]
@@ -141,7 +141,7 @@ modifiers = [{ target = "brazier.fireRate", op = "mult", value = 1.3 }]
 [[node]]
 id = "brazier.cinder.pen"
 name = "Slagging"
-desc = "+8 armour penetration"
+desc = "+8 armour penetration: ignores that much enemy armour"
 branch = "cinder"
 cost = 46
 requires = ["brazier.cinder.core"]

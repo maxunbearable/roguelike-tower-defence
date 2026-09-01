@@ -39,7 +39,7 @@ modifiers = [{ target = "fire.burn.pctPerHit", op = "mult", value = 1.0 }]
 [[node]]
 id = "fire.burn.deep"
 name = "Deep Char"
-desc = "+40% burn magnitude"
+desc = "+40% burn magnitude, scaled off the hit that lit it"
 branch = "burn"
 cost = 44
 requires = ["fire.burn.core"]

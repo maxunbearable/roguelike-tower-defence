@@ -186,3 +186,37 @@ Record the licence in this file and ship the notice.
 - [ ] Confirm no dependency has been added whose licence is copyleft (GPL/LGPL),
       which would be incompatible with a closed-source store release.
 - [ ] If any audio is added later, apply this same policy to it.
+
+## Audio (added 2026-09-01)
+
+Unlike the sprites, **all audio in this project is CC0 and therefore committed to
+the repository.** CC0 permits redistribution, so there is nothing to gitignore.
+
+### Music — `assets/audio/music/`
+
+| file | source | author | licence |
+|---|---|---|---|
+| `hub.ogg` | [The Old Tower Inn](https://opengameart.org/content/medieval-the-old-tower-inn) | RandomMind | CC0 |
+| `battle.ogg` | [Determined Pursuit](https://opengameart.org/content/determined-pursuit-epic-orchestra-loop) | Emma_MA | CC0 |
+
+Both verified at source, not from a search summary. Worth recording why: the
+Determined Pursuit page carries a heading reading "Attribution Notice", which on
+a careless grep looks like it demands credit. The full text is *"This track is in
+the public domain as of January 2017. No attribution necessary."* Converted from
+WAV to Ogg Vorbis (28 MB to 2.1 MB) so a repository can carry them.
+
+### Sound effects — `assets/audio/sfx/`
+
+13 files from [Kenney](https://kenney.nl)'s CC0 packs — Impact Sounds, UI Audio,
+RPG Audio and Music Jingles. Kenney releases under CC0 1.0 Universal: commercial
+use, modification and redistribution all permitted with no attribution required.
+
+**One honest caveat:** I cannot listen to audio, so the cue-to-file mapping is a
+considered guess, not a mix decision. It is deliberately keyed by FILENAME
+(`assets/audio/sfx/<cue>.ogg`), so replacing any cue is dropping a different
+`.ogg` in with that name — no rebuild, no code change. The 13 names are: shoot,
+hit, crit, death, quake, leak, build, sell, click, buy, wavestart, victory,
+defeat.
+
+The procedural synthesiser remains as a **fallback**: if a file is missing, that
+cue is generated instead, so the game always has audio.

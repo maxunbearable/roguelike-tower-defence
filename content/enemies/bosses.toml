@@ -8,6 +8,10 @@
 # Every boss is slow and heavily armoured: the threat is that it does not stop,
 # so the answer has to be damage rather than crowd control.
 #
+# Every boss REUSES an existing creature sprite set, tinted and drawn at 2x.
+# Without `sprite` the renderer asks for boss_<id>_0.png, which does not exist,
+# and the boss is invisible -- which is exactly what shipped.
+#
 # `resist` is the reason five maps replay differently. Each map's bosses resist
 # the element its whole roster leans on, so the build that cleared the last map
 # is the wrong build here.
@@ -19,10 +23,13 @@ name = "Ogre Warlord"
 maxHp = 640.0
 armor = 12.0
 speed = 0.95
-bounty = 108
+bounty = 84
 shardValue = 8
 flying = false
 boss = true
+sprite = "goblin"        # warm ogre hide
+tint = [232, 196, 150]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 
 [[enemy]]
 id = "boss_warlord_grulk"
@@ -30,10 +37,13 @@ name = "Warlord Grulk"
 maxHp = 1200.0
 armor = 22.0
 speed = 0.85
-bounty = 270
+bounty = 210
 shardValue = 20
 flying = false
 boss = true
+sprite = "wraith"        # blood-red warlord
+tint = [226, 150, 140]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 
 # --- ashen-wastes: fire is the wrong answer here --------------------------
 [[enemy]]
@@ -42,10 +52,13 @@ name = "Cinder Brute"
 maxHp = 700.0
 armor = 14.0
 speed = 1.0
-bounty = 126
+bounty = 98
 shardValue = 9
 flying = false
 boss = true
+sprite = "goblin"        # ember-lit
+tint = [255, 168, 110]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { fire = 0.35, frost = 1.4 }
 
 [[enemy]]
@@ -54,10 +67,13 @@ name = "Cinder Colossus"
 maxHp = 1320.0
 armor = 26.0
 speed = 0.8
-bounty = 297
+bounty = 230
 shardValue = 22
 flying = false
 boss = true
+sprite = "wraith"        # molten
+tint = [255, 140, 86]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { fire = 0.3, frost = 1.45, siege = 0.8 }
 
 # --- frostmere: frost is the wrong answer here ----------------------------
@@ -67,10 +83,13 @@ name = "Rime Stalker"
 maxHp = 660.0
 armor = 10.0
 speed = 1.25
-bounty = 126
+bounty = 98
 shardValue = 9
 flying = false
 boss = true
+sprite = "wolf"        # frost-rimed
+tint = [176, 216, 255]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { frost = 0.35, fire = 1.45 }
 
 [[enemy]]
@@ -79,10 +98,13 @@ name = "Rime Tyrant"
 maxHp = 1280.0
 armor = 24.0
 speed = 0.85
-bounty = 297
+bounty = 230
 shardValue = 22
 flying = false
 boss = true
+sprite = "wraith"        # glacial
+tint = [150, 204, 255]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { frost = 0.3, fire = 1.5, piercing = 0.85 }
 
 # --- blightmarsh: earth is the wrong answer here --------------------------
@@ -92,10 +114,13 @@ name = "Plague Carrier"
 maxHp = 720.0
 armor = 11.0
 speed = 1.05
-bounty = 130
+bounty = 101
 shardValue = 10
 flying = false
 boss = true
+sprite = "slime"        # swollen with rot
+tint = [176, 224, 140]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { earth = 0.3, shock = 1.4 }
 
 [[enemy]]
@@ -104,10 +129,13 @@ name = "Plague Mother"
 maxHp = 1380.0
 armor = 20.0
 speed = 0.8
-bounty = 306
+bounty = 237
 shardValue = 23
 flying = false
 boss = true
+sprite = "goblin"        # blighted matriarch
+tint = [150, 206, 120]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { earth = 0.25, shock = 1.45, arcane = 1.2 }
 
 # --- obsidian-gate: no soft answer; armour is the wall --------------------
@@ -117,10 +145,13 @@ name = "Gate Sentinel"
 maxHp = 820.0
 armor = 26.0
 speed = 0.9
-bounty = 153
+bounty = 118
 shardValue = 12
 flying = false
 boss = true
+sprite = "wraith"        # obsidian-plated
+tint = [186, 178, 206]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { piercing = 0.85, fire = 0.9, frost = 0.9, earth = 0.9, shock = 0.9 }
 
 [[enemy]]
@@ -129,8 +160,11 @@ name = "Gate Warden"
 maxHp = 1650.0
 armor = 38.0
 speed = 0.75
-bounty = 378
+bounty = 294
 shardValue = 30
 flying = false
 boss = true
+sprite = "wraith"        # the last gate
+tint = [150, 138, 186]
+spriteScale = 2          # twice size, so a boss reads as one on sight
 resist = { piercing = 0.82, fire = 0.88, frost = 0.88, earth = 0.88, shock = 0.88, siege = 1.2 }

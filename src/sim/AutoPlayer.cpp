@@ -90,6 +90,14 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
     // measuring against it would tune the game to the wrong player.
     constexpr size_t kCoverageFirst = 6;
 
+    // A ceiling on how many towers to field. `spots.size()` is every buildable
+    // tile -- around 140 on a 22x11 map -- and no human builds that. Without a
+    // cap, a profile that cannot yet upgrade (levelling is gated on the skill
+    // tree) just keeps buying towers, and since targeting is O(towers x enemies)
+    // per tick the harness slowed by more than an order of magnitude while
+    // measuring a board nobody would ever build.
+    constexpr size_t kMaxTowers = 34;
+
     auto buildOne = [&] {
         for (const auto& s2 : spots) {
             if (w.towerAt(s2.x, s2.y) != entt::null) continue;
@@ -150,7 +158,8 @@ AutoPlayResult autoPlay(const content::Registry& reg, const content::MapDef& map
             if (acted) continue;
 
             // 4. Then widen and deepen, preferring a new tower to a third level.
-            if (built.size() < spots.size() && w.gold() >= def.buildCost) {
+            if (built.size() < std::min(spots.size(), kMaxTowers) &&
+                w.gold() >= def.buildCost) {
                 if (buildOne()) { acted = true; continue; }
             }
             for (const auto& [tx, ty] : built) {

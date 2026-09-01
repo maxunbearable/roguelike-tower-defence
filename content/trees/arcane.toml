@@ -57,7 +57,7 @@ modifiers = [
 [[node]]
 id = "arcane.tempest.more"
 name = "Chain Lightning"
-desc = "+2 arc jumps"
+desc = "+2 arc jumps: each bolt reaches two more targets"
 branch = "tempest"
 cost = 46
 requires = ["arcane.tempest.core"]
@@ -104,7 +104,7 @@ modifiers = [{ target = "arcane.amplify.pct", op = "add", value = 0.15 }]
 [[node]]
 id = "arcane.hex.long"
 name = "Lingering Mark"
-desc = "+2s hex duration"
+desc = "+2s hex duration, so the mark covers more of a wave"
 branch = "hex"
 cost = 46
 requires = ["arcane.hex.core"]
@@ -128,7 +128,7 @@ modifiers = [
 [[node]]
 id = "arcane.drain.more"
 name = "Tithe"
-desc = "+3 gold per kill"
+desc = "+3 gold per kill this tower lands"
 branch = "drain"
 cost = 46
 requires = ["arcane.drain.core"]

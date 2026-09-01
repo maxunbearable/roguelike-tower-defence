@@ -132,7 +132,7 @@ modifiers = [
 [[node]]
 id = "cannon.siege.pen"
 name = "Breaching Shot"
-desc = "+10 armour penetration"
+desc = "+10 armour penetration: ignores that much enemy armour"
 branch = "siege"
 cost = 46
 requires = ["cannon.siege.core"]

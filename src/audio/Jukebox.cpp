@@ -1,6 +1,7 @@
 #include "audio/Jukebox.h"
 
 #include <algorithm>
+#include <filesystem>
 
 namespace td::audio {
 namespace {
@@ -16,7 +17,23 @@ Jukebox::~Jukebox() { unload(); }
 void Jukebox::load() {
     if (loaded_) return;
 
-    const auto init = [](Stream& s, core::Track t) {
+    const std::filesystem::path dir =
+        std::filesystem::path(TD_ASSET_DIR) / "audio" / "music";
+
+    const auto init = [&dir](Stream& s, core::Track t, const char* file) {
+        // Prefer the recorded CC0 track. The composed one stays as the fallback
+        // so a clone with no audio assets still has music rather than silence.
+        const auto path = dir / file;
+        if (std::filesystem::exists(path)) {
+            s.music = LoadMusicStream(path.string().c_str());
+            if (s.music.stream.buffer != nullptr) {
+                s.ready = true;
+                s.music.looping = true;
+                SetMusicVolume(s.music, 0.0f);
+                PlayMusicStream(s.music);
+                return;
+            }
+        }
         s.wav = core::toWav(core::composeTrack(t));
         s.music = LoadMusicStreamFromMemory(".wav", s.wav.data(),
                                             static_cast<int>(s.wav.size()));
@@ -29,8 +46,8 @@ void Jukebox::load() {
         SetMusicVolume(s.music, 0.0f);
         PlayMusicStream(s.music);
     };
-    init(hub_, core::Track::Hub);
-    init(battle_, core::Track::Battle);
+    init(hub_, core::Track::Hub, "hub.ogg");
+    init(battle_, core::Track::Battle, "battle.ogg");
 
     // The starting screen is a menu, so the hub track begins already up.
     hub_.level = 1.0f;

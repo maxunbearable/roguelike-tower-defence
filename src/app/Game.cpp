@@ -51,7 +51,9 @@ void Game::requestStart(bool demoTowers, const std::string& mapId) {
     if (!demoTowers) return;
 
     struct Build { int x, y; };
-    const Build spots[] = {{3, 1}, {8, 3}, {15, 5}, {20, 7}};
+    // y=0 and y=2 flank the long y=1 route; picked so the dev layout survives
+    // a change to the map's path.
+    const Build spots[] = {{3, 0}, {8, 2}, {13, 0}, {16, 2}};
     // Buildable tiles differ per map, so skip any spot this map does not allow
     // rather than silently ending up with fewer towers than the loop assumes.
     std::vector<Build> placed;
@@ -73,7 +75,7 @@ void Game::requestStart(bool demoTowers, const std::string& mapId) {
         if (!es.empty()) world_->specialiseElement(b.x, b.y, es.front());
         world_->upgradeTower(b.x, b.y);
     }
-    world_->upgradeTower(3, 1);   // a gold-tier tower, to show the trim
+    world_->upgradeTower(3, 0);   // a gold-tier tower, to show the trim
 
     // The menu is NOT opened here. It used to be, which meant every --autostart
     // capture had a radial menu sitting over the board; --menu opens it
@@ -250,15 +252,18 @@ void Game::updateResults() {
     }
 }
 
-// One line on what each tower is for. Kingdom Rush shows a description beside
-// the ring so the player never has to buy one to find out what it does.
-const char* towerBlurb(const std::string& id) {
-    if (id == "arrow") return "A steady shot. Everything else builds on it.";
-    if (id == "cannon") return "Slow, heavy shells that damage a whole cluster.";
-    if (id == "arcane") return "Support: chains, curses and gold from kills.";
-    if (id == "ballista") return "Longest reach. One bolt through a whole rank.";
-    if (id == "brazier") return "Short range, relentless cadence. Placement is everything.";
-    return "";
+// A specialisation's description is authored on its tree's `<tree>.<spec>.core`
+// node -- every one of the 33 specs has a real one. The menu used to replace all
+// of them with a single identical sentence about uniqueness, so choosing between
+// sniper, elf and hunter told the player nothing about any of them.
+std::string specDesc(const content::Registry& reg, const std::string& treeId,
+                     const std::string& spec) {
+    if (reg.hasTree(treeId)) {
+        if (const auto* n = reg.tree(treeId).find(treeId + "." + spec + ".core")) {
+            if (!n->desc.empty()) return n->desc;
+        }
+    }
+    return "One of each specialisation may exist on the map at a time.";
 }
 
 // Builds one page of the menu from what is actually legal right now, so the
@@ -278,8 +283,7 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
         for (const auto& [id, def] : registry_->towers()) {
             const std::string art =
                 renderer_.atlas().has("tower_" + id) ? "tower_" + id : "tower_plain";
-            items.push_back({A::Build, art, def.name, towerBlurb(id), id, def.buildCost, true,
-                             true});
+            items.push_back({A::Build, art, def.name, def.desc, id, def.buildCost, true, true});
         }
         return items;
     }
@@ -305,8 +309,10 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
             if (!tag.towerSpec.empty()) specWhy = "This tower is already specialised.";
             else if (!world_->atMaxLevel(tileX, tileY))
                 specWhy = "Reach max level first.";
-            else if (towerSpecs.empty())
-                specWhy = "Every specialisation is already in use.";
+            else if (towerSpecs.empty()) {
+                specWhy = "No specialisation unlocked yet. Buy one in the " +
+                          registry_->tower(tag.defId).name + " tree.";
+            }
             items.push_back({A::OpenSpec, "icon_spec", "Specialise", specWhy, "", 0, true,
                              !towerSpecs.empty()});
             const bool elementAvailable = canAttach || !elemSpecs.empty();
@@ -316,17 +322,22 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
                                                             : "Choose the element's power."),
                              "", 0, true, elementAvailable});
             items.push_back({A::Sell, "icon_sell", "Remove",
-                             "Refunds part of everything invested.", "", 0, true, true});
+                             "Refunds " + std::to_string(world_->sellValue(tileX, tileY)) +
+                                 " gold, " +
+                                 std::to_string(static_cast<int>(
+                                     registry_->tower(tag.defId).sellRefundPct * 100.0f)) +
+                                 "% of everything invested.",
+                             "", 0, true, true});
             break;
         }
         case MenuPage::Spec: {
             const int cost = world_->towerSpecCost(tileX, tileY);
             for (const auto& spec : towerSpecs) {
-                const std::string detail = "Only one of each spec on the map at a time.";
                 // The button shows the actual building, so the menu and the
                 // board agree about what each specialisation is.
-                items.push_back({A::TowerSpec, "tower_" + spec, spec, detail, spec, cost,
-                                 true, true});
+                items.push_back({A::TowerSpec, "tower_" + spec, spec,
+                                 specDesc(*registry_, tag.defId, spec), spec, cost, true,
+                                 true});
             }
             items.push_back({A::Back, "icon_back", "Back", "", "", 0, true, true});
             break;
@@ -337,15 +348,20 @@ std::vector<ui::RadialItem> Game::buildMenuItems(int tileX, int tileY, MenuPage 
                 for (const auto& [eid, edef] : registry_->elements()) {
                     const std::string art =
                         renderer_.atlas().has("icon_" + eid) ? "icon_" + eid : "icon_gem";
+                    const bool open = world_->elementUnlocked(eid);
+                    // Locked elements still show, so the player can see what
+                    // the tree would buy them, with the reason attached.
                     items.push_back({A::AttachElement, art, edef.name,
-                                     "Lets this tower carry " + edef.name + ".", eid,
-                                     world_->attachElementCost(eid), true, true});
+                                     open ? edef.desc
+                                          : "Locked. Buy a node in the " + edef.name +
+                                                " tree to unlock it.",
+                                     eid, world_->attachElementCost(eid), true, open});
                 }
             } else {
                 const int cost = world_->elementSpecCost(tileX, tileY);
                 for (const auto& spec : elemSpecs) {
-                    const std::string detail = "Only one of each element power at a time.";
-                    items.push_back({A::ElementSpec, "icon_" + spec, spec, detail, spec, cost,
+                    items.push_back({A::ElementSpec, "icon_" + spec, spec,
+                                     specDesc(*registry_, tag.elementId, spec), spec, cost,
                                      true, true});
                 }
             }

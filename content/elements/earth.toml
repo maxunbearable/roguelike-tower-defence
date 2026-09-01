@@ -1,6 +1,7 @@
 [element]
 id = "earth"
 name = "Earth"
+desc = "Grinding attrition. Rewards towers that hit often rather than hard."
 damageType = "earth"
 attachCost = 70     # cost to imbue a tower with this element
 specCost = 90       # cost to specialise the element (poison/rock/quake)

@@ -115,13 +115,13 @@ TEST_CASE("a save from an unsupported version is refused", "[save]") {
 TEST_CASE("a run snapshot restores an identical world", "[save]") {
     const auto reg = loadReg();
     sim::World a(reg, reg.map("greenfields"), 7, core::Loadout{}, /*goldOverride=*/5000);
-    a.placeTower(3, 1, "arrow");
-    while (a.upgradeCost(3, 1) > 0) a.upgradeTower(3, 1);
-    a.attachElement(3, 1, "earth");
-    a.specialiseTower(3, 1, "elf");
-    a.specialiseElement(3, 1, "poison");
-    a.upgradeTower(3, 1);
-    a.placeTower(6, 1, "arrow");
+    a.placeTower(3, 0, "arrow");
+    while (a.upgradeCost(3, 0) > 0) a.upgradeTower(3, 0);
+    a.attachElement(3, 0, "earth");
+    a.specialiseTower(3, 0, "elf");
+    a.specialiseElement(3, 0, "poison");
+    a.upgradeTower(3, 0);
+    a.placeTower(6, 0, "arrow");
 
     REQUIRE(a.canSnapshot());
     const auto snap = a.snapshot();
@@ -135,8 +135,8 @@ TEST_CASE("a run snapshot restores an identical world", "[save]") {
     REQUIRE(b.activeTowerSpecs() == a.activeTowerSpecs());
     REQUIRE(b.activeElementSpecs() == a.activeElementSpecs());
 
-    const auto ta = a.towerAt(3, 1);
-    const auto tb = b.towerAt(3, 1);
+    const auto ta = a.towerAt(3, 0);
+    const auto tb = b.towerAt(3, 0);
     REQUIRE((ta != entt::null));
     REQUIRE((tb != entt::null));
     const auto& tagA = a.reg().get<sim::TowerTag>(ta);
@@ -149,15 +149,15 @@ TEST_CASE("a run snapshot restores an identical world", "[save]") {
     REQUIRE(b.reg().get<sim::TowerStats>(tb).damage ==
             a.reg().get<sim::TowerStats>(ta).damage);
     REQUIRE(b.reg().all_of<sim::ElementRef>(tb));
-    REQUIRE((b.towerAt(6, 1) != entt::null));
+    REQUIRE((b.towerAt(6, 0) != entt::null));
 }
 
 TEST_CASE("restoring does not charge for the towers again", "[save]") {
     const auto reg = loadReg();
     sim::World a(reg, reg.map("greenfields"), 7, core::Loadout{}, /*goldOverride=*/5000);
-    a.placeTower(3, 1, "arrow");
-    while (a.upgradeCost(3, 1) > 0) a.upgradeTower(3, 1);
-    a.specialiseTower(3, 1, "sniper");
+    a.placeTower(3, 0, "arrow");
+    while (a.upgradeCost(3, 0) > 0) a.upgradeTower(3, 0);
+    a.specialiseTower(3, 0, "sniper");
     const int goldBefore = a.gold();
 
     sim::World b(reg, reg.map("greenfields"), 1);
@@ -169,7 +169,7 @@ TEST_CASE("a resumed run continues the same random sequence", "[save]") {
     const auto reg = loadReg();
     auto play = [&](bool viaSave) {
         sim::World w(reg, reg.map("greenfields"), 99, core::Loadout{}, /*goldOverride=*/5000);
-        w.placeTower(3, 1, "arrow");
+        w.placeTower(3, 0, "arrow");
         if (viaSave) {
             sim::World other(reg, reg.map("greenfields"), 1);
             other.restore(w.snapshot());
@@ -228,8 +228,8 @@ TEST_CASE("owned nodes actually change a run's stats", "[progression]") {
 
     sim::World a(reg, reg.map("greenfields"), 1, none, 5000);
     sim::World b(reg, reg.map("greenfields"), 1, some, 5000);
-    a.placeTower(3, 1, "arrow");
-    b.placeTower(3, 1, "arrow");
-    REQUIRE(b.reg().get<sim::TowerStats>(b.towerAt(3, 1)).damage >
-            a.reg().get<sim::TowerStats>(a.towerAt(3, 1)).damage);
+    a.placeTower(3, 0, "arrow");
+    b.placeTower(3, 0, "arrow");
+    REQUIRE(b.reg().get<sim::TowerStats>(b.towerAt(3, 0)).damage >
+            a.reg().get<sim::TowerStats>(a.towerAt(3, 0)).damage);
 }

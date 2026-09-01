@@ -39,7 +39,7 @@ modifiers = [{ target = "wind.shock.damagePct", op = "mult", value = 1.0 }]
 [[node]]
 id = "wind.shock.more"
 name = "Forked Arc"
-desc = "+2 chain jumps"
+desc = "+2 chain jumps: each hit arcs to two more enemies"
 branch = "shock"
 cost = 44
 requires = ["wind.shock.core"]
@@ -69,7 +69,7 @@ modifiers = [{ target = "wind.gust.pushTiles", op = "mult", value = 1.0 }]
 [[node]]
 id = "wind.gust.often"
 name = "Headwind"
-desc = "+25% chance to shove"
+desc = "+25% chance a hit shoves the target back"
 branch = "gust"
 cost = 44
 requires = ["wind.gust.core"]
@@ -79,7 +79,7 @@ modifiers = [{ target = "wind.gust.chance", op = "add", value = 0.25 }]
 [[node]]
 id = "wind.gust.far"
 name = "Hurricane"
-desc = "+80% shove distance"
+desc = "+80% shove distance, buying more passes"
 branch = "gust"
 cost = 44
 requires = ["wind.gust.core"]

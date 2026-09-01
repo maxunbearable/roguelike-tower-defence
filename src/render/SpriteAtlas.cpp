@@ -108,6 +108,21 @@ void SpriteAtlas::drawFitted(const std::string& id, float cx, float cy, float ma
     DrawTexturePro(*t, src, dst, Vector2{0, 0}, 0.0f, tint);
 }
 
+void SpriteAtlas::drawFootScaled(const std::string& id, float cx, float by, int scale,
+                                 Color tint) const {
+    const auto* t = get(id);
+    if (!t) return;
+    if (scale <= 1) {
+        drawFoot(id, cx, by, tint);
+        return;
+    }
+    const float w = static_cast<float>(t->width * scale);
+    const float h = static_cast<float>(t->height * scale);
+    const Rectangle src{0, 0, static_cast<float>(t->width), static_cast<float>(t->height)};
+    const Rectangle dst{std::round(cx - w * 0.5f), std::round(by - h), w, h};
+    DrawTexturePro(*t, src, dst, Vector2{0, 0}, 0.0f, tint);
+}
+
 void SpriteAtlas::drawRotated(const std::string& id, float cx, float cy, float degrees,
                               Color tint) const {
     const auto* t = get(id);

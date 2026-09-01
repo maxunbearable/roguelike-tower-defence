@@ -66,10 +66,14 @@ bool inRect(core::Vec2 m, int x, int y, int w, int h) {
 // top-left origin with the narrow ones stranded in a corner.
 struct TreeLayout {
     float originX = 0, originY = 0;
+    float stepX = kNodeSpacingX, stepY = kNodeSpacingY;
+    float radius = kNodeR;
 };
 
 TreeLayout treeLayout(const core::SkillTree& tree) {
-    if (tree.nodes.empty()) return {kVirtualW / 2.0f, kTreeBoxY + kTreeBoxH / 2.0f};
+    TreeLayout L{kVirtualW / 2.0f, kTreeBoxY + kTreeBoxH / 2.0f};
+    if (tree.nodes.empty()) return L;
+
     int minX = tree.nodes[0].x, maxX = minX, minY = tree.nodes[0].y, maxY = minY;
     for (const auto& n : tree.nodes) {
         minX = std::min(minX, n.x);
@@ -77,15 +81,32 @@ TreeLayout treeLayout(const core::SkillTree& tree) {
         minY = std::min(minY, n.y);
         maxY = std::max(maxY, n.y);
     }
+    const int cols = maxX - minX;
+    const int rows = maxY - minY;
+
+    // Spacing SHRINKS to fit. The global tree grew from 2 rows to 6 and clipped
+    // straight through the panel, so the layout adapts to the tree instead of
+    // the tree having to fit a fixed grid. Node labels sit below each circle, so
+    // a row needs a little more than its spacing.
+    const float availW = static_cast<float>(kPanelW) - 90.0f;
+    // The bottom row still needs its name and cost underneath, which sit about
+    // 34px below the circle's centre.
+    const float availH = static_cast<float>(kTreeBoxH) - 64.0f;
+    if (cols > 0) L.stepX = std::min(L.stepX, availW / static_cast<float>(cols));
+    if (rows > 0) L.stepY = std::min(L.stepY, availH / static_cast<float>(rows));
+    // The circle has to leave room for the name and cost underneath it.
+    L.radius = std::min(kNodeR * 1.0f, std::min(L.stepX * 0.34f, L.stepY * 0.30f));
+
     const float midX = (minX + maxX) / 2.0f;
     const float midY = (minY + maxY) / 2.0f;
-    return {kVirtualW / 2.0f - midX * kNodeSpacingX,
-            kTreeBoxY + kTreeBoxH / 2.0f - midY * kNodeSpacingY};
+    L.originX = kVirtualW / 2.0f - midX * L.stepX;
+    L.originY = kTreeBoxY + kTreeBoxH / 2.0f - midY * L.stepY;
+    return L;
 }
 
 core::Vec2 nodePos(const TreeLayout& L, const core::SkillNode& n) {
-    return {L.originX + static_cast<float>(n.x) * kNodeSpacingX,
-            L.originY + static_cast<float>(n.y) * kNodeSpacingY};
+    return {L.originX + static_cast<float>(n.x) * L.stepX,
+            L.originY + static_cast<float>(n.y) * L.stepY};
 }
 
 void centred(const char* t, int y, int size, Color c) {
@@ -100,6 +121,46 @@ Color mix(Color a, Color b, float t) {
         return static_cast<unsigned char>(x + (y - x) * t);
     };
     return {k(a.r, b.r), k(a.g, b.g), k(a.b, b.b), k(a.a, b.a)};
+}
+
+// An icon for EVERY node, not just the branch cores. Derived rather than
+// authored: a tower tree's trunk shows its building, an element tree's trunk
+// shows its orb, a branch node shows what that branch unlocks, and a global node
+// shows the kind of stat it raises.
+std::string nodeIcon(const render::SpriteAtlas& atlas, const core::SkillTree& tree,
+                     const core::SkillNode& n) {
+    const auto pick = [&atlas](std::initializer_list<std::string> ids) -> std::string {
+        for (const auto& id : ids) {
+            if (!id.empty() && atlas.has(id)) return id;
+        }
+        return {};
+    };
+
+    if (n.branch != "trunk") {
+        // What this branch is: the specialised building, or the element power.
+        return pick({"tower_" + n.branch, "icon_" + n.branch});
+    }
+
+    if (tree.kind == core::SkillTree::Kind::Tower) return pick({"tower_" + tree.id});
+    if (tree.kind == core::SkillTree::Kind::Element) return pick({"icon_" + tree.id});
+
+    // Global: read the stat it touches. Modifiers on a global node all move the
+    // same stat across every tower, so the first one is representative.
+    const std::string target = n.modifiers.empty() ? std::string{} : n.modifiers.front().target;
+    const auto ends = [&target](const char* suffix) {
+        const std::string s(suffix);
+        return target.size() >= s.size() &&
+               target.compare(target.size() - s.size(), s.size(), s) == 0;
+    };
+    if (target.rfind("global.unlock", 0) == 0) return pick({"icon_level", "ui_icon_08"});
+    if (target == "global.startGold") return pick({"icon_coin"});
+    if (target == "global.lives") return pick({"icon_heart"});
+    if (ends(".damage")) return pick({"icon_spec", "ui_icon_08"});
+    if (ends(".fireRate")) return pick({"icon_ffwd"});
+    if (ends(".range")) return pick({"ui_icon_09", "icon_build"});
+    if (ends(".critChance") || ends(".critMult")) return pick({"ui_icon_01", "icon_spec"});
+    if (ends(".armorPen")) return pick({"ui_icon_08", "icon_spec"});
+    return pick({"icon_gem"});
 }
 
 Color branchTint(const std::string& branch) {
@@ -253,7 +314,7 @@ HubAction hubHitTest(const content::Registry& reg, const core::SaveSlot& slot, i
         const auto& tree = reg.tree(id);
         const auto L = treeLayout(tree);
         for (const auto& n : tree.nodes) {
-            if (core::distance(nodePos(L, n), m) <= kNodeR + 2) {
+            if (core::distance(nodePos(L, n), m) <= L.radius + 2) {
                 return {HubAction::Kind::Buy, n.id, tab};
             }
         }
@@ -345,24 +406,20 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                                : reachable  ? paint::mix(tint, Color{110, 98, 86, 255}, 0.45f)
                                             : paint::mix(tint, Color{150, 138, 122, 255}, 0.62f);
 
-            DrawCircle(static_cast<int>(p.x), static_cast<int>(p.y) + 3, kNodeR,
+            DrawCircle(static_cast<int>(p.x), static_cast<int>(p.y) + 3, L.radius,
                        Color{92, 74, 56, 90});
-            DrawCircle(static_cast<int>(p.x), static_cast<int>(p.y), kNodeR, fill);
-            DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), kNodeR, ring);
-            DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), kNodeR - 1, ring);
+            DrawCircle(static_cast<int>(p.x), static_cast<int>(p.y), L.radius, fill);
+            DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), L.radius, ring);
+            DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), L.radius - 1, ring);
             if (hot) {
-                DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), kNodeR + 3,
+                DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), L.radius + 3,
                                 Color{255, 236, 170, 255});
             }
 
-            // A branch node shows what it unlocks, so the tree and the board
-            // describe the same thing. Tower branches have a building; element
-            // branches (poison / rock / quake) have no tower art, so they fall
-            // back to the element icon rather than drawing a blank circle.
-            std::string art = "tower_" + n.branch;
-            if (!atlas.has(art)) art = "icon_" + n.branch;
-            if (n.branch != "trunk" && atlas.has(art)) {
-                atlas.drawFitted(art, p.x, p.y - 2, kNodeR * 1.45f,
+            // Every node carries an icon now, trunk included.
+            const std::string art = nodeIcon(atlas, tree, n);
+            if (!art.empty()) {
+                atlas.drawFitted(art, p.x, p.y - 2, L.radius * 1.45f,
                                  owned ? WHITE : Color{206, 196, 180, 245}, /*grow=*/true);
             } else if (owned) {
                 centredIn("*", static_cast<int>(p.x), static_cast<int>(p.y) - 10, 20,
@@ -373,11 +430,11 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             // for all 23 nodes and used to appear only on hover, which meant
             // the tree read as anonymous numbered circles.
             centredIn(n.name.c_str(), static_cast<int>(p.x),
-                      static_cast<int>(p.y) + kNodeR + 8, 10, owned ? kInk : kInkDim);
+                      static_cast<int>(p.y + L.radius) + 6, 10, owned ? kInk : kInkDim);
 
             if (!owned) {
                 const char* c = TextFormat("%d", n.cost);
-                centredIn(c, static_cast<int>(p.x), static_cast<int>(p.y) + kNodeR + 21, 10,
+                centredIn(c, static_cast<int>(p.x), static_cast<int>(p.y + L.radius) + 18, 10,
                           affordable ? Color{62, 122, 52, 255} : kInkWarn);
             }
         }
@@ -393,9 +450,9 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 const int x = std::clamp(static_cast<int>(np.x) - w / 2, kPanelX + 8,
                                          kVirtualW - w - kPanelX - 8);
                 // Flip above the node when there is no room below it.
-                const bool below = np.y + kNodeR + 34 + h < kPanelY + kPanelH - 8;
-                const int y = below ? static_cast<int>(np.y) + kNodeR + 34
-                                    : static_cast<int>(np.y) - kNodeR - 20 - h;
+                const bool below = np.y + L.radius + 34 + h < kPanelY + kPanelH - 8;
+                const int y = below ? static_cast<int>(np.y + L.radius) + 34
+                                    : static_cast<int>(np.y - L.radius) - 20 - h;
                 panel(atlas, x, y, w, h);
                 DrawText(n->name.c_str(), x + 18, y + 12, 20, kInk);
                 DrawText(n->desc.c_str(), x + 18, y + 38, 10, kInkDim);

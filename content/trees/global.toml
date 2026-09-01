@@ -3,32 +3,317 @@ id = "global"
 kind = "global"
 specs = []
 
+# The global tree is the spine of the meta progression: it unlocks what a tower
+# is ALLOWED to do (levels 2 and 3) and then raises every tower type at once.
+#
+# Offence nodes carry one modifier per tower id rather than a single "all towers"
+# target, because the stat system resolves per tower and a wildcard would be a
+# special case in the resolver for the sake of shorter TOML.
+
+[[node]]
+id = "global.level2"
+name = "Reinforced Foundations"
+desc = "Unlocks tower level 2. Without it every tower stays at level 1."
+branch = "trunk"
+cost = 30
+requires = []
+pos = [0, 0]
+modifiers = [{ target = "global.unlock.level2", op = "flag" }]
+
+[[node]]
+id = "global.level3"
+name = "Master Masonry"
+desc = "Unlocks tower level 3, which every specialisation requires."
+branch = "trunk"
+cost = 64
+requires = ["global.level2"]
+pos = [0, 1]
+modifiers = [{ target = "global.unlock.level3", op = "flag" }]
+
 [[node]]
 id = "global.gold1"
 name = "Deeper Coffers"
-desc = "+40 starting gold"
+desc = "+40 starting gold on every run"
 branch = "trunk"
-cost = 21
+cost = 26
 requires = []
-pos = [0, 0]
+pos = [-2, 0]
 modifiers = [{ target = "global.startGold", op = "add", value = 40.0 }]
+
+[[node]]
+id = "global.gold2"
+name = "Counting House"
+desc = "+70 more starting gold"
+branch = "trunk"
+cost = 52
+requires = ["global.gold1"]
+pos = [-3, 1]
+modifiers = [{ target = "global.startGold", op = "add", value = 70.0 }]
+
+[[node]]
+id = "global.gold3"
+name = "Vaults"
+desc = "+110 more starting gold"
+branch = "trunk"
+cost = 92
+requires = ["global.gold2"]
+pos = [-3, 2]
+modifiers = [{ target = "global.startGold", op = "add", value = 110.0 }]
+
+[[node]]
+id = "global.gold4"
+name = "Treasury"
+desc = "+160 more starting gold"
+branch = "trunk"
+cost = 158
+requires = ["global.gold3"]
+pos = [-3, 3]
+modifiers = [{ target = "global.startGold", op = "add", value = 160.0 }]
 
 [[node]]
 id = "global.lives1"
 name = "Stout Walls"
-desc = "+5 starting lives"
+desc = "+4 starting lives"
 branch = "trunk"
-cost = 29
-requires = ["global.gold1"]
-pos = [0, 1]
-modifiers = [{ target = "global.lives", op = "add", value = 5.0 }]
+cost = 34
+requires = []
+pos = [3, 0]
+modifiers = [{ target = "global.lives", op = "add", value = 4.0 }]
+
+[[node]]
+id = "global.lives2"
+name = "Bastions"
+desc = "+6 more starting lives"
+branch = "trunk"
+cost = 72
+requires = ["global.lives1"]
+pos = [3, 1]
+modifiers = [{ target = "global.lives", op = "add", value = 6.0 }]
+
+[[node]]
+id = "global.lives3"
+name = "Citadel"
+desc = "+8 more starting lives"
+branch = "trunk"
+cost = 128
+requires = ["global.lives2"]
+pos = [3, 2]
+modifiers = [{ target = "global.lives", op = "add", value = 8.0 }]
+
+[[node]]
+id = "global.lives4"
+name = "Unbreached"
+desc = "+10 more starting lives"
+branch = "trunk"
+cost = 210
+requires = ["global.lives3"]
+pos = [3, 3]
+modifiers = [{ target = "global.lives", op = "add", value = 10.0 }]
 
 [[node]]
 id = "global.dmg1"
 name = "Sharpened Doctrine"
-desc = "+8% damage for every tower"
+desc = "+6% damage for every tower"
 branch = "trunk"
-cost = 46
-requires = ["global.gold1"]
+cost = 58
+requires = ["global.level2"]
 pos = [1, 1]
-modifiers = [{ target = "arrow.damage", op = "mult", value = 1.08 }]
+modifiers = [
+  { target = "arrow.damage", op = "mult", value = 1.06 },
+  { target = "arcane.damage", op = "mult", value = 1.06 },
+  { target = "ballista.damage", op = "mult", value = 1.06 },
+  { target = "brazier.damage", op = "mult", value = 1.06 },
+  { target = "cannon.damage", op = "mult", value = 1.06 },
+]
+
+[[node]]
+id = "global.dmg2"
+name = "Whetstone Corps"
+desc = "+9% more damage for every tower"
+branch = "trunk"
+cost = 98
+requires = ["global.dmg1"]
+pos = [1, 2]
+modifiers = [
+  { target = "arrow.damage", op = "mult", value = 1.09 },
+  { target = "arcane.damage", op = "mult", value = 1.09 },
+  { target = "ballista.damage", op = "mult", value = 1.09 },
+  { target = "brazier.damage", op = "mult", value = 1.09 },
+  { target = "cannon.damage", op = "mult", value = 1.09 },
+]
+
+[[node]]
+id = "global.dmg3"
+name = "Armoury Doctrine"
+desc = "+12% more damage for every tower"
+branch = "trunk"
+cost = 164
+requires = ["global.dmg2"]
+pos = [1, 3]
+modifiers = [
+  { target = "arrow.damage", op = "mult", value = 1.12 },
+  { target = "arcane.damage", op = "mult", value = 1.12 },
+  { target = "ballista.damage", op = "mult", value = 1.12 },
+  { target = "brazier.damage", op = "mult", value = 1.12 },
+  { target = "cannon.damage", op = "mult", value = 1.12 },
+]
+
+[[node]]
+id = "global.dmg4"
+name = "Grand Armoury"
+desc = "+15% more damage for every tower"
+branch = "trunk"
+cost = 268
+requires = ["global.dmg3"]
+pos = [1, 4]
+modifiers = [
+  { target = "arrow.damage", op = "mult", value = 1.15 },
+  { target = "arcane.damage", op = "mult", value = 1.15 },
+  { target = "ballista.damage", op = "mult", value = 1.15 },
+  { target = "brazier.damage", op = "mult", value = 1.15 },
+  { target = "cannon.damage", op = "mult", value = 1.15 },
+]
+
+[[node]]
+id = "global.rate1"
+name = "Cadence Drill"
+desc = "+6% fire rate for every tower"
+branch = "trunk"
+cost = 80
+requires = ["global.dmg1"]
+pos = [2, 2]
+modifiers = [
+  { target = "arrow.fireRate", op = "mult", value = 1.06 },
+  { target = "arcane.fireRate", op = "mult", value = 1.06 },
+  { target = "ballista.fireRate", op = "mult", value = 1.06 },
+  { target = "brazier.fireRate", op = "mult", value = 1.06 },
+  { target = "cannon.fireRate", op = "mult", value = 1.06 },
+]
+
+[[node]]
+id = "global.rate2"
+name = "Relentless Drill"
+desc = "+9% more fire rate for every tower"
+branch = "trunk"
+cost = 134
+requires = ["global.rate1"]
+pos = [2, 3]
+modifiers = [
+  { target = "arrow.fireRate", op = "mult", value = 1.09 },
+  { target = "arcane.fireRate", op = "mult", value = 1.09 },
+  { target = "ballista.fireRate", op = "mult", value = 1.09 },
+  { target = "brazier.fireRate", op = "mult", value = 1.09 },
+  { target = "cannon.fireRate", op = "mult", value = 1.09 },
+]
+
+[[node]]
+id = "global.rate3"
+name = "Ceaseless Volley"
+desc = "+12% more fire rate for every tower"
+branch = "trunk"
+cost = 222
+requires = ["global.rate2"]
+pos = [2, 4]
+modifiers = [
+  { target = "arrow.fireRate", op = "mult", value = 1.12 },
+  { target = "arcane.fireRate", op = "mult", value = 1.12 },
+  { target = "ballista.fireRate", op = "mult", value = 1.12 },
+  { target = "brazier.fireRate", op = "mult", value = 1.12 },
+  { target = "cannon.fireRate", op = "mult", value = 1.12 },
+]
+
+[[node]]
+id = "global.range1"
+name = "Watchtowers"
+desc = "+0.3 tiles range for every tower"
+branch = "trunk"
+cost = 76
+requires = ["global.level3"]
+pos = [0, 2]
+modifiers = [
+  { target = "arrow.range", op = "add", value = 0.3 },
+  { target = "arcane.range", op = "add", value = 0.3 },
+  { target = "ballista.range", op = "add", value = 0.3 },
+  { target = "brazier.range", op = "add", value = 0.3 },
+  { target = "cannon.range", op = "add", value = 0.3 },
+]
+
+[[node]]
+id = "global.range2"
+name = "Far Watch"
+desc = "+0.4 more tiles range for every tower"
+branch = "trunk"
+cost = 126
+requires = ["global.range1"]
+pos = [0, 3]
+modifiers = [
+  { target = "arrow.range", op = "add", value = 0.4 },
+  { target = "arcane.range", op = "add", value = 0.4 },
+  { target = "ballista.range", op = "add", value = 0.4 },
+  { target = "brazier.range", op = "add", value = 0.4 },
+  { target = "cannon.range", op = "add", value = 0.4 },
+]
+
+[[node]]
+id = "global.range3"
+name = "Eagle Eyes"
+desc = "+0.5 more tiles range for every tower"
+branch = "trunk"
+cost = 206
+requires = ["global.range2"]
+pos = [0, 4]
+modifiers = [
+  { target = "arrow.range", op = "add", value = 0.5 },
+  { target = "arcane.range", op = "add", value = 0.5 },
+  { target = "ballista.range", op = "add", value = 0.5 },
+  { target = "brazier.range", op = "add", value = 0.5 },
+  { target = "cannon.range", op = "add", value = 0.5 },
+]
+
+[[node]]
+id = "global.pen1"
+name = "Piercing Doctrine"
+desc = "+2 armour penetration for every tower"
+branch = "trunk"
+cost = 112
+requires = ["global.rate2"]
+pos = [2, 5]
+modifiers = [
+  { target = "arrow.armorPen", op = "add", value = 2.0 },
+  { target = "arcane.armorPen", op = "add", value = 2.0 },
+  { target = "ballista.armorPen", op = "add", value = 2.0 },
+  { target = "brazier.armorPen", op = "add", value = 2.0 },
+  { target = "cannon.armorPen", op = "add", value = 2.0 },
+]
+
+[[node]]
+id = "global.crit1"
+name = "Marksman Corps"
+desc = "+4% crit chance for every tower"
+branch = "trunk"
+cost = 120
+requires = ["global.dmg3"]
+pos = [1, 5]
+modifiers = [
+  { target = "arrow.critChance", op = "add", value = 0.04 },
+  { target = "arcane.critChance", op = "add", value = 0.04 },
+  { target = "ballista.critChance", op = "add", value = 0.04 },
+  { target = "brazier.critChance", op = "add", value = 0.04 },
+  { target = "cannon.critChance", op = "add", value = 0.04 },
+]
+
+[[node]]
+id = "global.crit2"
+name = "Killing Eye"
+desc = "+0.4 crit multiplier for every tower"
+branch = "trunk"
+cost = 176
+requires = ["global.crit1"]
+pos = [0, 5]
+modifiers = [
+  { target = "arrow.critMult", op = "add", value = 0.4 },
+  { target = "arcane.critMult", op = "add", value = 0.4 },
+  { target = "ballista.critMult", op = "add", value = 0.4 },
+  { target = "brazier.critMult", op = "add", value = 0.4 },
+  { target = "cannon.critMult", op = "add", value = 0.4 },
+]

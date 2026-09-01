@@ -72,8 +72,29 @@ def tile_rows(tiles):
     return ["".join(row) for row in grid]
 
 
+# Difficulty is normalised against PATH LENGTH, because total damage a board can
+# deal is proportional to how long enemies spend under fire. The reference is the
+# original greenfields: 48 path tiles, a wave-50 HP multiplier of 27.1, and 27.6
+# enemies on wave 50, which measured as a fair map. A route twice as long earns
+# twice the health for the same felt difficulty.
+REF_TILES, REF_W50, REF_COUNT = 48, 27.1, 27.6
+
+
+def hp_per_wave(target, count50, tiles, exp):
+    """Solves hpPerWave so this map lands at `target` x the reference difficulty."""
+    import math
+    w50 = target * REF_W50 * (REF_COUNT / count50) * (tiles / REF_TILES)
+    return math.exp(math.log(w50) / (49 ** exp)), w50
+
+
 def emit(m):
     tiles = verify(m["id"], m["path"])
+    # Recomputed at generation time, so changing a route cannot silently change
+    # how hard the map is.
+    count50 = m["countBase"] + m["countPerWave"] * 49
+    hp, w50 = hp_per_wave(m["target"], count50, len(tiles), m["hpCurveExp"])
+    m = dict(m, hpPerWave=round(hp, 4))
+    m["_w50"] = round(w50, 1)
     rows = tile_rows(tiles)
     wp = ",".join(f"[{x},{y}]" for x, y in m["path"])
     pool = "\n\n".join(
@@ -131,23 +152,32 @@ bossDelay = 9.0
 # virtual resolution fixes the board size.
 MAPS = [
     {
+        "id": "greenfields", "order": 1, "name": "Greenfields",
+        "blurb": "Open meadow. Where every build starts.",
+        "path": [(0, 1), (19, 1), (19, 3), (2, 3), (2, 5), (19, 5), (19, 7), (2, 7), (2, 9), (21, 9)],
+        "startGold": 310, "buildTime": 12.0,
+        "countBase": 8, "countPerWave": 0.4, "intervalBase": 0.9,
+        "target": 1.0, "hpCurveExp": 1.1, "armorPerWave": 0.11,
+        "bosses": [(25, "boss_ogre_warlord"), (50, "boss_warlord_grulk")],
+        "pool": [("slime", 1), ("wolf", 5), ("goblin", 8), ("wraith", 12)],
+    },
+    {
         "id": "ashen-wastes", "order": 2, "name": "Ashen Wastes",
         "blurb": "Three long straights: good for reach, punishing for short range.",
-        "path": [(0, 1), (18, 1), (18, 4), (3, 4), (3, 7), (19, 7), (19, 10), (21, 10)],
-        "startGold": 520, "buildTime": 12.0,
+        "path": [(0, 1), (20, 1), (20, 3), (1, 3), (1, 5), (20, 5), (20, 7), (1, 7), (1, 9), (21, 9)],
+        "startGold": 322, "buildTime": 12.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.88,
-        "hpPerWave": 1.0498, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.06, "hpCurveExp": 1.1, "armorPerWave": 0.12,
         "bosses": [(25, "boss_cinder_brute"), (50, "boss_cinder_colossus")],
         "pool": [("ash_slime", 1), ("ash_wolf", 4), ("ash_goblin", 7), ("ash_wraith", 11)],
     },
     {
         "id": "frostmere", "order": 3, "name": "Frostmere",
         "blurb": "A long winding route. Every tower gets several passes if placed well.",
-        "path": [(0, 1), (4, 1), (4, 5), (10, 5), (10, 1), (15, 1), (15, 9), (6, 9),
-                 (6, 7), (2, 7), (2, 10), (21, 10)],
-        "startGold": 540, "buildTime": 12.0,
+        "path": [(0, 0), (21, 0), (21, 2), (2, 2), (2, 4), (19, 4), (19, 6), (4, 6), (4, 8), (17, 8), (17, 10), (21, 10)],
+        "startGold": 334, "buildTime": 12.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.86,
-        "hpPerWave": 1.0524, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.12, "hpCurveExp": 1.1, "armorPerWave": 0.12,
         "bosses": [(25, "boss_rime_stalker"), (50, "boss_rime_tyrant")],
         "pool": [("frost_slime", 1), ("frost_wolf", 4), ("frost_goblin", 7),
                  ("frost_wraith", 10)],
@@ -155,10 +185,10 @@ MAPS = [
     {
         "id": "blightmarsh", "order": 4, "name": "Blightmarsh",
         "blurb": "Wide open ground with few corners: coverage matters more than depth.",
-        "path": [(0, 9), (5, 9), (5, 2), (11, 2), (11, 7), (17, 7), (17, 2), (21, 2)],
-        "startGold": 560, "buildTime": 11.0,
+        "path": [(0, 9), (18, 9), (18, 6), (3, 6), (3, 3), (20, 3), (20, 1), (1, 1), (1, 0), (21, 0)],
+        "startGold": 347, "buildTime": 11.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.84,
-        "hpPerWave": 1.0447, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.18, "hpCurveExp": 1.1, "armorPerWave": 0.12,
         "bosses": [(25, "boss_plague_carrier"), (50, "boss_plague_mother")],
         "pool": [("blight_slime", 1), ("blight_wolf", 4), ("blight_goblin", 6),
                  ("blight_wraith", 9)],
@@ -166,11 +196,10 @@ MAPS = [
     {
         "id": "obsidian-gate", "order": 5, "name": "Obsidian Gate",
         "blurb": "The last map. Heavily armoured, resistant to everything, and long.",
-        "path": [(0, 5), (3, 5), (3, 1), (8, 1), (8, 8), (13, 8), (13, 1), (18, 1),
-                 (18, 6), (21, 6)],
-        "startGold": 580, "buildTime": 11.0,
+        "path": [(0, 10), (2, 10), (2, 0), (5, 0), (5, 10), (8, 10), (8, 0), (11, 0), (11, 10), (14, 10), (14, 0), (17, 0), (17, 10), (20, 10), (20, 0), (21, 0)],
+        "startGold": 359, "buildTime": 11.0,
         "countBase": 10, "countPerWave": 0.44, "intervalBase": 0.82,
-        "hpPerWave": 1.0411, "hpCurveExp": 1.1, "armorPerWave": 0.1,
+        "target": 1.15, "hpCurveExp": 1.1, "armorPerWave": 0.1,
         "bosses": [(25, "boss_gate_sentinel"), (50, "boss_gate_warden")],
         "pool": [("obsidian_slime", 1), ("obsidian_wolf", 3), ("obsidian_goblin", 6),
                  ("obsidian_wraith", 9)],
@@ -186,8 +215,10 @@ def main():
         with open(path, "w") as f:
             f.write(text)
         tiles = route_tiles(m["path"])
-        print(f"  {m['id']:16s} {len(tiles):3d} path tiles, "
-              f"{len(m['path'])} waypoints -> {os.path.relpath(path, ROOT)}")
+        count50 = m["countBase"] + m["countPerWave"] * 49
+        hp, w50 = hp_per_wave(m["target"], count50, len(tiles), m["hpCurveExp"])
+        print(f"  {m['id']:16s} {len(tiles):3d} tiles  target {m['target']:.2f}x  "
+              f"w50 hp {w50:5.1f}  hpPerWave {hp:.4f}")
 
 
 if __name__ == "__main__":

@@ -24,15 +24,15 @@ TEST_CASE("the upgrade preview matches what upgrading actually produces",
     const auto reg = loadReg();
     for (const auto& [towerId, def] : reg.towers()) {
         sim::World w(reg, reg.map("greenfields"), 55, core::Loadout{}, 1000000);
-        REQUIRE(w.placeTower(5, 1, towerId) == sim::World::PlaceResult::Ok);
+        REQUIRE(w.placeTower(5, 0, towerId) == sim::World::PlaceResult::Ok);
 
-        while (w.upgradeCost(5, 1) > 0) {
+        while (w.upgradeCost(5, 0) > 0) {
             sim::TowerStats predicted;
-            REQUIRE(w.previewUpgrade(5, 1, predicted));
-            REQUIRE(w.upgradeTower(5, 1));
-            const auto& actual = w.reg().get<sim::TowerStats>(w.towerAt(5, 1));
+            REQUIRE(w.previewUpgrade(5, 0, predicted));
+            REQUIRE(w.upgradeTower(5, 0));
+            const auto& actual = w.reg().get<sim::TowerStats>(w.towerAt(5, 0));
 
-            UNSCOPED_INFO(towerId << " at level " << w.reg().get<sim::TowerTag>(w.towerAt(5, 1)).level);
+            UNSCOPED_INFO(towerId << " at level " << w.reg().get<sim::TowerTag>(w.towerAt(5, 0)).level);
             REQUIRE_THAT(predicted.damage, WithinAbs(actual.damage, 1e-3f));
             REQUIRE_THAT(predicted.fireRate, WithinAbs(actual.fireRate, 1e-3f));
             REQUIRE_THAT(predicted.range, WithinAbs(actual.range, 1e-3f));
@@ -41,17 +41,17 @@ TEST_CASE("the upgrade preview matches what upgrading actually produces",
         }
         // At max level there is nothing to preview.
         sim::TowerStats unused;
-        REQUIRE_FALSE(w.previewUpgrade(5, 1, unused));
+        REQUIRE_FALSE(w.previewUpgrade(5, 0, unused));
     }
 }
 
 TEST_CASE("an upgrade preview improves the stats it claims to", "[towers][preview]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 55, core::Loadout{}, 1000000);
-    REQUIRE(w.placeTower(5, 1, "arrow") == sim::World::PlaceResult::Ok);
-    const auto now = w.reg().get<sim::TowerStats>(w.towerAt(5, 1));
+    REQUIRE(w.placeTower(5, 0, "arrow") == sim::World::PlaceResult::Ok);
+    const auto now = w.reg().get<sim::TowerStats>(w.towerAt(5, 0));
     sim::TowerStats next;
-    REQUIRE(w.previewUpgrade(5, 1, next));
+    REQUIRE(w.previewUpgrade(5, 0, next));
     REQUIRE(next.damage > now.damage);
     REQUIRE(next.range >= now.range);
     REQUIRE(next.fireRate >= now.fireRate);

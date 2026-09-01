@@ -35,11 +35,11 @@ std::unique_ptr<sim::World> withTower(const content::Registry& reg, const char* 
                                      const char* elementSpec) {
     auto w = std::make_unique<sim::World>(reg, reg.map("greenfields"), 31337, ownAll(),
                                           /*goldOverride=*/1000000);
-    REQUIRE(w->placeTower(5, 1, towerId) == sim::World::PlaceResult::Ok);
-    while (w->upgradeCost(5, 1) > 0) w->upgradeTower(5, 1);
-    w->attachElement(5, 1, elementId);
-    w->specialiseTower(5, 1, towerSpec);
-    w->specialiseElement(5, 1, elementSpec);
+    REQUIRE(w->placeTower(5, 0, towerId) == sim::World::PlaceResult::Ok);
+    while (w->upgradeCost(5, 0) > 0) w->upgradeTower(5, 0);
+    w->attachElement(5, 0, elementId);
+    w->specialiseTower(5, 0, towerSpec);
+    w->specialiseElement(5, 0, elementSpec);
     w->enterSandbox();
     return w;
 }
@@ -161,13 +161,20 @@ TEST_CASE("a boss resists the shove far more than a regular enemy", "[control][b
         const auto e = firstEnemy(*w);
         REQUIRE((e != entt::null));
         auto& pf = w->reg().get<sim::PathFollower>(e);
-        pf.distance = 6.0f;  // start well along, so there is room to be shoved back
+        // Far enough along that neither enemy can be shoved back to the start,
+        // and a short window so the totals stay well clear of it. At distance 6
+        // over 4 seconds both hit the clamp at 0 and came out EQUAL, which made
+        // the comparison meaningless rather than false.
+        pf.distance = 9.0f;
         const float before = pf.distance;
         // Freeze movement so the only thing changing distance is the shove.
         w->reg().get<sim::Speed>(e).base = 0.0f;
-        advance(*w, 4.0f);
+        advance(*w, 1.0f);
         const auto* after = w->reg().try_get<sim::PathFollower>(e);
-        return after ? before - after->distance : 0.0f;
+        if (!after) return 0.0f;
+        // Guard the degenerate case explicitly, so it fails loudly next time.
+        REQUIRE(after->distance > 0.0f);
+        return before - after->distance;
     };
 
     const float regular = pushedBackBy("goblin");
@@ -185,13 +192,13 @@ TEST_CASE("a forge raises the output of the tower beside it", "[control][support
     const auto damageFrom = [&](bool withForge) {
         auto w = std::make_unique<sim::World>(reg, reg.map("greenfields"), 8181, ownAll(),
                                              /*goldOverride=*/1000000);
-        REQUIRE(w->placeTower(5, 1, "arrow") == sim::World::PlaceResult::Ok);
-        while (w->upgradeCost(5, 1) > 0) w->upgradeTower(5, 1);
+        REQUIRE(w->placeTower(5, 0, "arrow") == sim::World::PlaceResult::Ok);
+        while (w->upgradeCost(5, 0) > 0) w->upgradeTower(5, 0);
 
         if (withForge) {
-            REQUIRE(w->placeTower(6, 1, "brazier") == sim::World::PlaceResult::Ok);
-            while (w->upgradeCost(6, 1) > 0) w->upgradeTower(6, 1);
-            w->specialiseTower(6, 1, "forge");
+            REQUIRE(w->placeTower(6, 0, "brazier") == sim::World::PlaceResult::Ok);
+            while (w->upgradeCost(6, 0) > 0) w->upgradeTower(6, 0);
+            w->specialiseTower(6, 0, "forge");
         }
         w->enterSandbox();
         w->spawnEnemy("goblin", kTanky);

@@ -43,6 +43,9 @@ public:
     // Draws with the sprite's BOTTOM-CENTRE at (cx, by): the anchor towers use,
     // so a taller tower grows upward from its tile instead of sinking into it.
     void drawFoot(const std::string& id, float cx, float by, Color tint = WHITE) const;
+    // Foot-anchored at a WHOLE-number magnification, for bosses.
+    void drawFootScaled(const std::string& id, float cx, float by, int scale,
+                        Color tint = WHITE) const;
     void drawRotated(const std::string& id, float cx, float cy, float degrees,
                      Color tint = WHITE) const;
     // Draws fitted inside a box, preserving aspect. The HUD needs this now that

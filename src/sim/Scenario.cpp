@@ -21,7 +21,15 @@ struct Placement {
 // tower is several times stronger than the level-1 one this was first tuned
 // against, and every pairing was clearing 100% of every scenario. A saturated
 // matrix measures nothing.
+// Back to the values that held for most of development. They were raised when
+// every scenario saturated at 100%, but the real cause was the harness silently
+// inheriting the whole global tree via ownAll; with the loadout narrowed to just
+// the spec unlocks, these discriminate again.
 constexpr float kHpMult = 34.0f;
+// Armour stays near its old value on purpose. It is SUBTRACTIVE, so raising it
+// punishes small frequent hits far more than large ones -- at 22 it inverted
+// "fire rate beats hit size for poison uptime", because armour rather than
+// poison was deciding the outcome. HP was what had saturated; armour was not.
 constexpr float kArmorAdd = 9.0f;
 
 std::vector<Placement> layout(ScenarioKind kind) {
@@ -61,22 +69,36 @@ ComboResult simulateCombo(const content::Registry& reg, const std::string& tower
                           const std::string& towerSpec, const std::string& elementId,
                           const std::string& elementSpec, ScenarioKind kind, float seconds,
                           uint64_t seed) {
-    core::Loadout meta;  // owns every skill-tree node; specs are bought below
-    meta.ownAll = true;
+    // Owns exactly what it needs to BUY a specialisation, and nothing else.
+    //
+    // This used to set ownAll, which quietly included the whole global tree. Once
+    // that tree grew to 23 nodes (x1.49 damage, x1.30 fire rate, +2 armour pen
+    // for every tower) the matrix stopped measuring specs and started measuring
+    // specs-plus-a-uniform-buff: the +2 pen alone erased Sniper's anti-armour
+    // niche, because armour was the fast spec's only weakness. No value of
+    // kArmorAdd could restore the distinction, which is the tell that the
+    // harness was measuring the wrong thing.
+    core::Loadout meta;
+    meta.ownAll = false;
+    meta.ownedNodes.insert("global.unlock.level2");
+    meta.ownedNodes.insert("global.unlock.level3");
+    for (const auto& [treeId, tree] : reg.trees()) {
+        for (const auto& sp : tree.specs) meta.ownedNodes.insert(treeId + "." + sp + ".core");
+    }
 
     World w(reg, reg.map("greenfields"), seed, meta, /*goldOverride=*/1000000);
 
     // ONE specialised tower, because a specialisation is unique on the map --
     // two snipers is not a configuration a player can ever build. A pair of
     // plain arrow towers stands in for the supporting fire a real board has.
-    w.placeTower(5, 1, towerId);
+    w.placeTower(5, 0, towerId);
     // Specialising requires a fully levelled tower, so the matrix measures a
     // maxed tower -- which is the only configuration that can carry a spec.
-    while (w.upgradeCost(5, 1) > 0) w.upgradeTower(5, 1);
-    w.attachElement(5, 1, elementId);
-    w.specialiseTower(5, 1, towerSpec);
-    w.specialiseElement(5, 1, elementSpec);
-    w.placeTower(5, 3, towerId);
+    while (w.upgradeCost(5, 0) > 0) w.upgradeTower(5, 0);
+    w.attachElement(5, 0, elementId);
+    w.specialiseTower(5, 0, towerSpec);
+    w.specialiseElement(5, 0, elementSpec);
+    w.placeTower(5, 2, towerId);
     w.enterSandbox();
 
     ComboResult out;

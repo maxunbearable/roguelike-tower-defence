@@ -110,6 +110,7 @@ ElementDef loadElement(const std::filesystem::path& file) {
     if (!id) fail(file, "[element] needs an id");
     d.id = *id;
     d.name = (*e)["name"].value<std::string>().value_or(d.id);
+    d.desc = (*e)["desc"].value<std::string>().value_or(std::string{});
     d.damageType = (*e)["damageType"].value_or<std::string>("physical");
     d.attachCost = static_cast<int>((*e)["attachCost"].value_or<int64_t>(0));
     d.specCost = static_cast<int>((*e)["specCost"].value_or<int64_t>(0));

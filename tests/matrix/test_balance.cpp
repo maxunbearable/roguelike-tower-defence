@@ -60,14 +60,45 @@ TEST_CASE("a brand new profile survives the opening waves", "[balance]") {
     }
 }
 
-TEST_CASE("even a fully upgraded profile is tested by the late waves", "[balance]") {
-    // The other end of the curve. If owning everything walked the map, there
-    // would be no reason to play well -- and no reason to keep playing.
+TEST_CASE("the campaign is ordered: map 1 falls before the last map does",
+          "[balance]") {
+    // Two earlier versions of this test were both wrong, in opposite directions.
+    //
+    // It first asserted a fully-upgraded profile could NOT clear greenfields.
+    // That was true when the global tree was 5 nodes and the campaign was
+    // unreachable, and it became exactly backwards: map 1 of 5 SHOULD fall to a
+    // player who has ground out the tree.
+    //
+    // I then asserted owning everything must not clear the FINAL map. That is
+    // also wrong -- it would mean the game is never completable at any level of
+    // investment, and no amount of extra enemy health makes a wall rather than a
+    // grind.
+    //
+    // What is actually worth defending is ORDERING: partway through the tree,
+    // map 1 is winnable and the last map is not. Owning literally everything
+    // finishing the campaign is the reward, not a bug.
     const auto reg = loadReg();
-    const auto r = sim::autoPlay(reg, reg.map("greenfields"), fullyUpgraded(), 1);
-    UNSCOPED_INFO("fully upgraded reached wave " << r.wavesSurvived);
-    REQUIRE(r.wavesSurvived >= 25);  // the tree must be worth buying
-    REQUIRE(r.wavesSurvived < 50);   // but mastery, not shopping, clears the map
+
+    // A mid-game profile: the whole global tree, no tower or element branches
+    // beyond what is needed to specialise at all.
+    core::Loadout mid;
+    mid.ownAll = false;
+    for (const auto& n : reg.tree("global").nodes) mid.ownedNodes.insert(n.id);
+    for (const auto& sp : reg.tree("arrow").specs) {
+        mid.ownedNodes.insert("arrow." + sp + ".core");
+    }
+    for (const auto& sp : reg.tree("earth").specs) {
+        mid.ownedNodes.insert("earth." + sp + ".core");
+    }
+
+    const auto easy = sim::autoPlay(reg, reg.map("greenfields"), mid, 1);
+    const auto hard = sim::autoPlay(reg, reg.map("obsidian-gate"), mid, 1);
+    UNSCOPED_INFO("mid-game profile: greenfields wave " << easy.wavesSurvived << " (cleared "
+                                                        << easy.cleared << "), obsidian-gate wave "
+                                                        << hard.wavesSurvived << " (cleared "
+                                                        << hard.cleared << ")");
+    REQUIRE(easy.wavesSurvived > hard.wavesSurvived);  // the last map is harder
+    REQUIRE_FALSE(hard.cleared);                       // and not yet beatable
 }
 
 TEST_CASE("the endgame is actually reachable, on every map", "[balance]") {
