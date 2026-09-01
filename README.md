@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 210 tests
+ctest --test-dir build          # 218 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -220,6 +220,17 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## The screens
+
+Map select shows each map **drawn from its own tile grid** — the route, the
+start, the goal — and states the map's elemental bias, computed from that map's
+roster so the screen cannot contradict the enemies it sends. A map with no real
+tilt says so rather than inventing one.
+
+The skill trees draw their prerequisite wiring whether or not you own it. They
+used to mix unowned links 62% toward the parchment behind them, so the structure
+of a 150-node tree only appeared once you had already bought it.
 
 ## Documentation
 

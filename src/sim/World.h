@@ -95,6 +95,17 @@ public:
     bool waveInProgress() const { return phase_ == Phase::Wave; }
     int aliveEnemies() const;
     int towerCount() const;
+
+    // Run statistics for the results screen. A roguelike's end-of-run screen is
+    // where a loss becomes an investment rather than a dead end, and this one
+    // reported only the wave reached -- nothing about how the run actually went.
+    struct RunStats {
+        int enemiesKilled = 0;
+        int leaked = 0;       // enemies that reached the goal
+        int goldEarned = 0;   // bounty only, not the starting purse
+        int towersBuilt = 0;
+    };
+    const RunStats& stats() const { return stats_; }
     // Cumulative spawns for the whole run. Exists so tests can prove an early
     // overlap call does not quietly discard the rest of the current wave.
     int enemiesSpawned() const { return enemiesSpawned_; }
@@ -104,6 +115,7 @@ public:
     int shardsEarned() const { return shardsEarned_; }
     int shardsForRun() const;
     void addShards(int n) { shardsEarned_ += n; }
+    void noteKill(int bounty);  // one enemy died and paid out
 
     // --- tower management -------------------------------------------------
     enum class PlaceResult {
@@ -212,6 +224,7 @@ private:
     int gold_ = 0;
     int waveIndex_ = 0;
     int enemiesSpawned_ = 0;
+    RunStats stats_;
     Phase phase_ = Phase::Build;
     float buildTimer_ = 0.0f;
 

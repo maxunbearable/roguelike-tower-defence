@@ -5,6 +5,7 @@
 
 #include "raylib.h"
 
+#include "content/MapFacts.h"
 #include "core/Progression.h"
 #include "render/Palette.h"
 #include "render/PixelCanvas.h"
@@ -136,16 +137,10 @@ std::string nodeIcon(const render::SpriteAtlas& atlas, const core::SkillTree& tr
         return {};
     };
 
-    if (n.branch != "trunk") {
-        // What this branch is: the specialised building, or the element power.
-        return pick({"tower_" + n.branch, "icon_" + n.branch});
-    }
-
-    if (tree.kind == core::SkillTree::Kind::Tower) return pick({"tower_" + tree.id});
-    if (tree.kind == core::SkillTree::Kind::Element) return pick({"icon_" + tree.id});
-
-    // Global: read the stat it touches. Modifiers on a global node all move the
-    // same stat across every tower, so the first one is representative.
+    // What stat does this node move? Tried FIRST for every tree, not just the
+    // global one. Deriving it only for global meant a tower tab was ten nodes
+    // all drawn with the same tower sprite -- nothing separated Harpoon from
+    // Scorpion from Javelin but the caption underneath.
     const std::string target = n.modifiers.empty() ? std::string{} : n.modifiers.front().target;
     const auto ends = [&target](const char* suffix) {
         const std::string s(suffix);
@@ -160,7 +155,31 @@ std::string nodeIcon(const render::SpriteAtlas& atlas, const core::SkillTree& tr
     if (ends(".range")) return pick({"ui_icon_09", "icon_build"});
     if (ends(".critChance") || ends(".critMult")) return pick({"ui_icon_01", "icon_spec"});
     if (ends(".armorPen")) return pick({"ui_icon_08", "icon_spec"});
+    if (ends(".pierce")) return pick({"icon_hunter", "icon_spec"});
+    if (ends(".projectileCount")) return pick({"icon_hunter"});
+    if (ends(".projectileSpeed")) return pick({"icon_ffwd"});
+    if (target.find("splash") != std::string::npos) return pick({"icon_quake", "icon_rock"});
+    if (target.find("chain") != std::string::npos) return pick({"icon_spec"});
+    if (target.find("slowOnHit") != std::string::npos) return pick({"icon_tgt_weakest"});
+    if (target.find("drain") != std::string::npos) return pick({"icon_coin"});
+    if (target.find("trait.") != std::string::npos) return pick({"icon_spec"});
+
+    // Nothing matched: fall back to what this branch or tree IS.
+    if (n.branch != "trunk") return pick({"tower_" + n.branch, "icon_" + n.branch, "icon_gem"});
+    if (tree.kind == core::SkillTree::Kind::Tower) return pick({"tower_" + tree.id, "icon_gem"});
+    if (tree.kind == core::SkillTree::Kind::Element) return pick({"icon_" + tree.id, "icon_gem"});
     return pick({"icon_gem"});
+}
+
+// How deep a node sits along its own chain: 1 for a root, +1 per prerequisite
+// step. Drawn as pips so rank within a branch reads without the caption.
+int nodeTier(const core::SkillTree& tree, const core::SkillNode& n, int depth = 0) {
+    if (depth > 8 || n.prereqs.empty()) return depth + 1;  // depth guard: never trust data
+    int best = depth + 1;
+    for (const auto& req : n.prereqs) {
+        if (const auto* pr = tree.find(req)) best = std::max(best, nodeTier(tree, *pr, depth + 1));
+    }
+    return best;
 }
 
 Color branchTint(const std::string& branch) {
@@ -385,8 +404,15 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 const auto from = nodePos(L, *pr);
                 const bool lit = slot.meta.ownedNodes.count(req) > 0;
                 const Color tint = branchTint(n.branch);
-                DrawLineEx({from.x, from.y}, {to.x, to.y}, lit ? 5.0f : 3.0f,
-                           lit ? tint : paint::mix(tint, Color{188, 170, 146, 255}, 0.62f));
+                // An unowned link is drawn DARKER than the parchment, not paler.
+                // It used to be mixed 62% toward the background it sits on, so
+                // the wiring only appeared once the prerequisite was already
+                // owned -- the tree showed its structure exactly when the player
+                // no longer needed it, and a first-time player saw a grid of
+                // unconnected circles. Structure first, emphasis second.
+                const Color dim = paint::mix(tint, Color{78, 62, 46, 255}, 0.70f);
+                DrawLineEx({from.x, from.y}, {to.x, to.y}, lit ? 6.0f : 4.0f,
+                           lit ? tint : dim);
             }
         }
 
@@ -416,6 +442,20 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                                 Color{255, 236, 170, 255});
             }
 
+            // Rank within the branch, as pips under the node. Several nodes in a
+            // chain share one stat and therefore one icon; without this the only
+            // thing separating tier 1 from tier 4 is reading the caption.
+            const int tier = nodeTier(tree, n);
+            if (tier > 1) {
+                const int pips = std::min(tier, 5);
+                const int pw = pips * 5 - 2;
+                for (int i = 0; i < pips; ++i) {
+                    DrawRectangle(static_cast<int>(p.x) - pw / 2 + i * 5,
+                                  static_cast<int>(p.y + L.radius) - 5, 3, 3,
+                                  owned ? Color{255, 240, 200, 255} : ring);
+                }
+            }
+
             // Every node carries an icon now, trunk included.
             const std::string art = nodeIcon(atlas, tree, n);
             if (!art.empty()) {
@@ -429,6 +469,16 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             // The node's own name, always visible. This is authored in content
             // for all 23 nodes and used to appear only on hover, which meant
             // the tree read as anonymous numbered circles.
+            // Caption on a parchment plate. Links run vertically between stacked
+            // nodes and pass straight through this text, so without the plate the
+            // label sits on a line and both become harder to read.
+            {
+                const int cw = MeasureText(n.name.c_str(), 10);
+                const int ch = owned ? 13 : 25;
+                DrawRectangle(static_cast<int>(p.x) - cw / 2 - 4,
+                              static_cast<int>(p.y + L.radius) + 4, cw + 8, ch,
+                              Color{214, 196, 166, 232});
+            }
             centredIn(n.name.c_str(), static_cast<int>(p.x),
                       static_cast<int>(p.y + L.radius) + 6, 10, owned ? kInk : kInkDim);
 
@@ -445,7 +495,7 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             if (const auto* n = tree.find(hit.nodeId)) {
                 const int w = std::max({MeasureText(n->name.c_str(), 20),
                                         MeasureText(n->desc.c_str(), 10), 220}) + 36;
-                const int h = 78;
+                const int h = 92;
                 const auto np = nodePos(L, *n);
                 const int x = std::clamp(static_cast<int>(np.x) - w / 2, kPanelX + 8,
                                          kVirtualW - w - kPanelX - 8);
@@ -458,6 +508,24 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 DrawText(n->desc.c_str(), x + 18, y + 38, 10, kInkDim);
                 DrawText(TextFormat("%d shards", n->cost), x + 18, y + 56, 10,
                          slot.meta.shards >= n->cost ? Color{62, 122, 52, 255} : kInkWarn);
+
+                // Say WHY it cannot be bought, naming the prerequisites still
+                // missing. "Locked" on its own tells the player nothing they can
+                // act on, and the tree is 150 nodes deep.
+                if (!core::prereqsMet(tree, slot.meta, n->id)) {
+                    std::string need;
+                    for (const auto& req : n->prereqs) {
+                        if (slot.meta.ownedNodes.count(req)) continue;
+                        const auto* pr = tree.find(req);
+                        if (!pr) continue;
+                        if (!need.empty()) need += " + ";
+                        need += pr->name;
+                    }
+                    if (!need.empty()) {
+                        DrawText(TextFormat("needs %s", need.c_str()), x + 18, y + 68, 10,
+                                 kInkWarn);
+                    }
+                }
                 if (n->branch != "trunk") {
                     const char* b = n->branch.c_str();
                     DrawText(b, x + w - 18 - MeasureText(b, 10), y + 56, 10,
@@ -497,8 +565,45 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
 
 namespace {
 // Five cards across the board area.
-constexpr int kMapCardW = 250, kMapCardH = 300, kMapGap = 20;
-constexpr int kMapTop = 210;
+constexpr int kMapCardW = 250, kMapCardH = 420, kMapGap = 20;
+constexpr int kMapTop = 168;
+// A map, drawn from its own tile grid. The map select showed five identical
+// parchment cards of text: the player chose a map without ever seeing its shape,
+// which for a tower defence is the single most useful thing to know about one.
+// Locked maps still get their thumbnail, greyed -- the campaign should read as a
+// journey, not four blank boxes.
+void drawMapThumb(const content::MapDef& m, int x, int y, int w, int h, bool open) {
+    if (m.gridW <= 0 || m.gridH <= 0) return;
+    // Integer cell size, then centre the remainder: a fractional cell leaves
+    // seams between tiles and the route stops reading as a continuous road.
+    const int cell = std::max(1, std::min(w / m.gridW, h / m.gridH));
+    const int tw = cell * m.gridW, th = cell * m.gridH;
+    const int ox = x + (w - tw) / 2, oy = y + (h - th) / 2;
+
+    DrawRectangle(ox - 2, oy - 2, tw + 4, th + 4, Color{58, 46, 38, 255});
+    for (int gy = 0; gy < m.gridH; ++gy) {
+        for (int gx = 0; gx < m.gridW; ++gx) {
+            const char c = m.tileAt(gx, gy);
+            Color col = Color{104, 138, 66, 255};                 // buildable ground
+            if (c == '=') col = Color{170, 132, 92, 255};         // the route
+            else if (c == 'S') col = Color{198, 96, 72, 255};     // where they enter
+            else if (c == 'E') col = Color{92, 150, 206, 255};    // what you defend
+            else if (c != '.') col = Color{74, 104, 54, 255};     // blocked
+            if (!open) {
+                // Desaturate rather than dim: a dimmed thumbnail reads as an
+                // error, a grey one reads as "not yet".
+                const auto g = static_cast<unsigned char>(0.3f * col.r + 0.6f * col.g +
+                                                          0.1f * col.b);
+                col = Color{static_cast<unsigned char>(g * 0.7f + 30),
+                            static_cast<unsigned char>(g * 0.7f + 30),
+                            static_cast<unsigned char>(g * 0.7f + 34), 255};
+            }
+            DrawRectangle(ox + gx * cell, oy + gy * cell, cell, cell, col);
+        }
+    }
+    DrawRectangleLines(ox - 2, oy - 2, tw + 4, th + 4, Color{40, 32, 26, 255});
+}
+
 int mapCardX(int i) {
     const int total = 5 * kMapCardW + 4 * kMapGap;
     return (kVirtualW - total) / 2 + i * (kMapCardW + kMapGap);
@@ -558,20 +663,43 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
                kMapCardW - 36);
         centredIn(TextFormat("%d", i + 1), x + kMapCardW / 2, kMapTop + 22, 20, kInk);
 
-        centredIn(def.name.c_str(), x + kMapCardW / 2, kMapTop + 62, 20,
+        centredIn(def.name.c_str(), x + kMapCardW / 2, kMapTop + 56, 20,
                   open ? kInk : kInkDim);
 
+        drawMapThumb(def, x + 18, kMapTop + 84, kMapCardW - 36, 116, open);
+
         if (!open) {
-            centredIn("LOCKED", x + kMapCardW / 2, kMapTop + 130, 40, kInkDim);
-            centredIn("clear the map before it", x + kMapCardW / 2, kMapTop + 180, 10, kInkDim);
+            centredIn("LOCKED", x + kMapCardW / 2, kMapTop + 224, 20, kInkDim);
+            centredIn("clear the map before it", x + kMapCardW / 2, kMapTop + 252, 10, kInkDim);
             continue;
         }
 
         // The blurb is the map's own, so what makes it different is readable
         // before committing a run to it.
-        centredIn(def.blurb.c_str(), x + kMapCardW / 2, kMapTop + 96, 10, kInkDim);
+        centredIn(def.blurb.c_str(), x + kMapCardW / 2, kMapTop + 210, 10, kInkDim);
 
-        int ry = kMapTop + 140;
+        // The one mechanic the campaign rests on, and the screen never said it.
+        // Derived from this map's own roster, so it cannot contradict the
+        // enemies it actually sends.
+        const auto bias = content::mapBias(reg, def);
+        if (!bias.valid) {
+            // Saying "balanced" is real information on the opening map: it is
+            // the one place where any build works.
+            centredIn("no elemental bias", x + kMapCardW / 2, kMapTop + 240, 10,
+                      Color{120, 140, 100, 255});
+        } else {
+            const int by = kMapTop + 232;
+            DrawText("resists", x + 24, by, 10, kInkDim);
+            DrawText(bias.resistant.c_str(),
+                     x + kMapCardW - 24 - MeasureText(bias.resistant.c_str(), 10), by, 10,
+                     Color{176, 96, 72, 255});
+            DrawText("weak to", x + 24, by + 16, 10, kInkDim);
+            DrawText(bias.vulnerable.c_str(),
+                     x + kMapCardW - 24 - MeasureText(bias.vulnerable.c_str(), 10), by + 16, 10,
+                     Color{96, 158, 84, 255});
+        }
+
+        int ry = kMapTop + 276;
         const int best = it != slot.meta.mapProgress.end() ? it->second.bestWave : 0;
         DrawText("best wave", x + 24, ry, 10, kInkDim);
         DrawText(TextFormat("%d / %d", best, def.recipe.count),
@@ -710,10 +838,46 @@ void drawResults(const render::SpriteAtlas& atlas, const sim::World& w, int shar
         specs.insert(specs.end(), elems.begin(), elems.end());
         centredIn("BUILD FIELDED", kVirtualW / 2, y, 10, kInkDim);
         y += 18;
-        std::string build;
-        for (const auto& sp : specs) build += (build.empty() ? "" : "   /   ") + sp;
-        centredIn(build.empty() ? "none" : build.c_str(), kVirtualW / 2, y, 20, kInk);
-        y += 44;
+        // Wrapped, and stepped down to 10px if it still will not fit. Six specs
+        // joined at 20px overran the panel and were clipped at BOTH edges.
+        std::vector<std::string> lines{std::string{}};
+        for (const auto& sp : specs) {
+            const std::string next = lines.back().empty() ? sp : lines.back() + "  /  " + sp;
+            if (MeasureText(next.c_str(), 20) > kW - 80) {
+                lines.push_back(sp);
+            } else {
+                lines.back() = next;
+            }
+        }
+        if (lines.size() == 1 && lines.front().empty()) lines.front() = "none";
+        for (const auto& ln : lines) {
+            centredIn(ln.c_str(), kVirtualW / 2, y, 20, kInk);
+            y += 24;
+        }
+        y += 14;
+    }
+
+    // How the run actually went. The screen reported the wave reached and
+    // nothing else, so there was no way to tell a run that nearly held from one
+    // that collapsed at the first boss.
+    {
+        const auto& st = w.stats();
+        struct Cell { const char* label; std::string value; };
+        const Cell cells[] = {
+            {"enemies killed", std::to_string(st.enemiesKilled)},
+            {"leaked", std::to_string(st.leaked)},
+            {"gold earned", std::to_string(st.goldEarned)},
+            {"towers built", std::to_string(st.towersBuilt)},
+        };
+        const int colW = (kW - 120) / 4;
+        for (int i = 0; i < 4; ++i) {
+            const int cx = px + 60 + colW * i + colW / 2;
+            centredIn(cells[i].value.c_str(), cx, y, 20,
+                      // Leaks are the only one where a bigger number is worse.
+                      (i == 1 && st.leaked > 0) ? kInkWarn : kInk);
+            centredIn(cells[i].label, cx, y + 24, 10, kInkDim);
+        }
+        y += 52;
     }
 
     // The shard award is the reason this screen exists -- it is what turns a

@@ -381,6 +381,7 @@ void runDeathSystem(World& w, float dt) {
         }
         w.addGold(bounties[i]);
         w.addShards(shards[i]);
+        w.noteKill(bounties[i]);
         if (r.valid(dead[i])) r.destroy(dead[i]);
     }
 }

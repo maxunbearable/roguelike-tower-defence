@@ -209,7 +209,7 @@ shardValue = 1
 flying = false
 sprite = "goblin"
 tint = [168, 158, 190]
-resist = { earth = 0.51, fire = 0.92, frost = 0.92, piercing = 0.92, shock = 0.92 }
+resist = { arcane = 0.55, earth = 0.51, fire = 0.98, frost = 0.98, piercing = 1.02, shock = 0.98 }
 
 [[enemy]]
 id = "obsidian_wraith"
@@ -222,4 +222,4 @@ shardValue = 1
 flying = false
 sprite = "wraith"
 tint = [168, 158, 190]
-resist = { earth = 1.147, fire = 0.92, frost = 0.92, piercing = 0.56, shock = 0.92 }
+resist = { arcane = 0.55, earth = 1.147, fire = 0.98, frost = 0.98, piercing = 0.78, shock = 0.98 }

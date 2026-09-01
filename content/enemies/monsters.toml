@@ -38,7 +38,7 @@ bounty = 7
 shardValue = 0
 flying = true
 sprite = "hivewasp"
-resist = { piercing = 0.7, frost = 1.35 }  # cold-blooded: chill it and it drops
+resist = { frost = 1.35, fire = 1.15 }     # cold-blooded: chill it and it drops
 
 [[enemy]]
 id = "cryptbat"

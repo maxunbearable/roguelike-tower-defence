@@ -249,6 +249,7 @@ void World::startNextWave() {
 }
 
 void World::loseLife(int n) {
+    stats_.leaked += n;
     lives_ -= n;
     if (lives_ <= 0) {
         lives_ = 0;
@@ -278,6 +279,11 @@ TargetPriority World::towerPriority(int tileX, int tileY) const {
 }
 
 const char* World::priorityLabel(TargetPriority p) { return priorityName(p); }
+
+void World::noteKill(int bounty) {
+    ++stats_.enemiesKilled;
+    stats_.goldEarned += bounty;
+}
 
 int World::shardsForRun() const {
     // Kills pay directly; surviving waves pays a steady rate; clearing the map
@@ -358,6 +364,7 @@ World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& to
     ecs_.emplace<TileCoord>(e, tileX, tileY);
     ecs_.emplace<TowerTag>(e, def.id, 1, def.buildCost, std::string{}, std::string{},
                            std::string{}, parsePriority(def.targetPriority));
+    ++stats_.towersBuilt;
     ecs_.emplace<Cooldown>(e, 0.0f);
     ecs_.emplace<TargetRef>(e);
     ecs_.emplace<ShotCounter>(e);
