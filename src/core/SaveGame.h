@@ -75,6 +75,9 @@ struct MetaSave {
     // Chosen difficulty (core::Difficulty). Per profile rather than per run, so
     // it is a way to play rather than a decision to re-make every map.
     int difficulty = 1;  // Standard
+    // Accessibility. See core/Settings.h for why these two exist specifically.
+    bool colorAlternatives = false;
+    float shake = 1.0f;
 };
 
 // A map is playable when it is the first, or when the one before it in `order`

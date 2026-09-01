@@ -144,7 +144,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 248 tests
+ctest --test-dir build          # 251 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -226,6 +226,19 @@ the prototype until you run the importers.
 See [`docs/ASSET-POLICY.md`](docs/ASSET-POLICY.md) for which packs were cleared,
 which were rejected and why. Two were rejected after checking the licence at
 source contradicted what search results claimed.
+
+## Accessibility
+
+Measured against [Steam's published accessibility feature list](https://partner.steamgames.com/doc/accessibility_features),
+which now shows on store pages and which players can filter by. **Colour
+alternatives**: eleven damage types were separated by hue alone in the readout
+that tells you what to build against — and two pairs are barely separable *with*
+full colour vision (`arcane` against `void`, `radiant` against `shock`). Each now
+carries a two-letter tag, and a test walks every damage type in the content and
+fails if one is untagged or shares a tag. **Camera comfort**: screen shake has
+Full / Reduced / Off, applied inside `shakeOffset()` so every consumer honours
+it. Three settings rather than a toggle, because shake is feedback and removing
+it entirely costs the player information.
 
 ## Difficulty
 
@@ -332,8 +345,9 @@ Known gaps, honestly:
 - The simulated player only builds arrow towers, and its element choice is
   resistance-aware but not synergy-aware, so its difficulty readings are a
   conservative lower bound rather than a picture of good play.
-- Element overlays are per element rather than per specialisation (earth's three
-  are bespoke; the other five share one per element).
+- **Adjustable text size** is the one Steam accessibility category still
+  unmet. Every caption is a literal size at its call site, so it needs routing
+  through a helper rather than a setting bolted on.
 - **Tower art is fixed but capped by the pack.** All 20 tower sprites now use a
   tower silhouette; 16 of them used to be houses, barracks, archery halls and
   chapels, because Tiny Swords is a village builder. Tiny Swords contains only

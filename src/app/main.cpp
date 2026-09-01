@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     int jumpWave = 0;
     int cluster = 0;
     bool abilities = false;
+    bool settings = false;
     bool pauseIt = false;
     const char* menuPage = nullptr;
     for (int i = 1; i < argc; ++i) {
@@ -77,6 +78,8 @@ int main(int argc, char** argv) {
             menuPage = argv[++i];
         else if (std::strcmp(argv[i], "--abilities") == 0)
             abilities = true;
+        else if (std::strcmp(argv[i], "--settings") == 0)
+            settings = true;
         else if (std::strcmp(argv[i], "--pause") == 0)
             pauseIt = true;
         else if (std::strcmp(argv[i], "--cluster") == 0 && i + 1 < argc)
@@ -116,6 +119,7 @@ int main(int argc, char** argv) {
         game.requestStart(/*demoTowers=*/true, forceMap ? forceMap : "");
         if (cluster > 0) game.devCluster(cluster);
         if (abilities) game.devCastAbilities();
+        if (settings) game.devSettings();
         if (jumpWave > 0) game.devJumpToWave(jumpWave);
         if (pauseIt) game.devPause();
     }

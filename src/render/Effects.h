@@ -19,6 +19,10 @@ public:
     void update(float dt);
     void drawWorldLayer() const;  // behind the HUD, in tile-pixel space
     core::Vec2 shakeOffset() const;
+    // Camera Comfort: scales all screen shake. Shake is feedback, so the option
+    // offers "less" as well as "none" -- turning it off entirely costs the
+    // player information about what just happened.
+    void setShakeScale(float s) { shakeScale_ = s; }
 
 private:
     struct Particle {
@@ -49,6 +53,7 @@ private:
     std::vector<Particle> particles_;
     std::vector<Number> numbers_;
     std::vector<Ring> rings_;
+    float shakeScale_ = 1.0f;
     float shake_ = 0.0f;
     float time_ = 0.0f;
 };

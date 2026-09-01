@@ -152,10 +152,14 @@ def main(base):
             src = shapes[i % len(shapes)]
             if src is None:
                 continue
-            # earth already has three bespoke overlays and icons; do not clobber.
-            if elem == "earth":
-                continue
-            save(to_size(shift(src, h, sa, v), 20), f"icon_{spec}", log)
+            # Earth has three bespoke ICONS (icon_poison / icon_rock /
+            # icon_quake, hand-authored in tools/make_sprites.py) and they are
+            # better than a hue shift, so those are left alone. It does NOT have
+            # bespoke overlays: this used to skip earth entirely, so all three
+            # earth specialisations drew the same green flame on the board and
+            # were indistinguishable while playing. Only the icon is skipped.
+            if elem != "earth":
+                save(to_size(shift(src, h, sa, v), 20), f"icon_{spec}", log)
             save(to_size(shift(src, h, sa, v), 24), f"enchant_{spec}", log)
 
     # --- element overlays for the specs that had none -----------------------

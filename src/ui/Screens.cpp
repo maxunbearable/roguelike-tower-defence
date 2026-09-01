@@ -7,6 +7,7 @@
 
 #include "content/MapFacts.h"
 #include "core/Difficulty.h"
+#include "core/Settings.h"
 #include "core/Progression.h"
 #include "render/Palette.h"
 #include "render/PixelCanvas.h"
@@ -765,7 +766,7 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
 // ==========================================================================
 
 namespace {
-constexpr int kPauseW = 420, kPauseH = 328;
+constexpr int kPauseW = 420, kPauseH = 424;
 int pauseX() { return (kVirtualW - kPauseW) / 2; }
 int pauseY() { return (kPlayH - kPauseH) / 2; }
 constexpr int kSliderH = 14;
@@ -773,9 +774,15 @@ int sliderX() { return pauseX() + 40; }
 int sliderW() { return kPauseW - 80; }
 int musicY() { return pauseY() + 110; }
 int sfxY() { return pauseY() + 166; }
+// Accessibility options live above the buttons: they are settings, not exits.
+constexpr int kOptH = 34;
+int colorAltY() { return pauseY() + 208; }
+int shakeY() { return pauseY() + 250; }
+int optX() { return pauseX() + 40; }
+int optW() { return kPauseW - 80; }
 constexpr int kPauseBtnH = 40;
-int resumeY() { return pauseY() + 210; }
-int quitY() { return pauseY() + 254; }
+int resumeY() { return pauseY() + 306; }
+int quitY() { return pauseY() + 350; }
 
 // A slider's value comes from where in the track the cursor is.
 float valueAt(core::Vec2 m) {
@@ -793,6 +800,8 @@ bool onSlider(core::Vec2 m, int y) {
 PauseAction pauseHitTest(core::Vec2 m) {
     if (onSlider(m, musicY())) return {PauseAction::Kind::SetMusic, valueAt(m)};
     if (onSlider(m, sfxY())) return {PauseAction::Kind::SetSfx, valueAt(m)};
+    if (inRect(m, optX(), colorAltY(), optW(), kOptH)) return {PauseAction::Kind::ToggleColorAlt};
+    if (inRect(m, optX(), shakeY(), optW(), kOptH)) return {PauseAction::Kind::CycleShake};
     if (inRect(m, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH)) {
         return {PauseAction::Kind::Resume};
     }
@@ -802,8 +811,8 @@ PauseAction pauseHitTest(core::Vec2 m) {
     return {};
 }
 
-void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol,
-               core::Vec2 mouse) {
+void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol, bool colorAlt,
+               float shake, core::Vec2 mouse) {
     DrawRectangle(0, 0, kVirtualW, kPlayH, Color{14, 12, 20, 170});
     const auto hit = pauseHitTest(mouse);
 
@@ -826,6 +835,19 @@ void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol,
     };
     slider("MUSIC", musicVol, musicY(), hit.kind == PauseAction::Kind::SetMusic);
     slider("SOUND", sfxVol, sfxY(), hit.kind == PauseAction::Kind::SetSfx);
+
+    // Two accessibility options. Measured against Steam's published feature
+    // list, this game failed Color Alternatives and Camera Comfort outright.
+    const auto option = [&](const char* label, const char* value, int y, bool on,
+                            PauseAction::Kind kind) {
+        button(atlas, optX(), y, optW(), kOptH, hit.kind == kind, on);
+        DrawText(label, optX() + 14, y + 12, 10, kInkDim);
+        DrawText(value, optX() + optW() - 14 - MeasureText(value, 10), y + 12, 10, kInk);
+    };
+    option("COLOUR TAGS", colorAlt ? "On" : "Off", colorAltY(), colorAlt,
+           PauseAction::Kind::ToggleColorAlt);
+    option("SCREEN SHAKE", core::kShakeNames[core::shakeIndexOf(shake)], shakeY(),
+           shake < 0.99f, PauseAction::Kind::CycleShake);
 
     button(atlas, pauseX() + 40, resumeY(), kPauseW - 80, kPauseBtnH,
            hit.kind == PauseAction::Kind::Resume, false);

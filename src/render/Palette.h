@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "core/DamageTags.h"
+
 #include "raylib.h"
 
 // Every colour the game draws lives here, so the Phase 6 art pass has exactly
@@ -37,6 +39,8 @@ inline constexpr Color kBackdrop{16, 14, 24, 255};
 // the enemy dossier, floating damage numbers -- so the association is learnable
 // rather than decorative. Tower types are cool and metallic, element types take
 // their element's obvious hue.
+using core::damageTypeTag;  // re-exported: callers say palette::damageTypeTag
+
 inline Color damageTypeColor(const std::string& type) {
     if (type == "piercing") return Color{206, 214, 226, 255};  // steel
     if (type == "siege") return Color{168, 150, 128, 255};     // stone
@@ -51,6 +55,7 @@ inline Color damageTypeColor(const std::string& type) {
     if (type == "radiant") return Color{252, 240, 176, 255};
     return Color{200, 200, 200, 255};
 }
+
 
 // Resistant reads cold and dim, vulnerable reads hot and bright, independent of
 // the type hue -- so direction is legible even to a colour-blind player.

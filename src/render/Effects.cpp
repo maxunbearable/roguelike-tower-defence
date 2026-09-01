@@ -146,10 +146,12 @@ void Effects::update(float dt) {
 }
 
 core::Vec2 Effects::shakeOffset() const {
+    if (shakeScale_ <= 0.0f) return {0.0f, 0.0f};
     if (shake_ <= 0.01f) return {0.0f, 0.0f};
     // Whole-pixel offsets only: a sub-pixel shake would blur the art.
     const float a = time_ * 47.0f;
-    return {std::round(std::sin(a * 1.7f) * shake_), std::round(std::cos(a * 2.3f) * shake_)};
+    const float amp = shake_ * shakeScale_;
+    return {std::round(std::sin(a * 1.7f) * amp), std::round(std::cos(a * 2.3f) * amp)};
 }
 
 void Effects::drawWorldLayer() const {

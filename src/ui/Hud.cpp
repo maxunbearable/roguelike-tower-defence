@@ -245,16 +245,27 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
             // A pip per notable resistance: type hue, with a bar above for
             // vulnerable and below for resistant, so direction survives without
             // relying on hue alone.
-            int qx = ix - 18;
+            // Wider pips when tags are on, because a two-letter tag needs the
+            // room; the direction bar stays either way.
+            const int pipW = st.colorAlternatives ? 15 : 7;
+            const int pipStep = pipW + 2;
+            int qx = ix - (st.colorAlternatives ? 22 : 18);
             for (const auto& [type, mult] : notableResists(ed)) {
                 const bool weak = mult > 1.0f;
                 const Color hue = render::palette::damageTypeColor(type);
-                DrawRectangle(qx, kHudY + 64, 7, 7, hue);
-                DrawRectangle(qx, weak ? kHudY + 61 : kHudY + 72, 7, 2,
+                DrawRectangle(qx, kHudY + 64, pipW, st.colorAlternatives ? 9 : 7, hue);
+                if (st.colorAlternatives) {
+                    // Dark ink on the hue: every damage-type colour in the
+                    // palette is a light or mid tone, so dark always contrasts.
+                    const char* tag = render::palette::damageTypeTag(type);
+                    DrawText(tag, qx + (pipW - MeasureText(tag, 10)) / 2, kHudY + 65, 10,
+                             Color{28, 24, 20, 255});
+                }
+                DrawRectangle(qx, weak ? kHudY + 61 : kHudY + 74, pipW, 2,
                               weak ? render::palette::kVulnerable
                                    : render::palette::kResistant);
-                qx += 9;
-                if (qx > ix + 20) break;  // never spill into the next enemy
+                qx += pipStep;
+                if (qx > ix + 24) break;  // never spill into the next enemy
             }
             incomingRects.push_back({{ix - 20, kHudY + 26, 44, 52}, g.enemyId});
             ix += 52;

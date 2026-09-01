@@ -80,6 +80,9 @@ public:
     }
 
     void devPause() { hud_.paused = true; }
+    // The settings modal is a different thing from the tactical pause; they
+    // were split apart, so capture needs its own way in.
+    void devSettings() { hud_.menuOpen = true; }
 
     // Capture aid: fire both abilities at known spots so their board visuals can
     // be looked at. Every previous round has had at least one effect that was
@@ -150,6 +153,10 @@ private:
     void hintOnce(const char* id, const std::string& text);
     void updateHints();
     void announceWaves();
+    // Pushes the profile's accessibility choices into the systems that honour
+    // them. Called on load and whenever an option changes, so a setting can
+    // never be stored but unapplied.
+    void applySettings();
     // Advances the guided first run when the player has actually done the step,
     // and returns the SKIP rectangle so the click handler can find it.
     void updateTutorial();

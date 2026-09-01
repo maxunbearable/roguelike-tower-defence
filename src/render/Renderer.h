@@ -34,6 +34,7 @@ struct Cursor {
 class Renderer {
 public:
     void load(const content::Registry& reg);
+    void setShakeScale(float s) { fx_.setShakeScale(s); }
     void update(float dt, const std::vector<sim::VisualEvent>& events,
                 const content::Registry& reg);
     void draw(const sim::World& w, float alpha, const Cursor& cur);

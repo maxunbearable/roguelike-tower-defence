@@ -29,6 +29,9 @@ struct HudState {
     // Which ability is armed and waiting for a target on the board, as an index
     // into sim::Ability; -1 for none.
     int armed = -1;
+    // Color Alternatives: draw the damage-type tag beside the hue. Essential
+    // information must never be carried by a fixed colour alone.
+    bool colorAlternatives = false;
 };
 
 // A prominent bar per living boss, across the top of the play field. A boss has

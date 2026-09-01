@@ -1,5 +1,6 @@
 #include "app/Game.h"
 
+#include "core/Settings.h"
 #include "sim/Tutorial.h"
 
 #include <cstdio>
@@ -72,6 +73,14 @@ void Game::updateTutorial() {
             step = sim::tutorialToIndex(sim::tutorialNext(next));
         }
     }
+}
+
+void Game::applySettings() {
+    const auto& m = activeConst().meta;
+    renderer_.setShakeScale(m.shake);
+    hud_.colorAlternatives = m.colorAlternatives;
+    jukebox_.setVolume(m.musicVolume);
+    sfx_.setVolume(m.sfxVolume);
 }
 
 void Game::announceWaves() {
@@ -231,6 +240,7 @@ void Game::beginRun(bool resume, const std::string& mapId) {
     screen_ = Screen::Playing;
     accumulator_ = 0.0f;
     hud_ = ui::HudState{};
+    applySettings();
     jukebox_.setVolume(slot.meta.musicVolume);
     sfx_.setVolume(slot.meta.sfxVolume);
     closeMenu();
@@ -261,6 +271,7 @@ void Game::startRun(int goldOverride) {
     screen_ = Screen::Playing;
     accumulator_ = 0.0f;
     hud_ = ui::HudState{};
+    applySettings();
     closeMenu();
 }
 
@@ -814,7 +825,16 @@ void Game::updatePlaying(float frameDt) {
         }
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             const auto act = ui::pauseHitTest(mouseVirtual());
-            if (act.kind == ui::PauseAction::Kind::Resume) {
+            if (act.kind == ui::PauseAction::Kind::ToggleColorAlt) {
+                active().meta.colorAlternatives = !active().meta.colorAlternatives;
+                applySettings();
+                persist();
+            } else if (act.kind == ui::PauseAction::Kind::CycleShake) {
+                const int next = (core::shakeIndexOf(active().meta.shake) + 1) % 3;
+                active().meta.shake = core::kShakeLevels[next];
+                applySettings();
+                persist();
+            } else if (act.kind == ui::PauseAction::Kind::Resume) {
                 hud_.menuOpen = false;
             } else if (act.kind == ui::PauseAction::Kind::Quit) {
                 hud_.menuOpen = false;
@@ -980,7 +1000,8 @@ void Game::renderCanvas(float alpha) {
             }
             if (hud_.menuOpen) {
                 ui::drawPause(renderer_.atlas(), active().meta.musicVolume,
-                              active().meta.sfxVolume, mouseVirtual());
+                              active().meta.sfxVolume, active().meta.colorAlternatives,
+                              active().meta.shake, mouseVirtual());
             } else if (hud_.paused) {
                 // A slim banner, not a curtain: the whole point of the tactical
                 // pause is that the board stays readable and clickable.
