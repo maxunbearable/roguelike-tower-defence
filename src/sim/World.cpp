@@ -1,5 +1,7 @@
 #include "sim/World.h"
 
+#include "content/WaveGen.h"
+
 #include "sim/AreaEffects.h"
 
 #include <algorithm>
@@ -85,6 +87,14 @@ World::World(const content::Registry& reg, const content::MapDef& map, uint64_t 
     globalOnly.elementId.clear();
     globalOnly.elementSpec.clear();
     const auto globalStats = core::resolveStats(reg, globalOnly);
+
+    // Waves belong to the RUN, not to the map. Drawn from a stream derived from
+    // the run seed rather than from rng_ itself, so generating them cannot shift
+    // the simulation's own sequence -- and so a resumed run, which restores
+    // rng_ mid-stream, still rebuilds exactly the waves it was playing.
+    waves_ = map.hasRecipe
+                 ? content::generateWaves(map.recipe, seed ^ 0x9E3779B97F4A7C15ULL, reg)
+                 : map.waves;
 
     // goldOverride is a test and capture hook and deliberately bypasses
     // difficulty: a test that asks for 100000 gold means 100000.
@@ -255,7 +265,7 @@ void World::startNextWave() {
     addGold(callBonus());
     if (overlapping) ++waveIndex_;
 
-    const auto& wave = map_->waves[static_cast<size_t>(waveIndex_)];
+    const auto& wave = waves_[static_cast<size_t>(waveIndex_)];
 
     // Drop groups that have finished spawning so this cannot grow across 50
     // waves; anything still owing enemies is kept and keeps spawning.
@@ -317,9 +327,9 @@ bool World::castAbility(Ability a, core::Vec2 target) {
         // of damage, spread over everything in the blast.
         float scale = 1.0f;
         const int wi = std::clamp(waveIndex_, 0, waveCount() - 1);
-        if (wi >= 0 && wi < static_cast<int>(map_->waves.size()) &&
-            !map_->waves[static_cast<size_t>(wi)].groups.empty()) {
-            scale = map_->waves[static_cast<size_t>(wi)].groups.front().hpMult;
+        if (wi >= 0 && wi < static_cast<int>(waves_.size()) &&
+            !waves_[static_cast<size_t>(wi)].groups.empty()) {
+            scale = waves_[static_cast<size_t>(wi)].groups.front().hpMult;
         }
         // Falloff to 55% at the rim: a blast should reward being aimed.
         areaDamage(*this, target, ability_.strikeRadius, ability_.strikeDamage * scale, "siege",

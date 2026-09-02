@@ -1,5 +1,9 @@
 #include "app/Game.h"
 
+#include <random>
+
+#include <cstdlib>
+
 #include "content/SpecFacts.h"
 #include "core/Settings.h"
 #include "sim/Tutorial.h"
@@ -132,6 +136,24 @@ void Game::updateHints() {
     }
 }
 
+namespace {
+
+// A new run draws its own seed, because waves are now built from it: with a
+// constant here every run of a map was the same fifty waves however well the
+// generator shuffled them. Reproducibility is unaffected -- the seed is written
+// into the save and a resume rebuilds the run from it -- and the ban on
+// std::random_device is a ban on drawing entropy MID-run, which is what would
+// make a run irreproducible. `TD_RUN_SEED` pins it for capture and debugging.
+uint64_t newRunSeed() {
+    if (const char* pinned = std::getenv("TD_RUN_SEED")) {
+        return std::strtoull(pinned, nullptr, 10);
+    }
+    std::random_device rd;
+    return (static_cast<uint64_t>(rd()) << 32) ^ static_cast<uint64_t>(rd());
+}
+
+}  // namespace
+
 core::Vec2 Game::mouseVirtual() const {
     const Vector2 m = GetMousePosition();
     return canvas_.windowToVirtual({m.x, m.y});
@@ -251,7 +273,7 @@ void Game::beginRun(bool resume, const std::string& mapId) {
                                                                : runMapId_;
     if (!registry_->hasMap(runMapId_)) runMapId_ = "greenfields";
     world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_),
-                                          resume && slot.run ? slot.run->seed : 20260830u,
+                                          resume && slot.run ? slot.run->seed : newRunSeed(),
                                           metaLoadout(), -1,
                                           core::difficultyFromIndex(slot.meta.difficulty));
     if (resume && slot.run) {
@@ -291,7 +313,10 @@ void Game::finishRun() {
 
 void Game::startRun(int goldOverride) {
     // Retained for the dev capture path, which wants a throwaway run with money.
-    world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_), 20260830,
+    // Seeded like a real run, or a capture would never show the wave variation
+    // the rest of the game now has -- and this path is exactly what screenshots
+    // and the tutorial run go through.
+    world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_), newRunSeed(),
                                           core::Loadout{}, goldOverride);
     screen_ = Screen::Playing;
     accumulator_ = 0.0f;

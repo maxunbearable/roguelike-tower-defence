@@ -94,6 +94,9 @@ public:
     const entt::registry& reg() const { return ecs_; }
     const core::Path& path() const { return path_; }
     const content::MapDef& map() const { return *map_; }
+    // THIS run's waves, not the map's canonical ones. Every run of a map used to
+    // face the identical fifty waves; the order is now drawn from the run seed.
+    const std::vector<content::WaveDef>& waves() const { return waves_; }
     const content::Registry& defs() const { return *defs_; }
     core::Rng& rng() { return rng_; }
     const core::Loadout& meta() const { return meta_; }
@@ -282,6 +285,7 @@ private:
     entt::registry ecs_;
     core::Path path_;
     core::Rng rng_;
+    std::vector<content::WaveDef> waves_;
     core::Loadout meta_;
     // One behaviour instance per element spec, shared by every tower using it.
     std::map<std::string, std::unique_ptr<ElementBehavior>> elementCache_;

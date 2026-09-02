@@ -227,12 +227,12 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
     std::vector<std::pair<IconRect, std::string>> incomingRects;
 
     const int wi = w.waveIndex();
-    if (wi >= 0 && wi < static_cast<int>(w.map().waves.size())) {
+    if (wi >= 0 && wi < static_cast<int>(w.waves().size())) {
         DrawText("INCOMING", kIncomingX, kHudY + 14, 10, inkDim);
         DrawText("hover for weaknesses", kIncomingX + 62, kHudY + 14, 10,
                  flat ? palette::kHudDim : paint::mix(kInkDim, kInk, 0.1f));
         int ix = kIncomingX + 8;
-        for (const auto& g : w.map().waves[static_cast<size_t>(wi)].groups) {
+        for (const auto& g : w.waves()[static_cast<size_t>(wi)].groups) {
             // Same sprite indirection as the board, so a map's tinted roster
             // shows correctly in the incoming preview too.
             const auto& ed = w.defs().enemy(g.enemyId);

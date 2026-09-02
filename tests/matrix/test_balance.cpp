@@ -13,6 +13,7 @@
 
 #include "content/Registry.h"
 #include "sim/AutoPlayer.h"
+#include "sim/World.h"
 
 using namespace td;
 
@@ -228,9 +229,21 @@ TEST_CASE("plots bind the endgame board and gold binds the opening", "[balance]"
 
     // Early on the opposite must hold, or the opening becomes a formality: a
     // fresh profile is stopped by its purse, not by the map.
-    const auto weak = sim::autoPlay(reg, map, fresh(), 1);
-    UNSCOPED_INFO("fresh built " << weak.towersBuilt << " of " << plots << " plots");
-    CHECK(weak.towersBuilt < plots - 4);
+    //
+    // Averaged, because waves are drawn from the run seed now: a lucky opening
+    // survives far enough to bank the gold for every plot on the board, and one
+    // seed's run says nothing about whether the opening is generally poor. Over
+    // 24 seeds it builds about half the map.
+    constexpr int kSeeds = 24;
+    float freshTowers = 0.0f;
+    for (int s = 1; s <= kSeeds; ++s) {
+        freshTowers +=
+            static_cast<float>(sim::autoPlay(reg, map, fresh(), static_cast<uint64_t>(s))
+                                   .towersBuilt);
+    }
+    freshTowers /= static_cast<float>(kSeeds);
+    UNSCOPED_INFO("fresh built " << freshTowers << " on average of " << plots << " plots");
+    CHECK(freshTowers < static_cast<float>(plots) * 0.75f);
 }
 
 TEST_CASE("a build plot has neighbours a support aura can reach", "[balance]") {
@@ -294,7 +307,7 @@ TEST_CASE("report the campaign ladder", "[balance][.report]") {
         // an 8 and a 9 on one seed each is not evidence of anything.
         float weakMean = 0.0f;
         int weakMin = 999, weakMax = 0;
-        constexpr int kSeeds = 8;
+        constexpr int kSeeds = 24;
         for (int s = 1; s <= kSeeds; ++s) {
             const auto r = sim::autoPlay(reg, def, fresh(), static_cast<uint64_t>(s));
             weakMean += static_cast<float>(r.wavesSurvived);
@@ -355,4 +368,49 @@ TEST_CASE("the campaign gets harder in the order it is played", "[balance]") {
     }
     // ...and the ladder actually goes somewhere, rather than being flat.
     CHECK(ladder.front() - ladder.back() >= 3.0f);
+}
+
+TEST_CASE("report wave-composition variance by horizon", "[balance][.report]") {
+    const auto reg = loadReg();
+    std::ostringstream out;
+    out << "\ntotal spawned health across 16 seeds, by how far a run gets\n";
+    for (int horizon : {8, 12, 20, 35, 50}) {
+        float lo = 1e30f, hi = 0.0f;
+        for (uint64_t seed = 1; seed <= 16; ++seed) {
+            sim::World w(reg, reg.map("greenfields"), seed);
+            float total = 0.0f;
+            for (int i = 0; i < horizon && i < static_cast<int>(w.waves().size()); ++i) {
+                for (const auto& g : w.waves()[static_cast<size_t>(i)].groups) {
+                    total += static_cast<float>(g.count) * reg.enemy(g.enemyId).maxHp * g.hpMult;
+                }
+            }
+            lo = std::min(lo, total);
+            hi = std::max(hi, total);
+        }
+        out << "  first " << horizon << " waves: spread " << (hi / lo - 1.0f) * 100.0f << "%\n";
+    }
+    UNSCOPED_INFO(out.str());
+    CHECK(true);
+}
+
+TEST_CASE("report fresh-run tower counts by seed", "[balance][.report]") {
+    const auto reg = loadReg();
+    const auto& map = reg.map("greenfields");
+    int plots = 0;
+    for (int y = 0; y < map.gridH; ++y)
+        for (int x = 0; x < map.gridW; ++x)
+            if (map.buildableAt(x, y)) ++plots;
+    std::ostringstream out;
+    out << "\nfresh profile on greenfields (" << plots << " plots)\n";
+    float mean = 0.0f;
+    int lo = 1 << 30, hi = 0;
+    for (uint64_t seed = 1; seed <= 24; ++seed) {
+        const auto r = sim::autoPlay(reg, map, fresh(), seed);
+        mean += static_cast<float>(r.towersBuilt);
+        lo = std::min(lo, r.towersBuilt);
+        hi = std::max(hi, r.towersBuilt);
+    }
+    out << "  towers built: mean " << mean / 24.0f << ", range " << lo << ".." << hi << "\n";
+    UNSCOPED_INFO(out.str());
+    CHECK(true);
 }
