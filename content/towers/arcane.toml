@@ -2,9 +2,9 @@
 id = "arcane"
 name = "Arcane Spire"
 desc = "Support: chains between targets, curses them, or pays gold for kills."
-buildCost = 192
+buildCost = 168
 sellRefundPct = 0.6
-damage = 14.04
+damage = 16.38
 fireRate = 0.9
 range = 3.42
 projectileSpeed = 16.0
@@ -18,13 +18,13 @@ damageType = "arcane"
 specCost = 140
 
 [[level]]                 # level 2
-cost = 219
+cost = 192
 damageMult = 1.6
 rangeMult = 1.10
 fireRateMult = 1.18
 
 [[level]]                 # level 3
-cost = 376
+cost = 332
 damageMult = 2.35
 rangeMult = 1.22
 fireRateMult = 1.34

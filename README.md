@@ -111,6 +111,13 @@ itself constantly:
   lesson is now a test (`tests/sim/test_unlock_gates.cpp`): *a gate verified only
   through `ownAll` is not verified.* The gate is also resolved from the tree
   rather than by node id, so a rename cannot silently seal it again.
+- Balance asks **value per gold**, not damage per tower. The matrix reports
+  output per tower, but towers cost 105 to 192 and the game runs a measured gold
+  deficit, so gold is what binds. On raw output brazier looks like the weakest
+  family; per gold, using each family's best pairings, it has a low mean and a
+  high ceiling — which is what a *specialist* looks like, and what its design
+  says it is. Arcane was low on both, meaning no good pairing at the highest
+  price: a bad purchase in every situation rather than a specialist. Fixed.
 - Balance is driven by `tools/balance.py`: authored base stats plus named
   multiplier profiles, so tuning is idempotent, reversible and auditable.
 - A **reachability guardrail** asserts a fully-upgraded profile gets at least 76%

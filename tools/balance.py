@@ -27,7 +27,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_TOWERS = {
     "arrow":    {"damage": 12.0, "fireRate": 1.10, "range": 3.5, "armorPen": 0.0},
     "cannon":   {"damage": 34.0, "fireRate": 0.55, "range": 3.2, "armorPen": 2.0},
-    "arcane":   {"damage": 18.0, "fireRate": 0.90, "range": 3.8, "armorPen": 6.0},
+    # Arcane measured as the clear outlier: 57% of arrow's value per gold on the
+    # robust statistic (mean of each family's top five element pairings, divided
+    # by build cost), and worst on every other cut too -- worst mean, worst
+    # ceiling, and the most expensive tower in the game. It had no good pairing,
+    # which is a bad purchase in every situation rather than a specialist.
+    # Damage 18 -> 21 alongside a cost cut, together about +33% value per gold.
+    "arcane":   {"damage": 21.0, "fireRate": 0.90, "range": 3.8, "armorPen": 6.0},
     "ballista": {"damage": 26.0, "fireRate": 0.65, "range": 4.2, "armorPen": 5.0},
     "brazier":  {"damage": 7.0,  "fireRate": 3.20, "range": 2.1, "armorPen": 0.0},
 }
@@ -40,7 +46,7 @@ BASE_TOWERS = {
 BASE_COSTS = {
     "arrow":    {"build": 60,  "upgrades": [75, 140]},
     "cannon":   {"build": 95,  "upgrades": [110, 195]},
-    "arcane":   {"build": 110, "upgrades": [125, 215]},
+    "arcane":   {"build": 96,  "upgrades": [110, 190]},  # see BASE_TOWERS
     "ballista": {"build": 105, "upgrades": [120, 205]},
     "brazier":  {"build": 85,  "upgrades": [100, 180]},
 }
