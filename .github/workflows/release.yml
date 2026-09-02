@@ -16,6 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/cpm-cache
+          key: deps-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      # Via GITHUB_ENV, not a YAML env: a literal ~ is not expanded for CMake.
+      - name: Point CPM at the cached sources
+        shell: bash
+        run: echo "CPM_SOURCE_CACHE=$HOME/cpm-cache" >> "$GITHUB_ENV"
+
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 

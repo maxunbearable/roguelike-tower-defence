@@ -25,10 +25,20 @@ jobs:
           sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libgl1-mesa-dev
 
+      # Keyed on the dependency pins, not the whole of CMakeLists.txt, and with
+      # a fallback so an edit still starts from a warm cache. macOS builds two
+      # copies of raylib and every miss cost it twenty minutes.
       - uses: actions/cache@v4
         with:
-          path: build/_deps
-          key: deps-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          path: |
+            build/_deps
+            ~/cpm-cache
+          key: deps-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake', 'cmake/get_cpm.cmake') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Point CPM at the cached sources
+        shell: bash
+        run: echo "CPM_SOURCE_CACHE=$HOME/cpm-cache" >> "$GITHUB_ENV"
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
