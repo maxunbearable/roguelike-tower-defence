@@ -146,6 +146,7 @@ void Sfx::load() {
             if (base.frameCount > 0) {
                 v.pool.push_back(base);
                 for (int i = 1; i < poolSizeFor(c); ++i) v.pool.push_back(LoadSoundAlias(base));
+                v.aliased = true;
                 cues_[c] = std::move(v);
                 ++fromFile;
                 continue;
@@ -164,7 +165,15 @@ void Sfx::load() {
 void Sfx::unload() {
     if (!loaded_) return;
     for (auto& [cue, v] : cues_) {
-        for (auto& s : v.pool) UnloadSound(s);
+        if (v.aliased) {
+            // Aliases first, then the source that owns the sample data. Order is
+            // not strictly required -- UnloadSoundAlias never touches the data --
+            // but releasing borrowers before the owner is the honest order.
+            for (size_t i = v.pool.size(); i-- > 1;) UnloadSoundAlias(v.pool[i]);
+            if (!v.pool.empty()) UnloadSound(v.pool.front());
+        } else {
+            for (auto& s : v.pool) UnloadSound(s);
+        }
     }
     cues_.clear();
     loaded_ = false;

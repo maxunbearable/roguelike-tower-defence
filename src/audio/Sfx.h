@@ -39,6 +39,16 @@ private:
     struct Voices {
         std::vector<Sound> pool;
         size_t next = 0;
+        // True when pool[0] is a real Sound and pool[1..] are LoadSoundAlias of
+        // it, sharing its sample data. Those MUST be freed with
+        // UnloadSoundAlias: raylib's UnloadSound calls UnloadAudioBuffer, which
+        // does RL_FREE(buffer->data) on data the alias does not own. Freeing a
+        // pool of one source plus three aliases with UnloadSound is four frees of
+        // one allocation -- confirmed under AddressSanitizer as
+        // "double-free raudio.c in UnloadAudioBuffer".
+        //
+        // Synthesised cues have no aliases: every voice is an independent Sound.
+        bool aliased = false;
     };
     std::map<Cue, Voices> cues_;
     bool loaded_ = false;

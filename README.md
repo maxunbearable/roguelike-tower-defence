@@ -230,6 +230,13 @@ modification in a shipped game but forbid redistributing the source art.
 
 ### Audio — committed
 
+Each cue holds a pool of voices so a busy wave can overlap the same sound: one
+real `Sound` plus `LoadSoundAlias` copies that **share its sample data**. They are
+freed with `UnloadSoundAlias`, never `UnloadSound` — the latter frees the shared
+samples, so a pool of one source and three aliases used to be four frees of one
+allocation, on every cue, every shutdown. Confirmed under AddressSanitizer as
+`double-free raudio.c in UnloadAudioBuffer`.
+
 Two CC0 music loops from OpenGameArt and 13 CC0 effects from Kenney. Sound
 effects are looked up by filename (`assets/audio/sfx/<cue>.ogg`), so any cue can
 be replaced by dropping in a different `.ogg` — no rebuild. The procedural
