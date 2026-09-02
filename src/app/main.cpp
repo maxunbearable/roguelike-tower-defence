@@ -144,6 +144,12 @@ int main(int argc, char** argv) {
 
     app::Game game(registry);
     game.loadArt();  // after InitWindow: textures need a GL context
+    // Opening a profile comes FIRST, before anything that starts a run or picks
+    // a screen. A run begun before it reads a default profile -- which is how a
+    // capture of the tutorial showed step 0 whatever the save said -- and
+    // opening one afterwards resets the screen, which silently made four of the
+    // six README screenshots the same picture of the skill trees.
+    if (openSlot >= 0) game.openSlot(openSlot);
     if (autostart) {
         game.requestStart(/*demoTowers=*/true, forceMap ? forceMap : "");
         if (cluster > 0) game.devCluster(cluster);
@@ -152,16 +158,17 @@ int main(int argc, char** argv) {
         if (jumpWave > 0) game.devJumpToWave(jumpWave);
         if (pauseIt) game.devPause();
     }
-    // Order matters: opening a profile has to come first, or a run started
-    // before it has no profile and reads a default one -- which is how a capture
-    // of "the tutorial" came back showing step 0 whatever the save said.
-    if (openSlot >= 0) game.openSlot(openSlot);
     if (freshRun) game.requestStart(/*demoTowers=*/false, forceMap ? forceMap : "");
     if (hub) { game.openHub(0); game.devSetHubTab(hubTab); }
     if (artCompare) game.showArtCompare();
     if (spriteSheet) game.showSpriteSheet();
     if (menuAt) {
-        game.requestStart(/*demoTowers=*/true);
+        // Only start a run if one is not already going. This restarted
+        // unconditionally, which threw away whatever --autostart and --cluster
+        // had just built -- so "--cluster 12 --menu 8 2" opened the menu on an
+        // empty plot and the screenshot captioned "tower stats" showed the build
+        // menu instead.
+        if (!autostart) game.requestStart(/*demoTowers=*/true);
         game.devOpenMenu(menuX, menuY);
         if (menuPage) game.devMenuPage(menuPage);
     }

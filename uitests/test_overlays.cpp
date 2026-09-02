@@ -7,6 +7,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <string>
+#include <vector>
 #include <cstdlib>
 
 #include "raylib.h"
@@ -14,6 +16,7 @@
 #include "render/Capture.h"
 #include "render/PixelCanvas.h"
 #include "render/SpriteAtlas.h"
+#include "ui/Paint.h"
 #include "ui/Screens.h"
 
 using namespace td;
@@ -109,4 +112,32 @@ TEST_CASE("capture readback preserves red and blue", "[overlay]") {
     CHECK(blue.b > 180);
     CHECK(blue.r < 80);
     UnloadImage(shot);
+}
+
+TEST_CASE("wrapped text stays inside the width it was given", "[overlay]") {
+    // The map cards drew their blurbs with no width limit at all, so all five
+    // overflowed and ran into each other. This asserts the property the fix
+    // depends on, measured with the same MeasureText the drawing uses.
+    (void)display();
+    const std::vector<std::string> blurbs = {
+        "Open meadow. Where every build starts.",
+        "Three long straights: good for reach, punishing for short range.",
+        "A long winding route. Every tower gets several passes if placed well.",
+        "Wide open ground with few corners: coverage matters more than depth.",
+        "The last map. Heavily armoured, resistant to everything, and long.",
+    };
+    constexpr int kW = 250 - 36;  // the card, less its padding
+    for (const auto& b : blurbs) {
+        const auto lines = ui::paint::wrapToWidth(b, kW, 10, 2);
+        INFO("blurb: " << b << " -> " << lines.size() << " lines");
+        REQUIRE_FALSE(lines.empty());
+        CHECK(lines.size() <= 2);
+        for (const auto& l : lines) {
+            INFO("line: \"" << l << "\" measures " << MeasureText(l.c_str(), 10));
+            CHECK(MeasureText(l.c_str(), 10) <= kW);
+        }
+        // The unwrapped string is what used to be drawn; it must not have fit,
+        // or this test would pass without the wrapping doing anything.
+        if (b.size() > 45) CHECK(MeasureText(b.c_str(), 10) > kW);
+    }
 }

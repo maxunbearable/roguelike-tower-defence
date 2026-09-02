@@ -165,6 +165,12 @@ public:
         Locked,  // the tower type has not been unlocked in the skill tree
     };
     PlaceResult placeTower(int tileX, int tileY, const std::string& towerId);
+    // Why a placement was refused, in words fit to show a player. Lives beside
+    // the enum so a new outcome cannot be added without a message: `Locked` was
+    // added to the enum and not to the mapping, so clicking one of the four
+    // greyed towers in the build menu refused the placement and said NOTHING.
+    // The compiler had been warning about it.
+    static const char* describe(PlaceResult r);
     bool upgradeTower(int tileX, int tileY);
 
     // In-run build-up. Each returns false if the step is unavailable or unaffordable.

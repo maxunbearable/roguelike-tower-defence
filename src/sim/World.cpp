@@ -448,6 +448,19 @@ entt::entity World::towerAt(int tileX, int tileY) const {
     return found;
 }
 
+const char* World::describe(PlaceResult r) {
+    switch (r) {
+        case PlaceResult::Ok: return "";
+        case PlaceResult::NotBuildable: return "cannot build there";
+        case PlaceResult::Occupied: return "tile already occupied";
+        case PlaceResult::TooPoor: return "not enough gold";
+        case PlaceResult::OutOfBounds: return "outside the map";
+        case PlaceResult::UnknownTower: return "unknown tower";
+        case PlaceResult::Locked: return "unlock this tower in the skill trees first";
+    }
+    return "";
+}
+
 World::PlaceResult World::placeTower(int tileX, int tileY, const std::string& towerId) {
     if (tileX < 0 || tileY < 0 || tileX >= map_->gridW || tileY >= map_->gridH) {
         return PlaceResult::OutOfBounds;

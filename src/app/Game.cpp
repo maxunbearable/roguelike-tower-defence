@@ -23,18 +23,6 @@
 namespace td::app {
 namespace {
 
-const char* describe(sim::World::PlaceResult r) {
-    switch (r) {
-        case sim::World::PlaceResult::Ok: return "";
-        case sim::World::PlaceResult::NotBuildable: return "cannot build there";
-        case sim::World::PlaceResult::Occupied: return "tile already occupied";
-        case sim::World::PlaceResult::TooPoor: return "not enough gold";
-        case sim::World::PlaceResult::OutOfBounds: return "outside the map";
-        case sim::World::PlaceResult::UnknownTower: return "unknown tower";
-    }
-    return "";
-}
-
 }  // namespace
 
 Game::Game(const content::Registry& registry) : registry_(&registry) { reloadSlots(); }
@@ -782,20 +770,50 @@ void Game::applyMenuItem(const ui::RadialItem& item) {
         default: break;
     }
 
+    // Every refusal used to say "not enough gold", whatever the reason. A new
+    // profile has 275 gold and the build menu offers it a cannon at 166 that it
+    // has not unlocked -- so the one message the player got was the one thing
+    // that was not true. Each action reports why it actually refused.
+    static constexpr const char* kBuyIt = "unlock this in the skill trees first";
     bool ok = false;
+    std::string why;
     switch (item.action) {
-        case A::Build:
-            ok = world_->placeTower(x, y, item.arg) == sim::World::PlaceResult::Ok;
+        case A::Build: {
+            const auto r = world_->placeTower(x, y, item.arg);
+            ok = r == sim::World::PlaceResult::Ok;
+            why = sim::World::describe(r);
             break;
-        case A::LevelUp: ok = world_->upgradeTower(x, y); break;
-        case A::AttachElement: ok = world_->attachElement(x, y, item.arg); break;
-        case A::TowerSpec: ok = world_->specialiseTower(x, y, item.arg); break;
-        case A::ElementSpec: ok = world_->specialiseElement(x, y, item.arg); break;
+        }
+        case A::LevelUp:
+            ok = world_->upgradeTower(x, y);
+            // upgradeCost is -1 when no further level exists for this profile,
+            // which is the whole of a first run: levels are bought.
+            if (!ok) why = world_->upgradeCost(x, y) > 0 ? "not enough gold" : kBuyIt;
+            break;
+        case A::AttachElement:
+            ok = world_->attachElement(x, y, item.arg);
+            if (!ok) why = world_->elementUnlocked(item.arg) ? "not enough gold" : kBuyIt;
+            break;
+        case A::TowerSpec:
+            ok = world_->specialiseTower(x, y, item.arg);
+            if (!ok) {
+                const auto& tag = world_->reg().get<sim::TowerTag>(world_->towerAt(x, y));
+                why = world_->towerSpecUnlocked(tag.defId, item.arg) ? "not enough gold" : kBuyIt;
+            }
+            break;
+        case A::ElementSpec:
+            ok = world_->specialiseElement(x, y, item.arg);
+            if (!ok) {
+                const auto& tag = world_->reg().get<sim::TowerTag>(world_->towerAt(x, y));
+                why = world_->elementSpecUnlocked(tag.elementId, item.arg) ? "not enough gold"
+                                                                          : kBuyIt;
+            }
+            break;
         default: break;
     }
 
     if (!ok) {
-        say("not enough gold");
+        say(why.empty() ? "not enough gold" : why);
         sfx_.play(audio::Cue::Click, 0.02f, 0.35f);
         return;
     }

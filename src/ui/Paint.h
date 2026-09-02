@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+#include <string>
 
 #include "raylib.h"
 
@@ -44,5 +47,15 @@ int ribbonH(const render::SpriteAtlas& a, const char* art);
 void ribbon(const render::SpriteAtlas& a, const char* art, int x, int y, int w);
 
 void centredIn(const char* t, int cx, int y, int size, Color c);
+
+// Splits text into at most `maxLines` lines that each fit `maxW` pixels, broken
+// on word boundaries, with an ellipsis if it still will not fit.
+//
+// The map cards drew their blurb with a single centred call and no width limit.
+// Card is 250px; the blurbs run to 69 characters. Every one of them overflowed,
+// and since neighbouring cards are 20px apart the text of five maps ran into
+// each other -- invisible until a profile had unlocked more than one map, which
+// is why it survived every screenshot taken from a fresh save.
+std::vector<std::string> wrapToWidth(const std::string& text, int maxW, int size, int maxLines);
 
 }  // namespace td::ui::paint

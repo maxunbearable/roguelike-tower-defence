@@ -66,10 +66,31 @@ public:
         // Capture aid, so fund it: without this the gold deficit makes a cluster
         // unaffordable and the screenshot shows two towers instead of nine.
         world_->addGold(100000);
+        // The map's own build plots, in reading order, so a cluster spreads along
+        // the route. This scanned a hardcoded x=6..10, y=5..7 rectangle, which
+        // stopped being buildable when maps grew authored plots -- so asking for
+        // twenty towers quietly produced five, and the README's gameplay
+        // screenshot showed a nearly empty board.
+        std::vector<std::pair<int, int>> plots;
+        for (int y = 0; y < world_->map().gridH; ++y) {
+            for (int x = 0; x < world_->map().gridW; ++x) {
+                if (world_->map().buildableAt(x, y)) plots.emplace_back(x, y);
+            }
+        }
+        // Rotate through the tower types rather than fielding twenty arrows: a
+        // board of one building tells the reader nothing about a game whose
+        // pitch is combinations.
+        std::vector<std::string> types;
+        for (const auto& [id, def] : registry_->towers()) types.push_back(id);
+        std::sort(types.begin(), types.end());
         int placed = 0;
-        for (int y = 5; y <= 7 && placed < n; ++y) {
-            for (int x = 6; x <= 10 && placed < n; ++x) {
-                if (world_->placeTower(x, y, "arrow") != sim::World::PlaceResult::Ok) continue;
+        for (const auto& [x, y] : plots) {
+            if (placed >= n) break;
+            {
+                const std::string& pick =
+                    types.empty() ? std::string("arrow")
+                                  : types[static_cast<size_t>(placed) % types.size()];
+                if (world_->placeTower(x, y, pick) != sim::World::PlaceResult::Ok) continue;
                 // Must test the UPGRADE, not just its cost. upgradeCost() stays
                 // positive when a level exists but is unaffordable or locked,
                 // while upgradeTower() returns false -- so testing only the cost

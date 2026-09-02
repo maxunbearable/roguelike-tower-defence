@@ -134,6 +134,38 @@ python3 tools/compose_art.py /path/to/tiny-packs
 Anything not overridden still uses the generated art in
 `content/art/sprites.toml` (terrain, props, icons, effects).
 
+### Screenshots of the game — committed, and why
+
+`docs/screenshots/` is tracked, and those images contain the licensed art
+rendered into frames. `.gitignore` asserted this was fine without recording a
+basis, so here it is, along with its limit.
+
+**Checked at both sources 2026-09-02. Neither licence mentions screenshots at
+all.** What they actually restrict is the asset *files*:
+
+- CraftPix: *"You can NOT resell the art source files (PNG, JPG, EPS, Adobe
+  Illustrator, etc) or slightly modified version of the art."* Its extraction
+  clause is about apps: *"an app that uses the art as part of the play of the
+  game is fine. An app that allows the user to save or export a modified version
+  of the artwork itself is not fine."*
+- Tiny Swords: *"You may not redistribute, resell, or repackage the assets, even
+  if the files are modified."*
+
+So the basis is the commercial-use grant, not an explicit permission: a game that
+may be sold cannot be sold without being shown, and a composited gameplay frame
+is the product rather than the source files. That is the ordinary reading and the
+ordinary practice, but it is a **judgement**, not a term either vendor wrote
+down.
+
+Where that leaves the repository:
+
+- Gameplay frames of the finished product: kept.
+- Anything that functions as an asset sheet -- a grid of sprites, a tower
+  line-up, an element overlay strip -- is **not** committed. Several such renders
+  exist under `docs/previews/`, which is gitignored for exactly this reason.
+- If an explicit answer is ever needed, CraftPix support is the route; Pixel Frog
+  has no stated process.
+
 ### Rejected sources, and why
 
 - **CraftPix** — best art fit and the licence permits commercial use and Steam,

@@ -729,8 +729,15 @@ void drawMaps(const render::SpriteAtlas& atlas, const content::Registry& reg,
         }
 
         // The blurb is the map's own, so what makes it different is readable
-        // before committing a run to it.
-        centredIn(def.blurb.c_str(), x + kMapCardW / 2, kMapTop + 210, 10, kInkDim);
+        // before committing a run to it. Wrapped to the card: unwrapped, all five
+        // overflowed and ran into each other.
+        {
+            int by = kMapTop + 202;
+            for (const auto& line : paint::wrapToWidth(def.blurb, kMapCardW - 36, 10, 2)) {
+                centredIn(line.c_str(), x + kMapCardW / 2, by, 10, kInkDim);
+                by += 12;
+            }
+        }
 
         // The one mechanic the campaign rests on, and the screen never said it.
         // Derived from this map's own roster, so it cannot contradict the
