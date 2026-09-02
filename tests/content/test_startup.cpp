@@ -15,6 +15,7 @@
 // These tests corrupt a real copy of the game's content and check what comes
 // back, rather than asserting on a hand-built fixture that might not resemble it.
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -85,18 +86,7 @@ TEST_CASE("a malformed file is reported, not thrown", "[startup]") {
     CHECK(mentions(out.problem, "buildCost"));
 }
 
-#ifdef NDEBUG
 TEST_CASE("unparseable TOML is reported, not thrown", "[startup]") {
-    // Guarded by NDEBUG because the behaviour genuinely differs by build type,
-    // and pretending otherwise would mean a test that cannot pass.
-    //
-    // toml++ asserts inside its own parser on syntactically invalid input
-    // (parser.inl: is_bare_key_character), and assert() calls abort(), which no
-    // try/catch can intercept. In a Debug build a corrupt file kills the process
-    // before any error handling runs. With NDEBUG the assert is gone and the
-    // parser throws, which loadAndValidate catches like anything else. Shipping
-    // builds are Release, which is why the default build type was changed.
-    //
     // Not a missing key -- syntactically broken, which fails deeper in the parser.
     ContentCopy c("garbage");
     c.corrupt("towers/cannon.toml", "[[level]]", "[[[[not toml");
@@ -107,7 +97,23 @@ TEST_CASE("unparseable TOML is reported, not thrown", "[startup]") {
     REQUIRE_FALSE(out.ok);
     CHECK(!out.problem.empty());
 }
-#endif  // NDEBUG
+
+TEST_CASE("a table header with an invalid key starter is reported", "[startup]") {
+    // toml++ 3.4.0 entered parse_key() on '[' without checking the next
+    // character, which asserted in Debug and was UB in Release. These are the
+    // shapes that triggered it; each must now come back as a normal error.
+    const auto broken = GENERATE(as<std::string>{},
+                                 "[=tower]", "[.tower]", "[#tower]",
+                                 "[\\tower]", "[&tower]", "[", "[[[level]]");
+    ContentCopy c("badheader");
+    c.corrupt("towers/cannon.toml", "[[level]]", broken);
+
+    content::Registry reg;
+    const auto out = content::loadAndValidate(reg, c.dir);
+    INFO("header: " << broken << " -> " << out.problem);
+    REQUIRE_FALSE(out.ok);
+    CHECK(!out.problem.empty());
+}
 
 TEST_CASE("content that fails validation refuses to start", "[startup]") {
     // A modifier pointing at a stat path that does not exist. The validator has
