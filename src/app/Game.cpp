@@ -1,5 +1,6 @@
 #include "app/Game.h"
 
+#include "content/SpecFacts.h"
 #include "core/Settings.h"
 #include "sim/Tutorial.h"
 
@@ -363,8 +364,17 @@ void Game::updateResults() {
 std::string specDesc(const content::Registry& reg, const std::string& treeId,
                      const std::string& spec) {
     if (reg.hasTree(treeId)) {
-        if (const auto* n = reg.tree(treeId).find(treeId + "." + spec + ".core")) {
-            if (!n->desc.empty()) return n->desc;
+        const auto& tree = reg.tree(treeId);
+        const std::string id = treeId + "." + spec + ".core";
+        if (const auto* n = tree.find(id)) {
+            // Prose says what it IS; the derived numbers say how much. Choosing a
+            // specialisation used to be done on flavour text alone -- not one of
+            // the 33 said a single figure -- and it is the decision that defines
+            // a whole build.
+            std::string out = n->desc;
+            const auto nums = content::specNumbersLine(tree, id);
+            if (!nums.empty()) out += out.empty() ? nums : "  (" + nums + ")";
+            if (!out.empty()) return out;
         }
     }
     return "One of each specialisation may exist on the map at a time.";

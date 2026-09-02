@@ -6,6 +6,7 @@
 #include "raylib.h"
 
 #include "content/MapFacts.h"
+#include "content/SpecFacts.h"
 #include "core/Difficulty.h"
 #include "core/Settings.h"
 #include "core/Progression.h"
@@ -495,9 +496,16 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
         // node actually does.
         if (hit.kind == HubAction::Kind::Buy) {
             if (const auto* n = tree.find(hit.nodeId)) {
-                const int w = std::max({MeasureText(n->name.c_str(), 20),
-                                        MeasureText(n->desc.c_str(), 10), 220}) + 36;
-                const int h = 92;
+                const auto nums = content::specNumbersLine(tree, n->id);
+                // The numbers line is long -- Sniper alone carries six figures --
+                // so the panel grows for it, but only up to a width that still
+                // fits the screen. std::clamp below has undefined behaviour when
+                // lo > hi, which an unbounded width would produce.
+                const int maxW = kVirtualW - 2 * (kPanelX + 8);
+                const int w = std::min(maxW, std::max({MeasureText(n->name.c_str(), 20),
+                                                       MeasureText(n->desc.c_str(), 10),
+                                                       MeasureText(nums.c_str(), 10), 220}) + 36);
+                const int h = nums.empty() ? 92 : 106;
                 const auto np = nodePos(L, *n);
                 const int x = std::clamp(static_cast<int>(np.x) - w / 2, kPanelX + 8,
                                          kVirtualW - w - kPanelX - 8);
@@ -508,7 +516,13 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 panel(atlas, x, y, w, h);
                 DrawText(n->name.c_str(), x + 18, y + 12, 20, kInk);
                 DrawText(n->desc.c_str(), x + 18, y + 38, 10, kInkDim);
-                DrawText(TextFormat("%d shards", n->cost), x + 18, y + 56, 10,
+                // The figures behind a specialisation, derived from its own
+                // modifiers so they cannot drift from what it actually does.
+                if (!nums.empty()) {
+                    DrawText(nums.c_str(), x + 18, y + 52, 10,
+                             paint::mix(kInkDim, kInk, 0.35f));
+                }
+                DrawText(TextFormat("%d shards", n->cost), x + 18, y + (nums.empty() ? 56 : 70), 10,
                          slot.meta.shards >= n->cost ? Color{62, 122, 52, 255} : kInkWarn);
 
                 // Say WHY it cannot be bought, naming the prerequisites still
@@ -524,8 +538,8 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                         need += pr->name;
                     }
                     if (!need.empty()) {
-                        DrawText(TextFormat("needs %s", need.c_str()), x + 18, y + 68, 10,
-                                 kInkWarn);
+                        DrawText(TextFormat("needs %s", need.c_str()), x + 18,
+                                 y + (nums.empty() ? 68 : 82), 10, kInkWarn);
                     }
                 }
                 if (n->branch != "trunk") {

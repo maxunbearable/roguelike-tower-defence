@@ -161,7 +161,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 265 tests
+ctest --test-dir build          # 271 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -287,6 +287,18 @@ Nothing reduces shard payout below baseline. Taxing the meta progression of
 players who chose the easier setting punishes exactly the people who needed it,
 and it is the design players most often say makes them doubt a game's fairness.
 Brutal pays 35% more instead — harder is rewarded rather than easier being taxed.
+
+## Saying what things do
+
+Every specialisation shows the **exact figures it gives you** — Sniper is not
+"far heavier shots", it is `damage x2.6, fire rate x0.45, range x1.7, crit +20%,
+armour pen +4, execute below 60%`. All 33 specialisation cores previously carried
+prose and not one number between them, which made the decision that defines a
+whole build a guess.
+
+The figures are **derived from each node's own modifiers**, never written by
+hand, so retuning a value updates the text automatically. Hand-written numbers
+drift, and a description that lies is worse than one that is vague.
 
 ## Learning the game
 
