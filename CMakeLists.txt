@@ -70,7 +70,12 @@ target_link_libraries(td_core PUBLIC
 # --- td_app : executable --------------------------------------------------
 file(GLOB_RECURSE APP_SRC CONFIGURE_DEPENDS
      src/render/*.cpp src/ui/*.cpp src/app/*.cpp src/audio/*.cpp)
-add_executable(td_app ${APP_SRC})
+# The .rc gives the Windows executable its icon; elsewhere it is ignored.
+if(WIN32)
+  add_executable(td_app ${APP_SRC} packaging/app.rc)
+else()
+  add_executable(td_app ${APP_SRC})
+endif()
 target_link_libraries(td_app PRIVATE td_core raylib)
 target_compile_definitions(td_app PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
@@ -148,11 +153,18 @@ if(APPLE)
       MACOSX_BUNDLE_GUI_IDENTIFIER "com.wardstone.game"
       MACOSX_BUNDLE_BUNDLE_VERSION "${TD_VERSION}"
       MACOSX_BUNDLE_SHORT_VERSION_STRING "${TD_VERSION}"
-      MACOSX_BUNDLE_COPYRIGHT "zlib/MIT/CC0 third-party assets; see ASSET-POLICY.md")
+      MACOSX_BUNDLE_COPYRIGHT "zlib/MIT/CC0 third-party assets; see ASSET-POLICY.md"
+      MACOSX_BUNDLE_ICON_FILE "Wardstone.icns")
+  # The icns has to be a source of the target with a package location, or the
+  # bundle gets a CFBundleIconFile pointing at a file that is not there.
+  target_sources(td_app PRIVATE "${CMAKE_SOURCE_DIR}/packaging/Wardstone.icns")
+  set_source_files_properties("${CMAKE_SOURCE_DIR}/packaging/Wardstone.icns"
+      PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
   install(TARGETS td_app BUNDLE DESTINATION .)
   install(DIRECTORY content assets DESTINATION "Wardstone.app/Contents/Resources")
   set(CPACK_GENERATOR "DragNDrop")
   set(CPACK_DMG_VOLUME_NAME "Wardstone")
+  set(CPACK_DMG_VOLUME_ICON "${CMAKE_SOURCE_DIR}/packaging/Wardstone.icns")
 else()
   install(TARGETS td_app RUNTIME DESTINATION .)
   install(DIRECTORY content assets DESTINATION .)
@@ -164,6 +176,8 @@ else()
     set(CPACK_PACKAGE_EXECUTABLES "td_app;Wardstone")
     set(CPACK_CREATE_DESKTOP_LINKS "td_app")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/packaging/Wardstone.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/packaging/Wardstone.ico")
   else()
     set(CPACK_GENERATOR "TGZ")
   endif()

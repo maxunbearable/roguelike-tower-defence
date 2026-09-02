@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="packaging/icon.png" width="120" alt="Wardstone">
+
 # Wardstone
 
 **A pixel-art roguelike tower defence, written from scratch in C++20.**
@@ -233,6 +235,11 @@ gold on imbuing instead of building, and measured waves fall from 14 to 10 over
 the opening runs.
 
 ### Packaging
+
+The application icon is drawn from the game's own palette by
+`tools/make_icon.py`, which writes the `.icns` and `.ico` in `packaging/`. It is
+hand-drawn rather than taken from the sprite packs, whose licences forbid
+redistribution — the icon ships inside the installer and is committed.
 
 ```sh
 cmake -B build -DCMAKE_BUILD_TYPE=Release
