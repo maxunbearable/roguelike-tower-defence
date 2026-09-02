@@ -135,7 +135,13 @@ int main(int argc, char** argv) {
         return 3;
     }
     InitAudioDevice();
-    SetMasterVolume(0.65f);
+    // Silent while capturing. A screenshot run still simulates waves, so it
+    // fired every build, shot and death cue at the machine it was rendering on
+    // -- and tools/shots.sh renders six of them back to back. The device is
+    // still opened so the sound code runs (and any fault in it still shows up
+    // here); only the output is muted. TD_MUTE=1 silences a normal run too.
+    const bool silent = shotPath != nullptr || std::getenv("TD_MUTE") != nullptr;
+    SetMasterVolume(silent ? 0.0f : 0.65f);
     const int s = bestWindowScale();
     SetWindowSize(render::kVirtualW * s, render::kVirtualH * s);
     SetWindowPosition((GetMonitorWidth(GetCurrentMonitor()) - render::kVirtualW * s) / 2,

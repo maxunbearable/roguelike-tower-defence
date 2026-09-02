@@ -13,6 +13,9 @@
 
 #include "raylib.h"
 
+#include <filesystem>
+#include "content/Registry.h"
+#include "core/SaveGame.h"
 #include "render/Capture.h"
 #include "render/PixelCanvas.h"
 #include "render/SpriteAtlas.h"
@@ -140,4 +143,94 @@ TEST_CASE("wrapped text stays inside the width it was given", "[overlay]") {
         // or this test would pass without the wrapping doing anything.
         if (b.size() > 45) CHECK(MeasureText(b.c_str(), 10) > kW);
     }
+}
+
+// --- skill tree wiring ----------------------------------------------------
+
+namespace {
+
+// How many pixels inside the tree panel are meaningfully darker than the
+// parchment they sit on. The connectors are the only thing in that band that is
+// darker than the panel and wider than a glyph stroke, so this counts wiring.
+int wiringPixels(const Image& shot, int minContrast) {
+    const auto lum = [](Color c) { return (c.r * 299 + c.g * 587 + c.b * 114) / 1000; };
+    // The panel's own colour, taken as the most common luma inside the box
+    // rather than from a fixed coordinate: with no sprite atlas the panel is
+    // drawn by the fallback path, so a hardcoded sample landed off it and every
+    // measurement came back zero.
+    int hist[256] = {0};
+    std::vector<int> lums;
+    for (int y = 320; y < 700; y += 2) {
+        for (int x = 60; x < 1340; x += 2) {
+            const int l = lum(GetImageColor(shot, x, y));
+            ++hist[l];
+            lums.push_back(l);
+        }
+    }
+    int panel = 0;
+    for (int i = 0; i < 256; ++i) {
+        if (hist[i] > hist[panel]) panel = i;
+    }
+    // ABSOLUTE contrast, not "darker than the panel". Which side of the panel
+    // the wiring falls on depends on whether the sprite atlas is loaded: with
+    // art the panel is parchment and the links are darker, without it the
+    // fallback panel is dark navy and they are lighter. Signing the comparison
+    // made this measure zero in the test and 64 in the game.
+    int n = 0;
+    for (const int l : lums) {
+        if (std::abs(panel - l) >= minContrast) ++n;
+    }
+    return n;
+}
+
+td::core::SaveSlot profileOwning(const td::content::Registry& reg, bool all) {
+    td::core::SaveSlot s;
+    s.used = true;
+    s.meta.shards = 900;
+    if (all) {
+        for (const auto& [id, tree] : reg.trees()) {
+            for (const auto& node : tree.nodes) s.meta.ownedNodes.insert(node.id);
+        }
+    }
+    return s;
+}
+
+}  // namespace
+
+TEST_CASE("a prerequisite link contrasts with the panel it is drawn on", "[tree]") {
+    // The defect, in numbers: a walked link was drawn in the raw branch tint,
+    // and the trunk tint is (198,178,148) against a panel of (204,184,141) --
+    // nine luma. Rendered, the tree showed a new player its structure and hid it
+    // the moment they bought anything.
+    //
+    // Measured here rather than counted off a screenshot: a first attempt did
+    // count dark pixels in the rendered panel and was VACUOUS -- node circles
+    // and captions dominated the count, and with no sprite atlas the fallback
+    // panel is dark navy, so even the pale tint contrasted. It reported
+    // identical figures with the bug reintroduced.
+    const auto luma = [](Color c) { return (c.r * 299 + c.g * 587 + c.b * 114) / 1000; };
+    const int panel = luma(ui::paint::kTreePanel);
+
+    for (const auto& branch : ui::paint::branchNames()) {
+        const Color tint = ui::paint::branchTint(branch);
+        for (const bool walked : {false, true}) {
+            const Color c = ui::paint::linkColour(tint, walked);
+            const int d = std::abs(luma(c) - panel);
+            INFO(branch << (walked ? " walked" : " unwalked") << ": luma contrast " << d);
+            // 25 is the floor at which a 4px line reads on this parchment; the
+            // shipped values land between 45 and 75.
+            CHECK(d >= 25);
+        }
+    }
+}
+
+TEST_CASE("the raw branch tints are what could not be used", "[tree]") {
+    // Keeps the fix honest. If somebody ever "simplifies" linkColour back to the
+    // tint, the test above fails -- and this one says why it had to exist: the
+    // trunk tint on its own is invisible on the panel.
+    const auto luma = [](Color c) { return (c.r * 299 + c.g * 587 + c.b * 114) / 1000; };
+    const int panel = luma(ui::paint::kTreePanel);
+    const int raw = std::abs(luma(ui::paint::branchTint("trunk")) - panel);
+    INFO("raw trunk tint against the panel: " << raw << " luma");
+    CHECK(raw < 15);  // the original bug, recorded
 }

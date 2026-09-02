@@ -54,6 +54,27 @@ void ribbon(const render::SpriteAtlas& a, const char* art, int x, int y, int w) 
     }
 }
 
+Color branchTint(const std::string& branch) {
+    if (branch == "sniper") return Color{126, 170, 214, 255};
+    if (branch == "elf") return Color{132, 202, 130, 255};
+    if (branch == "hunter") return Color{226, 168, 88, 255};
+    if (branch == "poison") return Color{158, 204, 106, 255};
+    if (branch == "rock") return Color{176, 162, 196, 255};
+    if (branch == "quake") return Color{206, 156, 104, 255};
+    return Color{198, 178, 148, 255};  // trunk
+}
+
+const std::vector<std::string>& branchNames() {
+    static const std::vector<std::string> v = {"trunk",  "sniper", "elf",  "hunter",
+                                               "poison", "rock",   "quake"};
+    return v;
+}
+
+Color linkColour(Color branchTint, bool walked) {
+    return walked ? mix(branchTint, Color{62, 48, 34, 255}, 0.45f)
+                  : mix(branchTint, Color{78, 62, 46, 255}, 0.70f);
+}
+
 std::vector<std::string> wrapToWidth(const std::string& text, int maxW, int size, int maxLines) {
     std::vector<std::string> out;
     if (text.empty() || maxLines <= 0) return out;

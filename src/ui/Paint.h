@@ -58,4 +58,29 @@ void centredIn(const char* t, int cx, int y, int size, Color c);
 // is why it survived every screenshot taken from a fresh save.
 std::vector<std::string> wrapToWidth(const std::string& text, int maxW, int size, int maxLines);
 
+// The parchment the skill tree panel is painted with, measured off the rendered
+// panel (the panel itself comes from the sprite atlas, so this is a reference
+// value, not its source). Link colours must contrast against THIS, which is the
+// thing that was never checked.
+inline constexpr Color kTreePanel{204, 184, 141, 255};
+
+// The colour a prerequisite link is drawn in. `walked` means the prerequisite is
+// owned.
+//
+// Both states must read against kTreePanel. A walked link used to be drawn in
+// the raw branch tint, and the trunk tint is (198,178,148) against a panel of
+// (204,184,141) -- nine luma of contrast, which is invisible. Emphasis is
+// carried by width and saturation instead, never by lightness.
+Color linkColour(Color branchTint, bool walked);
+
+// Branch colour coding. The eye groups by hue long before it reads a label,
+// which is what makes three specialisation paths legible at a glance instead of
+// one undifferentiated web. Lives here, beside `linkColour`, because a tint and
+// the contrast it has to achieve are the same question.
+Color branchTint(const std::string& branch);
+
+// Every branch a tree can name, so a test can check all of them rather than the
+// ones somebody remembered.
+const std::vector<std::string>& branchNames();
+
 }  // namespace td::ui::paint

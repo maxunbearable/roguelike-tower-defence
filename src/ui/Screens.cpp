@@ -185,15 +185,6 @@ int nodeTier(const core::SkillTree& tree, const core::SkillNode& n, int depth = 
     return best;
 }
 
-Color branchTint(const std::string& branch) {
-    if (branch == "sniper") return Color{126, 170, 214, 255};
-    if (branch == "elf") return Color{132, 202, 130, 255};
-    if (branch == "hunter") return Color{226, 168, 88, 255};
-    if (branch == "poison") return Color{158, 204, 106, 255};
-    if (branch == "rock") return Color{176, 162, 196, 255};
-    if (branch == "quake") return Color{206, 156, 104, 255};
-    return Color{198, 178, 148, 255};  // trunk
-}
 
 }  // namespace
 
@@ -414,16 +405,47 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 if (!pr) continue;
                 const auto from = nodePos(L, *pr);
                 const bool lit = slot.meta.ownedNodes.count(req) > 0;
-                const Color tint = branchTint(n.branch);
-                // An unowned link is drawn DARKER than the parchment, not paler.
-                // It used to be mixed 62% toward the background it sits on, so
-                // the wiring only appeared once the prerequisite was already
-                // owned -- the tree showed its structure exactly when the player
-                // no longer needed it, and a first-time player saw a grid of
-                // unconnected circles. Structure first, emphasis second.
-                const Color dim = paint::mix(tint, Color{78, 62, 46, 255}, 0.70f);
-                DrawLineEx({from.x, from.y}, {to.x, to.y}, lit ? 6.0f : 4.0f,
-                           lit ? tint : dim);
+                const Color tint = paint::branchTint(n.branch);
+                // BOTH states are drawn darker than the parchment they sit on.
+                //
+                // A previous pass fixed the unowned link, which had been mixed
+                // toward the background and so appeared only once the player no
+                // longer needed it -- and left the owned link drawn in the raw
+                // branch tint. The trunk tint is (198,178,148) against parchment
+                // (204,184,141): measured, 9 luma of contrast against 86 for the
+                // unowned case. So the tree showed its structure to a player who
+                // owned nothing and hid it the moment they bought anything,
+                // which is the same fault the comment above describes, inverted.
+                //
+                // Emphasis is carried by WIDTH and saturation, not by lightness:
+                // a walked path is thicker and keeps its branch hue, an unwalked
+                // one is thinner and greyer. Making it lighter is what broke it.
+                const Color walked = paint::linkColour(tint, /*walked=*/true);
+                const Color unwalked = paint::linkColour(tint, /*walked=*/false);
+                const Color c = lit ? walked : unwalked;
+
+                // Routed around the grid rather than straight through it. A
+                // straight line from a root to a node six columns away crosses
+                // every node between them -- the global tree's ability chains
+                // ran diagonally across the whole panel and through two other
+                // nodes on the way. Three segments keep the long run in the gap
+                // BETWEEN rows, where there is nothing to cross.
+                const float w = lit ? 6.0f : 4.0f;
+                if (std::abs(from.x - to.x) < 1.0f) {
+                    DrawLineEx({from.x, from.y}, {to.x, to.y}, w, c);
+                } else {
+                    // The run sits in the gap next to the CHILD rather than
+                    // halfway: a parent showing its cost carries a 25px caption
+                    // block under it, which on 84px row spacing leaves the
+                    // midpoint inside the caption. The captions are drawn on
+                    // opaque plates spanning their column, so where this does
+                    // pass behind one it is hidden rather than striking through.
+                    const float dir = to.y >= from.y ? 1.0f : -1.0f;
+                    const float busY = to.y - dir * (L.radius + 10.0f);
+                    DrawLineEx({from.x, from.y}, {from.x, busY}, w, c);
+                    DrawLineEx({from.x, busY}, {to.x, busY}, w, c);
+                    DrawLineEx({to.x, busY}, {to.x, to.y}, w, c);
+                }
             }
         }
 
@@ -433,7 +455,7 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             const bool reachable = core::prereqsMet(tree, slot.meta, n.id);
             const bool affordable = reachable && !owned && slot.meta.shards >= n.cost;
             const bool hot = hit.kind == HubAction::Kind::Buy && hit.nodeId == n.id;
-            const Color tint = branchTint(n.branch);
+            const Color tint = paint::branchTint(n.branch);
 
             const Color fill = owned       ? tint
                                : reachable ? Color{236, 224, 200, 255}
@@ -484,11 +506,15 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             // nodes and pass straight through this text, so without the plate the
             // label sits on a line and both become harder to read.
             {
+                // Opaque, and as wide as the caption needs within its column.
+                // At 232 alpha a link routed behind the text still showed
+                // through it; the plate exists precisely so that cannot happen.
                 const int cw = MeasureText(n.name.c_str(), 10);
+                const int pw = std::min(static_cast<int>(L.stepX) - 6, cw + 14);
                 const int ch = owned ? 13 : 25;
-                DrawRectangle(static_cast<int>(p.x) - cw / 2 - 4,
-                              static_cast<int>(p.y + L.radius) + 4, cw + 8, ch,
-                              Color{214, 196, 166, 232});
+                DrawRectangle(static_cast<int>(p.x) - pw / 2,
+                              static_cast<int>(p.y + L.radius) + 4, pw, ch,
+                              Color{212, 193, 161, 255});
             }
             centredIn(n.name.c_str(), static_cast<int>(p.x),
                       static_cast<int>(p.y + L.radius) + 6, 10, owned ? kInk : kInkDim);
