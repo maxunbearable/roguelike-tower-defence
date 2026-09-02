@@ -92,7 +92,7 @@ elseif(WIN32)
   target_link_libraries(raylib_sw PUBLIC winmm)
 endif()
 
-add_executable(td_shot ${APP_SRC})
+add_executable(td_shot EXCLUDE_FROM_ALL ${APP_SRC})
 target_link_libraries(td_shot PRIVATE td_core raylib_sw)
 target_compile_definitions(td_shot PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
