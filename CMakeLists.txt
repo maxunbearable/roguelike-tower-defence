@@ -55,6 +55,9 @@ file(GLOB_RECURSE CORE_SRC CONFIGURE_DEPENDS
      src/core/*.cpp src/sim/*.cpp src/content/*.cpp)
 add_library(td_core STATIC ${CORE_SRC})
 target_include_directories(td_core PUBLIC src)
+# Last-resort resource root, so a build run in place from the source tree works
+# without an install step. Every packaged layout is preferred over it.
+target_compile_definitions(td_core PUBLIC TD_SOURCE_ROOT="${CMAKE_SOURCE_DIR}")
 target_link_libraries(td_core PUBLIC
     EnTT::EnTT
     tomlplusplus::tomlplusplus
@@ -102,6 +105,49 @@ target_compile_definitions(td_shot PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
     TD_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
     TD_HEADLESS=1)
+
+# --- packaging -------------------------------------------------------------
+# Resources sit beside the executable (or in Contents/Resources on macOS), which
+# is what core::resourceRoot looks for.
+set(TD_VERSION 1.0.0)
+
+if(APPLE)
+  set_target_properties(td_app PROPERTIES
+      MACOSX_BUNDLE TRUE
+      OUTPUT_NAME "Wardstone"
+      MACOSX_BUNDLE_BUNDLE_NAME "Wardstone"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "com.wardstone.game"
+      MACOSX_BUNDLE_BUNDLE_VERSION "${TD_VERSION}"
+      MACOSX_BUNDLE_SHORT_VERSION_STRING "${TD_VERSION}"
+      MACOSX_BUNDLE_COPYRIGHT "zlib/MIT/CC0 third-party assets; see ASSET-POLICY.md")
+  install(TARGETS td_app BUNDLE DESTINATION .)
+  install(DIRECTORY content assets DESTINATION "Wardstone.app/Contents/Resources")
+  set(CPACK_GENERATOR "DragNDrop")
+  set(CPACK_DMG_VOLUME_NAME "Wardstone")
+else()
+  install(TARGETS td_app RUNTIME DESTINATION .)
+  install(DIRECTORY content assets DESTINATION .)
+  if(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_NSIS_PACKAGE_NAME "Wardstone")
+    set(CPACK_NSIS_DISPLAY_NAME "Wardstone")
+    set(CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
+    set(CPACK_PACKAGE_EXECUTABLES "td_app;Wardstone")
+    set(CPACK_CREATE_DESKTOP_LINKS "td_app")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+  else()
+    set(CPACK_GENERATOR "TGZ")
+  endif()
+endif()
+
+set(CPACK_PACKAGE_NAME "Wardstone")
+set(CPACK_PACKAGE_VENDOR "Wardstone")
+set(CPACK_PACKAGE_VERSION "${TD_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A pixel-art roguelike tower defence")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Wardstone")
+set(CPACK_PACKAGE_FILE_NAME "Wardstone-${TD_VERSION}-${CMAKE_SYSTEM_NAME}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/THIRD_PARTY_LICENSES.md")
+include(CPack)
 
 enable_testing()
 add_subdirectory(tests)

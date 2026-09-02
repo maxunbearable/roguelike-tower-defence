@@ -1,5 +1,7 @@
 #include "render/Renderer.h"
 
+#include "core/Paths.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -67,11 +69,11 @@ bool isPath(const content::MapDef& m, int x, int y) {
 
 void Renderer::load(const content::Registry& reg) {
     (void)reg;
-    atlas_.load(content::loadSprites(std::filesystem::path(TD_CONTENT_DIR) / "art" /
+    atlas_.load(content::loadSprites(core::contentDir() / "art" /
                                      "sprites.toml"));
     // Hand-made art wins over generated art, per sprite. Drop a PNG named after
     // any sprite id into assets/sprites/ and it takes over.
-    atlas_.loadOverrides(std::filesystem::path(TD_ASSET_DIR) / "sprites");
+    atlas_.loadOverrides(core::assetDir() / "sprites");
     tiles_.generate(kTile);
 }
 

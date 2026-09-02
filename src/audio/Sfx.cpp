@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "core/Paths.h"
 #include "core/Synth.h"
 
 namespace td::audio {
@@ -129,7 +130,7 @@ const char* fileFor(Cue c) {
 
 void Sfx::load() {
     if (loaded_) return;
-    const std::filesystem::path dir = std::filesystem::path(TD_ASSET_DIR) / "audio" / "sfx";
+    const std::filesystem::path dir = core::assetDir() / "audio" / "sfx";
     int fromFile = 0, fromSynth = 0;
 
     for (const Cue c : {Cue::Shoot, Cue::Hit, Cue::Crit, Cue::Death, Cue::Quake, Cue::Leak,

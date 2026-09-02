@@ -19,17 +19,13 @@ class World;
 //
 //  1. ONE mechanic at a time, introduced when it becomes relevant. Hence a
 //     single current step rather than a panel of instructions.
-//  2. Learn by doing. Every step is gated on the player actually performing the
-//     action -- `satisfied()` observes the world, it is never a timer and never
-//     a "click to continue".
-//  2b. A step the player cannot yet perform WAITS, and says what would unlock
-//     it. It used to claim it was skipped, and was not: levelling a tower is
-//     bought in the skill trees, so on a first run -- the only run a tutorial
-//     ever sees -- that step could never be satisfied and the tutorial stalled
-//     on it permanently. Anything sequenced behind it was never taught at all.
-//     Steps that depend on a purchase therefore come LAST, so a first run is
-//     taught everything it can actually do.
-//  3. Always skippable, and never repeated once finished.
+//  2. Learn by doing. Every step is gated on the player performing the action --
+//     `satisfied()` observes the world, never a timer or a "click to continue".
+//  3. A step the player cannot yet perform WAITS and says what would unlock it.
+//     Steps needing a purchase therefore come last, so a first run is taught
+//     everything it can actually do.
+//  4. Always skippable, never repeated once finished.
+
 // The ORDER of this enum is the save format -- it is serialised as an integer
 // into the profile -- so the sequence lives in `tutorialNext`, not here.
 enum class TutorialStep {

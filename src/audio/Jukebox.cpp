@@ -1,5 +1,7 @@
 #include "audio/Jukebox.h"
 
+#include "core/Paths.h"
+
 #include <algorithm>
 #include <filesystem>
 
@@ -18,7 +20,7 @@ void Jukebox::load() {
     if (loaded_) return;
 
     const std::filesystem::path dir =
-        std::filesystem::path(TD_ASSET_DIR) / "audio" / "music";
+        core::assetDir() / "audio" / "music";
 
     const auto init = [&dir](Stream& s, core::Track t, const char* file) {
         // Prefer the recorded CC0 track. The composed one stays as the fallback

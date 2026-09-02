@@ -1,4 +1,6 @@
 #include <algorithm>
+
+#include "core/Paths.h"
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -126,7 +128,7 @@ int main(int argc, char** argv) {
     // errors were logged and the game started anyway, which meant content the
     // validator had already declared broken ran in an undefined state.
     content::Registry registry;
-    if (const auto outcome = content::loadAndValidate(registry, TD_CONTENT_DIR); !outcome.ok) {
+    if (const auto outcome = content::loadAndValidate(registry, core::contentDir()); !outcome.ok) {
         std::fprintf(stderr, "\nCannot start: %s\n\n", outcome.problem.c_str());
         return 2;
     }

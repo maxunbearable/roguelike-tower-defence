@@ -1,11 +1,35 @@
-# Roguelike Tower Defence — *Wardstone*
+<div align="center">
 
-A pixel-art roguelike tower defence in C++20. Towers specialise, elements
-specialise, and the two **combine** — 270 distinct builds from 33 authored
-pieces. Every map resists a different element, so the build that cleared the
-last map is the wrong build for the next one.
+# Wardstone
+
+**A pixel-art roguelike tower defence, written from scratch in C++20.**
+
+Towers specialise, elements specialise, and the two *combine* — **270 distinct
+builds from 33 authored pieces**. Every map resists a different element, so the
+build that cleared the last one is the wrong build for the next.
+
+[![build](https://github.com/maxunbearable/roguelike-tower-defence/actions/workflows/ci.yml/badge.svg)](https://github.com/maxunbearable/roguelike-tower-defence/actions/workflows/ci.yml)
+![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)
+![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
+![tests](https://img.shields.io/badge/tests-330%20passing-brightgreen)
+[![licence](https://img.shields.io/badge/licence-proprietary-blue)](LICENSE)
 
 ![Gameplay](docs/screenshots/01-gameplay.png)
+
+</div>
+
+---
+
+## Download
+
+Installers are built by CI for every tagged release — a `.dmg` for macOS and an
+installer plus portable `.zip` for Windows.
+
+**[Latest release ›](https://github.com/maxunbearable/roguelike-tower-defence/releases/latest)**
+
+Releases built from this repository alone ship the *procedurally generated* art:
+the sprite packs the real build uses may not be redistributed, so they are not
+in the repository. See [Assets](#assets).
 
 ---
 
@@ -207,6 +231,19 @@ cheapest nodes in the game, so it buys all six first, and under a gold deficit
 that makes it measurably *worse* — an unlocked element invites spending scarce
 gold on imbuing instead of building, and measured waves fall from 14 to 10 over
 the opening runs.
+
+### Packaging
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+cd build && cpack          # .dmg on macOS, installer + .zip on Windows, .tar.gz elsewhere
+```
+
+Resources are found at runtime rather than compiled in: beside the executable,
+or in `Contents/Resources` inside the macOS bundle. `core::resourceRoot()` tries
+those before falling back to the source tree, so an installed copy never reads a
+developer's checkout that happens to be on the same machine.
 
 ### Useful dev flags
 

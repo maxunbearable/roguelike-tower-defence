@@ -1,0 +1,15 @@
+Copyright (c) 2026 Maksym Petrov. All rights reserved.
+
+This game and its source code are proprietary. The repository is published for
+reference and portfolio purposes only.
+
+You MAY read the code, build it locally, and quote short excerpts with
+attribution. You MAY NOT redistribute it, publish a modified version, or use it
+or any substantial part of it in another product, commercial or otherwise,
+without written permission.
+
+Third-party components are covered by their own licences and are NOT subject to
+the above. See THIRD_PARTY_LICENSES.md for the libraries linked into the binary
+and docs/ASSET-POLICY.md for the art and audio, which carry redistribution terms
+of their own -- the sprite packs in particular may not be redistributed, which is
+why assets/sprites/ is not part of this repository.

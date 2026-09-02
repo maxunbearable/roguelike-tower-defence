@@ -11,6 +11,7 @@
 #include "render/PostFx.h"
 #include "audio/Sfx.h"
 #include "audio/Jukebox.h"
+#include "core/Paths.h"
 #include "core/SaveGame.h"
 #include "core/SaveIO.h"
 #include "ui/Hud.h"
@@ -34,7 +35,7 @@ public:
     void loadArt() {  // needs a live GL and audio context, so not the constructor
         renderer_.load(*registry_);
         sfx_.load();
-        postfx_.load(std::filesystem::path(TD_ASSET_DIR) / "shaders");
+        postfx_.load(core::assetDir() / "shaders");
         jukebox_.load();
     }
 

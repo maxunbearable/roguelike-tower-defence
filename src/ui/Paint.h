@@ -48,39 +48,23 @@ void ribbon(const render::SpriteAtlas& a, const char* art, int x, int y, int w);
 
 void centredIn(const char* t, int cx, int y, int size, Color c);
 
-// Splits text into at most `maxLines` lines that each fit `maxW` pixels, broken
-// on word boundaries, with an ellipsis if it still will not fit.
-//
-// The map cards drew their blurb with a single centred call and no width limit.
-// Card is 250px; the blurbs run to 69 characters. Every one of them overflowed,
-// and since neighbouring cards are 20px apart the text of five maps ran into
-// each other -- invisible until a profile had unlocked more than one map, which
-// is why it survived every screenshot taken from a fresh save.
+// Word-wraps to at most `maxLines` lines of `maxW` pixels, ellipsising if it
+// still will not fit. Map card blurbs were drawn with no width limit and ran
+// into the neighbouring cards.
 std::vector<std::string> wrapToWidth(const std::string& text, int maxW, int size, int maxLines);
 
-// The parchment the skill tree panel is painted with, measured off the rendered
-// panel (the panel itself comes from the sprite atlas, so this is a reference
-// value, not its source). Link colours must contrast against THIS, which is the
-// thing that was never checked.
+// The tree panel's parchment, measured off the rendered panel (the panel art
+// comes from the atlas). Link colours must contrast against this.
 inline constexpr Color kTreePanel{204, 184, 141, 255};
 
-// The colour a prerequisite link is drawn in. `walked` means the prerequisite is
-// owned.
-//
-// Both states must read against kTreePanel. A walked link used to be drawn in
-// the raw branch tint, and the trunk tint is (198,178,148) against a panel of
-// (204,184,141) -- nine luma of contrast, which is invisible. Emphasis is
-// carried by width and saturation instead, never by lightness.
+// A prerequisite link's colour; `walked` means the prerequisite is owned. Both
+// states must read against kTreePanel -- the raw branch tint does not.
 Color linkColour(Color branchTint, bool walked);
 
-// Branch colour coding. The eye groups by hue long before it reads a label,
-// which is what makes three specialisation paths legible at a glance instead of
-// one undifferentiated web. Lives here, beside `linkColour`, because a tint and
-// the contrast it has to achieve are the same question.
+// Branch colour coding: the eye groups by hue before it reads a label.
 Color branchTint(const std::string& branch);
 
-// Every branch a tree can name, so a test can check all of them rather than the
-// ones somebody remembered.
+// Every branch a tree can name, so a test can check all of them.
 const std::vector<std::string>& branchNames();
 
 }  // namespace td::ui::paint

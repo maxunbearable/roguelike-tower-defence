@@ -406,40 +406,20 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
                 const auto from = nodePos(L, *pr);
                 const bool lit = slot.meta.ownedNodes.count(req) > 0;
                 const Color tint = paint::branchTint(n.branch);
-                // BOTH states are drawn darker than the parchment they sit on.
-                //
-                // A previous pass fixed the unowned link, which had been mixed
-                // toward the background and so appeared only once the player no
-                // longer needed it -- and left the owned link drawn in the raw
-                // branch tint. The trunk tint is (198,178,148) against parchment
-                // (204,184,141): measured, 9 luma of contrast against 86 for the
-                // unowned case. So the tree showed its structure to a player who
-                // owned nothing and hid it the moment they bought anything,
-                // which is the same fault the comment above describes, inverted.
-                //
-                // Emphasis is carried by WIDTH and saturation, not by lightness:
-                // a walked path is thicker and keeps its branch hue, an unwalked
-                // one is thinner and greyer. Making it lighter is what broke it.
+                // Emphasis is width and saturation, never lightness: a pale tint
+                // on parchment measured 9 luma of contrast and vanished.
                 const Color walked = paint::linkColour(tint, /*walked=*/true);
                 const Color unwalked = paint::linkColour(tint, /*walked=*/false);
                 const Color c = lit ? walked : unwalked;
 
-                // Routed around the grid rather than straight through it. A
-                // straight line from a root to a node six columns away crosses
-                // every node between them -- the global tree's ability chains
-                // ran diagonally across the whole panel and through two other
-                // nodes on the way. Three segments keep the long run in the gap
-                // BETWEEN rows, where there is nothing to cross.
+                // Three segments, not a straight line: a root feeding a node six
+                // columns away would cross every node between them.
                 const float w = lit ? 6.0f : 4.0f;
                 if (std::abs(from.x - to.x) < 1.0f) {
                     DrawLineEx({from.x, from.y}, {to.x, to.y}, w, c);
                 } else {
-                    // The run sits in the gap next to the CHILD rather than
-                    // halfway: a parent showing its cost carries a 25px caption
-                    // block under it, which on 84px row spacing leaves the
-                    // midpoint inside the caption. The captions are drawn on
-                    // opaque plates spanning their column, so where this does
-                    // pass behind one it is hidden rather than striking through.
+                    // Beside the child, not halfway: a node showing its cost
+                    // carries a caption block the midpoint would land inside.
                     const float dir = to.y >= from.y ? 1.0f : -1.0f;
                     const float busY = to.y - dir * (L.radius + 10.0f);
                     DrawLineEx({from.x, from.y}, {from.x, busY}, w, c);
