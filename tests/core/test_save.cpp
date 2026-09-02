@@ -6,6 +6,7 @@
 
 #include "content/Registry.h"
 
+#include "support/Env.h"
 #include "support/Plots.h"
 #include "core/Progression.h"
 #include "core/SaveGame.h"
@@ -23,11 +24,11 @@ struct TempSaveDir {
     TempSaveDir() {
         dir = std::filesystem::temp_directory_path() / "td_save_test";
         std::filesystem::remove_all(dir);
-        setenv("TD_SAVE_DIR", dir.c_str(), 1);
+        tdtest::setEnv("TD_SAVE_DIR", dir.string());
     }
     ~TempSaveDir() {
         std::filesystem::remove_all(dir);
-        unsetenv("TD_SAVE_DIR");
+        tdtest::unsetEnv("TD_SAVE_DIR");
     }
 };
 

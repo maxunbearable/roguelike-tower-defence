@@ -36,6 +36,11 @@ jobs:
       - name: Build
         run: cmake --build build --config RelWithDebInfo --parallel
 
+      # Every header compiled on its own. A header that leans on its includers
+      # passes on one toolchain and fails on another.
+      - name: Check headers are self-contained
+        run: cmake --build build --config RelWithDebInfo --target td_headers
+
       # The whole suite runs without a display: td_tests never links raylib, and
       # the rendering tests use raylib's software backend.
       - name: Test

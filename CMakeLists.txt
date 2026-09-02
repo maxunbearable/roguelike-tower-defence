@@ -16,6 +16,10 @@ endif()
 # CMake 4 rejects outright. This floors them instead of forking each one.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
+if(MSVC)
+  add_compile_options(/utf-8)
+endif()
+
 include(cmake/get_cpm.cmake)
 
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -97,6 +101,8 @@ target_compile_definitions(raylib_sw PUBLIC PLATFORM_MEMORY GRAPHICS_API_OPENGL_
                            SW_MAX_TEXTURES=1024)
 if(APPLE)
   target_link_libraries(raylib_sw PUBLIC "-framework CoreAudio" "-framework AudioToolbox")
+elseif(WIN32)
+  target_link_libraries(raylib_sw PUBLIC winmm)
 endif()
 
 add_executable(td_shot ${APP_SRC})
@@ -105,6 +111,29 @@ target_compile_definitions(td_shot PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
     TD_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
     TD_HEADLESS=1)
+
+# --- header self-containment ----------------------------------------------
+# One TU per header, so a header that leans on its includers fails here rather
+# than on whichever toolchain happens not to supply the include transitively.
+# WaveGen.h used uint64_t without <cstdint>: fine under libc++, red on Linux.
+file(GLOB_RECURSE TD_HEADERS CONFIGURE_DEPENDS src/*.h)
+set(TD_HDR_DIR "${CMAKE_BINARY_DIR}/header_check")
+file(MAKE_DIRECTORY "${TD_HDR_DIR}")
+set(TD_HDR_SRC "")
+foreach(h ${TD_HEADERS})
+  file(RELATIVE_PATH rel "${CMAKE_SOURCE_DIR}/src" "${h}")
+  string(REPLACE "/" "_" flat "${rel}")
+  string(REPLACE ".h" "" flat "${flat}")
+  set(gen "${TD_HDR_DIR}/hdr_${flat}.cpp")
+  file(WRITE "${gen}" "#include \"${rel}\"\n")
+  list(APPEND TD_HDR_SRC "${gen}")
+endforeach()
+add_library(td_headers OBJECT EXCLUDE_FROM_ALL ${TD_HDR_SRC})
+target_link_libraries(td_headers PRIVATE td_core raylib)
+target_include_directories(td_headers PRIVATE src)
+target_compile_definitions(td_headers PRIVATE
+    TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
+    TD_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets")
 
 # --- packaging -------------------------------------------------------------
 # Resources sit beside the executable (or in Contents/Resources on macOS), which
