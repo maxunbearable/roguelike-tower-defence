@@ -151,12 +151,81 @@ def tile_rows(tiles, plot_every):
 # twice the health for the same felt difficulty.
 REF_TILES, REF_W50, REF_COUNT = 48, 27.1, 27.6
 
+# ...and against an EARLY anchor as well, which is the half that was missing.
+#
+# The curve is hpPerWave ^ (wave ^ exp), and only its wave-50 end was pinned. A
+# single parameter then had to serve both ends, so a map's `target` -- the dial a
+# designer turns to say "this one is harder" -- moved wave 50 by 18% and wave 10
+# by 1.6%. Measured across all five maps the early multiplier sat between 1.85
+# and 1.89 whatever the target said, which is to say the dial did nothing in the
+# range where a player actually loses: a fresh profile dies around wave 9. The
+# ordering of the campaign was left to incidental geometry, and came out 10.0,
+# 8.5, 9.0, 9.5, 4.0 waves survived against an authored order of 1..5.
+#
+# Pinning both ends and solving for BOTH unknowns fixes that:
+#
+#     ln w50 = 49^exp . ln h        ln wE = (E-1)^exp . ln h
+#     =>  exp = ln(ln w50 / ln wE) / ln(49 / (E-1))
+#     =>  h   = exp(ln w50 / 49^exp)
+#
+# `exp` stops being an authored constant and becomes what the two anchors imply.
+REF_EARLY_WAVE, REF_W_EARLY = 10, 1.86
 
-def hp_per_wave(target, count50, tiles, exp):
-    """Solves hpPerWave so this map lands at `target` x the reference difficulty."""
+# Exposure -- how many towers reach each tile of the route, summed along it --
+# was tried as a normalising term here and REMOVED. It is a much better
+# description of what a board delivers than route length (across the five maps
+# route length spans 15%, exposure 54%), and it explains Obsidian Gate: a dozen
+# towers reach each of its path tiles 2.07 times against greenfields' 2.66, so
+# the same board deals 27% less damage there.
+#
+# But it did not predict the others. Compensating for it moved obsidian the
+# right way and ashen the wrong way, and no exponent flattened the set. Modelling
+# early difficulty from geometry is evidently harder than it looks, so the dial
+# is calibrated against measured runs instead and the geometry stays an
+# observation rather than a formula. REACH and the exposure helper are kept
+# because the report uses them.
+REACH = 4.0
+OPENING_TOWERS = 12
+
+
+def exposure(path_tiles, plots, n=None):
+    """Sum over route tiles of how many towers reach each -- the board's reach."""
+    import math
+    d = lambda a, b: math.dist(a, b)
+    sel = plots
+    if n is not None:
+        sel = sorted(plots, key=lambda q: -sum(1 for p in path_tiles if d(p, q) <= REACH))[:n]
+    return sum(sum(1 for q in sel if d(p, q) <= REACH) for p in path_tiles)
+
+
+def hp_curve(target, count50, tiles, early_target):
+    """Solves hpPerWave and the curve exponent from the early and late anchors.
+
+    Returns (hpPerWave, exp, w50, wEarly).
+    """
     import math
     w50 = target * REF_W50 * (REF_COUNT / count50) * (tiles / REF_TILES)
-    return math.exp(math.log(w50) / (49 ** exp)), w50
+    # The two anchors take path length in OPPOSITE directions, which is the
+    # part the single-anchor model could not express.
+    #
+    # A finished board covers the whole route, so a longer route holds more
+    # towers firing for longer and earns more health -- that is the w50 term
+    # above. An OPENING board does not: what a fresh purse buys is about a dozen
+    # towers whatever the route's length, so they cover a fixed absolute stretch
+    # of it and a longer route simply means a larger uncovered remainder.
+    # Scaling early health up with length therefore punished long maps twice.
+    #
+    # Measured: ranking the maps by path length reproduced the measured
+    # difficulty order exactly -- ashen 106, frostmere 100, blightmarsh 99,
+    # greenfields 98 against 8.0, 9.0, 9.0, 10.0 waves survived -- while the
+    # authored targets said the order should be the reverse. Eight tiles of route
+    # outweighed a 6% step of the dial.
+    w_early = REF_W_EARLY * early_target
+    if w_early <= 1.0:
+        raise ValueError("early anchor must exceed 1.0 to be a growth curve")
+    exp = math.log(math.log(w50) / math.log(w_early)) / math.log(49.0 / (REF_EARLY_WAVE - 1))
+    h = math.exp(math.log(w50) / (49 ** exp))
+    return h, exp, w50, w_early
 
 
 def emit(m):
@@ -164,11 +233,14 @@ def emit(m):
     # Recomputed at generation time, so changing a route cannot silently change
     # how hard the map is.
     count50 = m["countBase"] + m["countPerWave"] * 49
-    hp, w50 = hp_per_wave(m["target"], count50, len(tiles), m["hpCurveExp"])
-    m = dict(m, hpPerWave=round(hp, 4))
-    m["_w50"] = round(w50, 1)
     rows, plots = tile_rows(tiles, m.get("plotEvery", 8))
+    early_exp = exposure(tiles, plots, OPENING_TOWERS)
+    hp, exp, w50, w_early = hp_curve(m["target"], count50, len(tiles), m["earlyTarget"])
+    m = dict(m, hpPerWave=round(hp, 4), hpCurveExp=round(exp, 4))
+    m["_w50"] = round(w50, 1)
+    m["_wEarly"] = round(w_early, 2)
     m["_plots"] = len(plots)
+    m["_exposure"] = early_exp
     wp = ",".join(f"[{x},{y}]" for x, y in m["path"])
     pool = "\n\n".join(
         f'[[waves.pool]]\nenemy = "{e}"\nfromWave = {w}' for e, w in m["pool"])
@@ -230,7 +302,7 @@ MAPS = [
         "path": [(0, 1), (19, 1), (19, 3), (2, 3), (2, 5), (19, 5), (19, 7), (2, 7), (2, 9), (21, 9)],
         "startGold": 275, "buildTime": 12.0,
         "countBase": 8, "countPerWave": 0.4, "intervalBase": 0.9,
-        "target": 1.0, "hpCurveExp": 1.1, "armorPerWave": 0.11,
+        "target": 1.0, "earlyTarget": 1.0, "armorPerWave": 0.11,
         "bosses": [(25, "boss_ogre_warlord"), (40, "boss_grub_matron"),
                    (50, "boss_warlord_grulk")],
         "pool": [("slime", 1), ("wolf", 5), ("goblin", 8), ("wraith", 12),
@@ -242,7 +314,7 @@ MAPS = [
         "path": [(0, 1), (20, 1), (20, 3), (1, 3), (1, 5), (20, 5), (20, 7), (1, 7), (1, 9), (21, 9)],
         "startGold": 286, "buildTime": 12.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.88,
-        "target": 1.06, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.06, "earlyTarget": 0.97, "armorPerWave": 0.12,
         "bosses": [(25, "boss_cinder_brute"), (40, "boss_cinder_fiend"),
                    (50, "boss_cinder_colossus")],
         "pool": [("ash_slime", 1), ("ash_wolf", 4), ("ash_goblin", 7), ("ash_wraith", 11),
@@ -254,7 +326,7 @@ MAPS = [
         "path": [(0, 0), (21, 0), (21, 2), (2, 2), (2, 4), (19, 4), (19, 6), (4, 6), (4, 8), (17, 8), (17, 10), (21, 10)],
         "startGold": 297, "buildTime": 12.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.86,
-        "target": 1.12, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.12, "earlyTarget": 1.23, "armorPerWave": 0.12,
         "bosses": [(25, "boss_rime_stalker"), (40, "boss_rime_crawler"),
                    (50, "boss_rime_tyrant")],
         "pool": [("frost_slime", 1), ("frost_wolf", 4), ("frost_goblin", 7),
@@ -266,7 +338,7 @@ MAPS = [
         "path": [(0, 9), (18, 9), (18, 6), (3, 6), (3, 3), (20, 3), (20, 1), (1, 1), (1, 0), (21, 0)],
         "startGold": 308, "buildTime": 11.0,
         "countBase": 9, "countPerWave": 0.42, "intervalBase": 0.84,
-        "target": 1.18, "hpCurveExp": 1.1, "armorPerWave": 0.12,
+        "target": 1.18, "earlyTarget": 1.56, "armorPerWave": 0.12,
         "bosses": [(25, "boss_plague_carrier"), (40, "boss_bloat_gorger"),
                    (50, "boss_plague_mother")],
         "pool": [("blight_slime", 1), ("blight_wolf", 4), ("blight_goblin", 6),
@@ -278,7 +350,7 @@ MAPS = [
         "path": [(0, 10), (2, 10), (2, 0), (5, 0), (5, 10), (8, 10), (8, 0), (11, 0), (11, 10), (14, 10), (14, 0), (17, 0), (17, 10), (20, 10), (20, 0), (21, 0)],
         "startGold": 319, "buildTime": 11.0,
         "countBase": 10, "countPerWave": 0.44, "intervalBase": 0.82,
-        "target": 1.15, "hpCurveExp": 1.1, "armorPerWave": 0.1,
+        "target": 1.24, "earlyTarget": 0.65, "armorPerWave": 0.1,
         "bosses": [(25, "boss_gate_sentinel"), (40, "boss_void_tyrant"),
                    (50, "boss_gate_warden")],
         "pool": [("obsidian_slime", 1), ("obsidian_wolf", 3), ("obsidian_goblin", 6),
@@ -297,9 +369,12 @@ def main():
             f.write(text)
         tiles = route_tiles(m["path"])
         count50 = m["countBase"] + m["countPerWave"] * 49
-        hp, w50 = hp_per_wave(m["target"], count50, len(tiles), m["hpCurveExp"])
-        print(f"  {m['id']:16s} {len(tiles):3d} tiles  target {m['target']:.2f}x  "
-              f"w50 hp {w50:5.1f}  hpPerWave {hp:.4f}")
+        _, plots = tile_rows(tiles, m.get("plotEvery", 8))
+        early_exp = exposure(tiles, plots, OPENING_TOWERS)
+        hp, exp, w50, w_early = hp_curve(m["target"], count50, len(tiles), m["earlyTarget"])
+        print(f"  {m['id']:16s} {len(tiles):3d} tiles  {len(plots):3d} plots  "
+              f"exposure {early_exp:5.0f}  w10 hp {w_early:4.2f}  w50 hp {w50:5.1f}  "
+              f"exp {exp:.3f}")
 
 
 if __name__ == "__main__":

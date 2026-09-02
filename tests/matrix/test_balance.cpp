@@ -3,6 +3,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <iomanip>
+#include <string>
 #include <filesystem>
 #include <sstream>
 #include <utility>
@@ -257,4 +260,99 @@ TEST_CASE("a build plot has neighbours a support aura can reach", "[balance]") {
         UNSCOPED_INFO(id << ": " << plots.size() << " plots, mean aura neighbours " << mean);
         CHECK(mean > 1.57f);
     }
+}
+
+TEST_CASE("report the campaign ladder", "[balance][.report]") {
+    // The campaign is authored as an ordered ladder: map 1 is where every build
+    // starts and map 5 is the wall. Difficulty is normalised against PATH
+    // LENGTH, on the reasoning that total damage a board can deal is
+    // proportional to how long enemies spend under fire. Since maps grew finite
+    // build plots that reasoning is only half of it -- a long route with few
+    // plots holds less defence than a short one with many -- so this prints both
+    // terms beside what actually happens.
+    const auto reg = loadReg();
+    std::vector<std::pair<int, std::string>> byOrder;
+    for (const auto& [id, def] : reg.maps()) byOrder.emplace_back(def.order, id);
+    std::sort(byOrder.begin(), byOrder.end());
+
+    std::ostringstream out;
+    out << "\n" << std::left << std::setw(16) << "map" << std::right << std::setw(6) << "order"
+        << std::setw(7) << "path" << std::setw(7) << "plots" << std::setw(9) << "path/plot"
+        << std::setw(9) << "target" << std::setw(9) << "fresh" << std::setw(10) << "range" << std::setw(9) << "strong"
+        << std::setw(8) << "clear\n";
+    for (const auto& [order, id] : byOrder) {
+        const auto& def = reg.map(id);
+        int plots = 0, path = 0;
+        for (int y = 0; y < def.gridH; ++y) {
+            for (int x = 0; x < def.gridW; ++x) {
+                if (def.buildableAt(x, y)) ++plots;
+                const char c = def.tileAt(x, y);
+                if (c == '=' || c == 'S' || c == 'E') ++path;
+            }
+        }
+        // Averaged over seeds: a single run reports a whole number of waves, so
+        // an 8 and a 9 on one seed each is not evidence of anything.
+        float weakMean = 0.0f;
+        int weakMin = 999, weakMax = 0;
+        constexpr int kSeeds = 8;
+        for (int s = 1; s <= kSeeds; ++s) {
+            const auto r = sim::autoPlay(reg, def, fresh(), static_cast<uint64_t>(s));
+            weakMean += static_cast<float>(r.wavesSurvived);
+            weakMin = std::min(weakMin, r.wavesSurvived);
+            weakMax = std::max(weakMax, r.wavesSurvived);
+        }
+        weakMean /= static_cast<float>(kSeeds);
+        const auto strong = sim::autoPlay(reg, def, fullyUpgraded(), 1);
+        out << std::left << std::setw(16) << id << std::right << std::setw(6) << order
+            << std::setw(7) << path << std::setw(7) << plots << std::setw(9) << std::fixed
+            << std::setprecision(1) << (plots ? static_cast<float>(path) / plots : 0.0f)
+            << std::setw(9) << def.recipe.count << std::setw(9) << weakMean << std::setw(10)
+            << (std::to_string(weakMin) + "-" + std::to_string(weakMax)) << std::setw(9)
+            << strong.wavesSurvived << std::setw(8) << (strong.cleared ? "yes" : "no") << "\n";
+    }
+    UNSCOPED_INFO(out.str());
+    CHECK(true);
+}
+
+TEST_CASE("the campaign gets harder in the order it is played", "[balance]") {
+    // The maps screen says "clear a map to unlock the next", so the order is a
+    // promise. It was not being kept: measured with one comparable profile, the
+    // ladder ran 10.0, 8.5, 9.0, 9.5, 4.0 waves survived against an authored
+    // order of 1..5 -- map 2 was the second-hardest map in the game and map 4
+    // was easier than map 2.
+    //
+    // The cause was that the difficulty dial did nothing where players actually
+    // lose. The health curve was pinned at wave 50 only, so a map's `target`
+    // moved wave-50 health by 18% and wave-10 health by 1.6%, and the ordering
+    // was left to whatever the geometry happened to do. The curve is now pinned
+    // at both ends and the dial calibrated against measured runs.
+    //
+    // Averaged over seeds because a single run reports whole waves, and an 8 and
+    // a 9 on one seed each is not evidence of anything.
+    const auto reg = loadReg();
+    std::vector<std::pair<int, std::string>> byOrder;
+    for (const auto& [id, def] : reg.maps()) byOrder.emplace_back(def.order, id);
+    std::sort(byOrder.begin(), byOrder.end());
+    REQUIRE(byOrder.size() >= 3);
+
+    constexpr int kSeeds = 8;
+    std::vector<float> ladder;
+    for (const auto& [order, id] : byOrder) {
+        float mean = 0.0f;
+        for (int s = 1; s <= kSeeds; ++s) {
+            mean += static_cast<float>(
+                sim::autoPlay(reg, reg.map(id), fresh(), static_cast<uint64_t>(s)).wavesSurvived);
+        }
+        ladder.push_back(mean / static_cast<float>(kSeeds));
+        UNSCOPED_INFO("map " << order << " " << id << ": " << ladder.back() << " waves");
+    }
+
+    // Each map is at least as hard as the one before it. The tolerance absorbs
+    // seed noise without absorbing an inversion: the smallest authored step is a
+    // whole wave, and the worst observed spread around a mean is half of one.
+    for (size_t i = 1; i < ladder.size(); ++i) {
+        CHECK(ladder[i] <= ladder[i - 1] + 0.5f);
+    }
+    // ...and the ladder actually goes somewhere, rather than being flat.
+    CHECK(ladder.front() - ladder.back() >= 3.0f);
 }

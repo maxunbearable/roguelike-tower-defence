@@ -185,3 +185,32 @@ TEST_CASE("a map with no build plots refuses to start", "[startup]") {
     REQUIRE_FALSE(outcome.ok);
     CHECK(outcome.problem.find("build plots") != std::string::npos);
 }
+
+TEST_CASE("a flat difficulty curve is rejected", "[startup]") {
+    // The rule this replaced -- hpCurveExp >= 1 -- became wrong when the curve
+    // started being solved from two anchors instead of authored. Its first
+    // replacement, "late growth must outpace early growth", was worse: it holds
+    // for every positive exponent, so it could never fire. This checks the one
+    // that can.
+    ContentCopy c("flatcurve");
+    const auto path = c.dir / "maps" / "greenfields.toml";
+    std::string text;
+    {
+        std::ifstream in(path);
+        text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    const auto at = text.find("hpCurveExp = ");
+    REQUIRE(at != std::string::npos);
+    const auto eol = text.find('\n', at);
+    text.replace(at, eol - at, "hpCurveExp = 0.2");
+    {
+        std::ofstream out(path, std::ios::trunc);
+        out << text;
+    }
+
+    content::Registry reg;
+    const auto outcome = content::loadAndValidate(reg, c.dir);
+    INFO(outcome.problem);
+    REQUIRE_FALSE(outcome.ok);
+    CHECK(outcome.problem.find("too flat") != std::string::npos);
+}

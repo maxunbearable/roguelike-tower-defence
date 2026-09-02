@@ -194,8 +194,26 @@ void validateMap(const MapDef& m, const Registry& reg, std::vector<std::string>&
         if (r.intervalMin <= 0.0f) {
             out.push_back(at(m.id) + "wave recipe intervalMin must be positive");
         }
-        if (r.hpCurveExp < 1.0f) {
-            out.push_back(at(m.id) + "wave recipe hpCurveExp below 1 flattens the late game");
+        // The ending must be a different game from the opening.
+        //
+        // This replaces `hpCurveExp >= 1`, which was exact while the exponent
+        // was authored and the curve pinned only at wave 50. It is now SOLVED
+        // from an early anchor and a late one, so a map that is deliberately
+        // harder early lands just under 1 without flattening anything.
+        //
+        // "Late growth must outpace early growth" was tried here first and is
+        // WORTHLESS: for any positive exponent, 49^e - 14^e exceeds 14^e - 4^e,
+        // so the check is true by construction and could never fire. What can
+        // fail, and what the rule is actually protecting, is the opening
+        // creeping up towards the ending until the curve is nearly flat.
+        const auto mult = [&](int wave) {
+            return std::pow(r.hpPerWave, std::pow(static_cast<float>(wave - 1), r.hpCurveExp));
+        };
+        if (r.hpCurveExp <= 0.0f) {
+            out.push_back(at(m.id) + "wave recipe hpCurveExp must be positive");
+        } else if (mult(50) < mult(5) * 20.0f) {
+            out.push_back(at(m.id) + "wave recipe is too flat: wave 50 must be at least 20x " +
+                          "wave 5, and is " + std::to_string(mult(50) / mult(5)) + "x");
         }
         if (r.hpPerWave < 1.0f) {
             out.push_back(at(m.id) + "wave recipe hpPerWave < 1 makes later waves weaker");
