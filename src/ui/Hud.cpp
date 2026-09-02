@@ -272,11 +272,15 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
         }
     }
 
-    // Hovering an incoming enemy opens its dossier. The pips say "something is
-    // here"; this says exactly what.
+    // Which incoming enemy is being hovered. The dossier itself is drawn LAST,
+    // at the end of this function: drawn here it went under the transient
+    // message banner, which occupies the same strip above the HUD band, so the
+    // card a player had deliberately hovered lost to an ambient hint about the
+    // pause key and its lower rows were unreadable.
+    std::string dossierFor;
     for (const auto& [rect, enemyId] : incomingRects) {
         if (!inRect(mouse, rect.x, rect.y, rect.w, rect.h)) continue;
-        drawEnemyDossier(atlas, w.defs().enemy(enemyId), mouse);
+        dossierFor = enemyId;
         break;
     }
 
@@ -422,6 +426,9 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
         centredIn("FINAL WAVE", kNextX + kNextW / 2, kNextY + 20, 10, inkDim);
     }
 
+    // Topmost within the HUD: a hovered dossier is the one thing here the player
+    // asked to see.
+    if (!dossierFor.empty()) drawEnemyDossier(atlas, w.defs().enemy(dossierFor), mouse);
 }
 
 TutorialBox drawTutorial(const render::SpriteAtlas& atlas, const char* title, const char* body,

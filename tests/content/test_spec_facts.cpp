@@ -112,3 +112,29 @@ TEST_CASE("the derivation tracks the content", "[specfacts]") {
         }
     }
 }
+
+TEST_CASE("a node's derived numbers never repeat themselves", "[facts]") {
+    // A node that raises a stat "for every tower" carries one modifier per
+    // tower, and the label comes from the target's suffix, so every one of them
+    // renders identically. Thirteen of the global tree's nodes read
+    // "damage x1.06" five times over -- on the card a player reads while
+    // deciding whether to spend 36 shards on it.
+    const auto reg = loadReg();
+    int checked = 0, offenders = 0;
+    for (const auto& [treeId, tree] : reg.trees()) {
+        for (const auto& node : tree.nodes) {
+            const auto parts = content::specNumbers(tree, node.id);
+            if (parts.empty()) continue;
+            ++checked;
+            std::set<std::string> seen(parts.begin(), parts.end());
+            if (seen.size() != parts.size()) {
+                ++offenders;
+                UNSCOPED_INFO(treeId << "/" << node.id << ": "
+                                     << content::specNumbersLine(tree, node.id));
+            }
+        }
+    }
+    INFO("checked " << checked << " nodes with modifiers");
+    REQUIRE(checked > 100);  // the scan actually looked at the content
+    CHECK(offenders == 0);
+}

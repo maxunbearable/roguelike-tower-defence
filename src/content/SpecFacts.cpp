@@ -142,7 +142,17 @@ std::vector<std::string> specNumbers(const core::SkillTree& tree, const std::str
             case core::ModOp::Flag:
                 break;
         }
-        out.push_back(std::move(line));
+        // Deduplicated, because a node that raises one stat "for every tower"
+        // spells that out as one modifier per tower -- arrow.damage,
+        // arcane.damage, ballista.damage, brazier.damage, cannon.damage -- and
+        // the label is taken from the suffix, so all five rendered as
+        // "damage x1.06". Thirteen of the global tree's nodes read
+        // "damage x1.06, damage x1.06, damage x1.06, damage x1.06, damage x1.06".
+        //
+        // Deduplicated rather than combined: those five are parallel, one per
+        // tower, so a tower gets x1.06 and not x1.34. Multiplying them would
+        // turn a redundant line into a wrong one.
+        if (std::find(out.begin(), out.end(), line) == out.end()) out.push_back(std::move(line));
     }
     return out;
 }

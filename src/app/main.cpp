@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
     bool freshRun = false;
     bool hub = false;
     int openSlot = -1;
+    int mouseX = -1, mouseY = -1;
     bool artCompare = false;
     bool spriteSheet = false;
     bool menuAt = false;
@@ -71,6 +72,15 @@ int main(int argc, char** argv) {
             freshRun = true;
         else if (std::strcmp(argv[i], "--hub") == 0)
             hub = true;
+        // Park the cursor somewhere for the capture. Hover is a whole class of
+        // this game's information display -- the radial menu's detail card, the
+        // HUD's "hover for weaknesses" readout, every button's hot state -- and
+        // none of it had ever been looked at, because a capture leaves the mouse
+        // at (0,0) where nothing is hovered.
+        else if (std::strcmp(argv[i], "--mouse") == 0 && i + 2 < argc) {
+            mouseX = std::atoi(argv[++i]);
+            mouseY = std::atoi(argv[++i]);
+        }
         else if (std::strcmp(argv[i], "--openslot") == 0 && i + 1 < argc)
             openSlot = std::atoi(argv[++i]);
         else if (std::strcmp(argv[i], "--artcompare") == 0)
@@ -155,6 +165,8 @@ int main(int argc, char** argv) {
     // capture of the tutorial showed step 0 whatever the save said -- and
     // opening one afterwards resets the screen, which silently made four of the
     // six README screenshots the same picture of the skill trees.
+    // Before the dev hooks: several of them hit-test against the cursor.
+    if (mouseX >= 0) SetMousePosition(mouseX, mouseY);
     if (openSlot >= 0) game.openSlot(openSlot);
     if (autostart) {
         game.requestStart(/*demoTowers=*/true, forceMap ? forceMap : "");
