@@ -16,6 +16,7 @@
 #include "ui/Hud.h"
 #include "ui/Screens.h"
 #include "ui/RadialMenu.h"
+#include "sim/Autosave.h"
 #include "sim/World.h"
 
 namespace td::app {
@@ -78,6 +79,10 @@ public:
         // the README screenshot of a game whose whole pitch is a gold deficit.
         world_->addGold(240 - world_->gold());
     }
+
+    // Flushes a run the player has changed but not yet had written -- called on
+    // the way out, so closing the window does not discard a build phase.
+    void maybeAutosave();
 
     void devPause() { hud_.paused = true; }
     // The settings modal is a different thing from the tactical pause; they
@@ -180,7 +185,7 @@ private:
     std::string runMapId_ = "greenfields";
     std::string hubMessage_;
     int lastAward_ = 0;
-    int savedWave_ = -1;
+    sim::SaveMark savedMark_{};
     // The tile the radial menu is anchored to, or -1 for none.
     int selX_ = -1;
     int selY_ = -1;

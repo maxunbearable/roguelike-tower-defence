@@ -215,6 +215,17 @@ core::Loadout Game::metaLoadout() const {
     return lo;
 }
 
+// Writes the run whenever it has changed and can be written. Gated on the run's
+// actual state rather than on the wave index, which only ever captured the start
+// of a build phase and lost everything the player did during it.
+void Game::maybeAutosave() {
+    if (activeSlot_ < 0 || !world_) return;
+    if (!sim::shouldAutosave(*world_, savedMark_)) return;
+    savedMark_ = sim::saveMarkOf(*world_);
+    active().run = world_->snapshot();
+    persist();
+}
+
 void Game::persist() {
     if (activeSlot_ < 0) return;
     core::writeSlot(activeSlot_, active());
@@ -922,14 +933,7 @@ void Game::updatePlaying(float frameDt) {
         return;
     }
 
-    // Autosave whenever a new build phase begins. Build phases are the only
-    // moment the field is empty, which is exactly what makes a run snapshottable.
-    if (activeSlot_ >= 0 && world_->canSnapshot() &&
-        world_->waveIndex() != savedWave_) {
-        savedWave_ = world_->waveIndex();
-        active().run = world_->snapshot();
-        persist();
-    }
+    maybeAutosave();
 }
 
 std::vector<render::PostFx::Light> Game::collectLights() const {

@@ -138,7 +138,10 @@ Other load-bearing decisions:
   run continues the same random sequence. Resuming also restores the run's
   statistics and its ability cooldowns — neither used to be saved, so a reload
   wiped everything the results screen reports and handed back any ability the
-  player had just spent.
+  player had just spent. The autosave fires whenever the run has **changed**
+  rather than once per wave, and the game flushes on exit: closing the window
+  used to discard the entire current build phase, which is the moment a player
+  spends their gold.
 - **Fixed 1/60s timestep** with an accumulator, and render interpolation.
 - **Music is generated, not licensed.** `core::Music` composes two minor-key
   loops from the same raylib-free synthesiser the sound effects use, wraps the PCM
@@ -164,7 +167,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 287 tests
+ctest --test-dir build          # 293 tests
 ```
 
 A plain `cmake -B build` produces an optimised `RelWithDebInfo` build, which is

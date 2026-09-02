@@ -169,6 +169,12 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Closing the window used to discard everything since the last wave
+    // boundary -- which is the whole of the current build phase, the moment a
+    // player spends their gold. A run mid-wave still cannot be written (enemies
+    // are not serialised), but one sitting in a build phase now is.
+    game.maybeAutosave();
+
     CloseAudioDevice();
     CloseWindow();
     return 0;
