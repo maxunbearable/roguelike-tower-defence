@@ -47,6 +47,16 @@ StatBlock resolveStats(const content::Registry& reg, const Loadout& lo) {
     StatBlock sb;
     sb.setBase("global.startGold", 0.0f);
     sb.setBase("global.lives", 0.0f);
+    // Ability tuning. A MULTIPLIED path must start at 1 -- StatBlock computes
+    // (base + adds) * mults, so a multiplier on an unseeded path yields zero and
+    // the ability silently does nothing. Additive paths start at 0 and are added
+    // to the constants in World.
+    sb.setBase("global.strike.damage", 1.0f);
+    sb.setBase("global.strike.radius", 0.0f);
+    sb.setBase("global.strike.cooldown", 0.0f);
+    sb.setBase("global.ward.duration", 0.0f);
+    sb.setBase("global.ward.slow", 0.0f);
+    sb.setBase("global.ward.cooldown", 0.0f);
 
     if (reg.hasTower(lo.towerId)) seedTower(sb, reg.tower(lo.towerId));
     if (reg.hasElement(lo.elementId)) seedElement(sb, reg.element(lo.elementId));
@@ -64,6 +74,18 @@ std::set<std::string> knownStatPaths(const content::Registry& reg) {
     // Unlock flags: what a tower is permitted to do, bought in the global tree.
     out.insert("global.unlock.level2");
     out.insert("global.unlock.level3");
+    // The two player abilities. They were the only system in the game with no
+    // progression at all -- every other capability (levels, elements, tower
+    // specialisations, element specialisations, tower types) is bought in a
+    // tree, while Strike and Ward were fixed constants a player could never
+    // improve. Kingdom Rush upgrades its Rain of Fire along exactly these axes:
+    // damage, radius, and a flat cooldown reduction.
+    out.insert("global.strike.damage");
+    out.insert("global.strike.radius");
+    out.insert("global.strike.cooldown");
+    out.insert("global.ward.duration");
+    out.insert("global.ward.slow");
+    out.insert("global.ward.cooldown");
     for (const auto& [id, t] : reg.towers()) {
         // Trait parameter paths live here too. A spec grants its trait with a
         // `flag` modifier and then tunes it through these, so every new trait

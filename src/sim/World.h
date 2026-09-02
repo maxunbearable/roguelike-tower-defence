@@ -233,9 +233,24 @@ public:
     void gainLife(int n);
 
     // --- player abilities --------------------------------------------------
+    // Ability parameters, resolved from the skill tree at construction rather
+    // than read from the constants. The constants remain the BASE that the tree
+    // modifies, so a fresh profile is unchanged.
+    struct AbilityTuning {
+        float strikeDamage = kStrikeBaseDamage;
+        float strikeRadius = kStrikeRadius;
+        float strikeCooldown = kStrikeCooldown;
+        float wardDuration = kWardDuration;
+        float wardSlow = kWardSlowPct;
+        float wardCooldown = kWardCooldown;
+    };
+
     bool abilityReady(Ability a) const;
     float abilityCooldown(Ability a) const;      // seconds remaining, 0 when ready
-    static float abilityCooldownMax(Ability a);
+    // Instance rather than static now: cooldowns are bought in the tree, so
+    // the maximum depends on the profile playing.
+    float abilityCooldownMax(Ability a) const;
+    const AbilityTuning& abilityTuning() const { return ability_; }
     // Casts at a board position in TILE coordinates. False when still cooling
     // down or when the run is not in a state that accepts a cast.
     bool castAbility(Ability a, core::Vec2 target);
@@ -285,6 +300,8 @@ private:
     int waveIndex_ = 0;
     int enemiesSpawned_ = 0;
     RunStats stats_;
+    AbilityTuning ability_;
+
     core::Difficulty difficulty_ = core::Difficulty::Standard;
     core::DifficultyMods mods_{};
     float abilityCd_[kAbilityCount] = {0.0f, 0.0f};

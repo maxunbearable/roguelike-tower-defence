@@ -98,6 +98,19 @@ World::World(const content::Registry& reg, const content::MapDef& map, uint64_t 
                               static_cast<int>(globalStats.get("global.lives"))) *
                              mods_.lives));
     startingLives_ = lives_;
+
+    // Ability tuning from the tree. Multipliers where scaling should compound
+    // with the base, additions where it should not -- and cooldowns are FLAT
+    // reductions, clamped so no amount of investment can reach zero and make an
+    // ability free.
+    ability_.strikeDamage = kStrikeBaseDamage * globalStats.get("global.strike.damage", 1.0f);
+    ability_.strikeRadius = kStrikeRadius + globalStats.get("global.strike.radius");
+    ability_.strikeCooldown =
+        std::max(6.0f, kStrikeCooldown + globalStats.get("global.strike.cooldown"));
+    ability_.wardDuration = kWardDuration + globalStats.get("global.ward.duration");
+    ability_.wardSlow = std::min(0.85f, kWardSlowPct + globalStats.get("global.ward.slow"));
+    ability_.wardCooldown =
+        std::max(8.0f, kWardCooldown + globalStats.get("global.ward.cooldown"));
 }
 
 World::~World() = default;
@@ -281,8 +294,8 @@ void World::gainLife(int n) {
 
 void World::addGold(int n) { gold_ += n; }
 
-float World::abilityCooldownMax(Ability a) {
-    return a == Ability::Strike ? kStrikeCooldown : kWardCooldown;
+float World::abilityCooldownMax(Ability a) const {
+    return a == Ability::Strike ? ability_.strikeCooldown : ability_.wardCooldown;
 }
 
 float World::abilityCooldown(Ability a) const {
@@ -309,13 +322,14 @@ bool World::castAbility(Ability a, core::Vec2 target) {
             scale = map_->waves[static_cast<size_t>(wi)].groups.front().hpMult;
         }
         // Falloff to 55% at the rim: a blast should reward being aimed.
-        areaDamage(*this, target, kStrikeRadius, kStrikeBaseDamage * scale, "siege",
+        areaDamage(*this, target, ability_.strikeRadius, ability_.strikeDamage * scale, "siege",
                    0.55f);
-        emit({VisualEvent::Kind::Quake, target, {}, kStrikeRadius, false, "strike"});
+        emit({VisualEvent::Kind::Quake, target, {}, ability_.strikeRadius, false, "strike"});
         return true;
     }
 
-    wards_.push_back(WardField{target, kWardRadius, kWardSlowPct, kWardDuration});
+    wards_.push_back(
+        WardField{target, kWardRadius, ability_.wardSlow, ability_.wardDuration});
     emit({VisualEvent::Kind::Build, target, {}, kWardRadius, false, "ward"});
     return true;
 }

@@ -48,7 +48,7 @@ skill trees that persist across runs.
 | Maps | 5, each 50 waves, with bosses at 25, 40 and 50 |
 | Bosses | 15 |
 | Enemies | 45 definitions over 14 creature sets, 6 of them flying, with per-damage-type resistance tables |
-| Skill trees | 12 trees, 150 nodes, 5057 shards — the global tree alone is 23 |
+| Skill trees | 12 trees, 156 nodes, 5629 shards — the global tree alone is 29 |
 | Damage types | 11 |
 | Audio | 2 CC0 music loops + 13 CC0 effects, committed; procedural synth as fallback |
 
@@ -161,7 +161,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 271 tests
+ctest --test-dir build          # 277 tests
 ```
 
 The suite takes several minutes, dominated by the 270-combination matrix and the
@@ -312,7 +312,12 @@ the highest-leverage part of the product.
 
 ## Abilities
 
-Two, free and on cooldowns rather than costing gold: **Strike** (Q), an immediate
+Two, free and on cooldowns rather than costing gold, and **bought up in the
+global tree** like every other capability — damage, radius and a flat cooldown
+reduction, the same axes Kingdom Rush upgrades its Rain of Fire along. They were
+the only system in the game a player could never improve.
+
+**Strike** (Q), an immediate
 blast whose damage scales with the wave's own health multiplier so it means the
 same thing on wave 3 and wave 50, and **Ward** (W), a field that holds enemies
 and deals no damage at all. They are deliberately free — under a gold deficit

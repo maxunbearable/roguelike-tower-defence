@@ -145,7 +145,12 @@ TEST_CASE("ward fields are cleaned up when they run out", "[abilities]") {
     sim::World w(reg, reg.map("greenfields"), 1, owning());
     REQUIRE(w.castAbility(sim::Ability::Ward, w.path().positionAt(4.0f)));
     CHECK(w.wards().size() == 1);
-    for (int i = 0; i < static_cast<int>(60 * (sim::kWardDuration + 1.0f)); ++i) {
+    // Ask the WORLD how long its ward lasts rather than assuming the authored
+    // constant. This profile owns every node, including the ward duration
+    // upgrades, so the constant is the base and not the answer -- which is
+    // exactly what this test failed on when ability progression was added.
+    const float lasts = w.abilityTuning().wardDuration;
+    for (int i = 0; i < static_cast<int>(60 * (lasts + 1.0f)); ++i) {
         w.tick(sim::kFixedDt);
     }
     CHECK(w.wards().empty());

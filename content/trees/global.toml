@@ -317,3 +317,81 @@ modifiers = [
   { target = "brazier.critMult", op = "add", value = 0.4 },
   { target = "cannon.critMult", op = "add", value = 0.4 },
 ]
+
+# --- abilities -------------------------------------------------------------
+#
+# Strike and Ward were the only capability in the game a player could not
+# improve. Everything else -- tower levels, elements, both kinds of
+# specialisation, tower types themselves -- is bought here, while the two
+# abilities were fixed constants identical on run 1 and run 200.
+#
+# The axes follow Kingdom Rush, which upgrades its Rain of Fire by damage,
+# explosion radius and a flat cooldown reduction. Cooldowns are reduced by whole
+# seconds rather than by a percentage: a multiplier compounds badly across a long
+# tree, and World clamps them so no amount of investment makes an ability free.
+
+[[node]]
+id = "global.strike1"
+name = "Focused Charge"
+desc = "The Strike hits harder."
+branch = "trunk"
+cost = 54
+requires = ["global.level2"]
+pos = [4, 1]
+modifiers = [{ target = "global.strike.damage", op = "mult", value = 1.35 }]
+
+[[node]]
+id = "global.strike2"
+name = "Wider Impact"
+desc = "The Strike covers more ground."
+branch = "trunk"
+cost = 88
+requires = ["global.strike1"]
+pos = [4, 2]
+modifiers = [{ target = "global.strike.radius", op = "add", value = 0.7 }]
+
+[[node]]
+id = "global.strike3"
+name = "Rapid Invocation"
+desc = "The Strike comes back sooner."
+branch = "trunk"
+cost = 136
+requires = ["global.strike2"]
+pos = [4, 3]
+modifiers = [
+  { target = "global.strike.cooldown", op = "add", value = -6.0 },
+  { target = "global.strike.damage", op = "mult", value = 1.25 },
+]
+
+[[node]]
+id = "global.ward1"
+name = "Binding Sigil"
+desc = "The Ward holds enemies harder."
+branch = "trunk"
+cost = 58
+requires = ["global.level2"]
+pos = [5, 1]
+modifiers = [{ target = "global.ward.slow", op = "add", value = 0.12 }]
+
+[[node]]
+id = "global.ward2"
+name = "Lasting Sigil"
+desc = "The Ward lingers."
+branch = "trunk"
+cost = 94
+requires = ["global.ward1"]
+pos = [5, 2]
+modifiers = [{ target = "global.ward.duration", op = "add", value = 3.0 }]
+
+[[node]]
+id = "global.ward3"
+name = "Swift Sigil"
+desc = "The Ward comes back sooner."
+branch = "trunk"
+cost = 142
+requires = ["global.ward2"]
+pos = [5, 3]
+modifiers = [
+  { target = "global.ward.cooldown", op = "add", value = -8.0 },
+  { target = "global.ward.duration", op = "add", value = 1.5 },
+]

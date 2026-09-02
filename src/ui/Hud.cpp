@@ -306,7 +306,7 @@ void drawHud(const render::SpriteAtlas& atlas, const sim::World& w, const HudSta
             if (!ready) {
                 // A top-down sweep, so "how much longer" is readable without
                 // reading the number.
-                const float frac = cd / sim::World::abilityCooldownMax(ab.id);
+                const float frac = cd / w.abilityCooldownMax(ab.id);
                 const int h = static_cast<int>(kAbilH * frac);
                 DrawRectangle(bx, kAbilY + kAbilH - h, kAbilW, h, Color{18, 16, 26, 150});
                 const char* secs = TextFormat("%d", static_cast<int>(cd + 0.99f));
