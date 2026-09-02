@@ -1031,6 +1031,9 @@ void Game::renderCanvas(float alpha) {
         }
         case Screen::Results:
             renderer_.draw(*world_, alpha, render::Cursor{});
+            // The board is only kPlayH tall, so without the HUD the bottom 96px
+            // was bare backdrop and the results panel sat above a hard seam.
+            ui::drawHud(renderer_.atlas(), *world_, hud_, mouseVirtual());
             ui::drawResults(renderer_.atlas(), *world_, lastAward_,
                             activeSlot_ >= 0 ? slots_[static_cast<size_t>(activeSlot_)].meta.shards
                                              : 0);

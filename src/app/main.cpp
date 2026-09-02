@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -9,6 +10,7 @@
 #include "content/Registry.h"
 #include "content/Startup.h"
 #include "content/Validate.h"
+#include "render/Capture.h"
 #include "render/PixelCanvas.h"
 #include "sim/World.h"
 
@@ -164,7 +166,13 @@ int main(int argc, char** argv) {
         ++frames;
         game.frame(dt);
         if (shotPath && elapsed >= shotAfter && frames >= kShotWarmupFrames) {
-            TakeScreenshot(shotPath);
+            // Not TakeScreenshot: it prepends the working directory, so an
+            // absolute path silently produced "<cwd>//tmp/x.png" and saved
+            // nothing. ExportImage writes where it is told.
+            const Image shot = render::captureScreen();
+            if (!ExportImage(shot, shotPath))
+                std::fprintf(stderr, "Could not write %s\n", shotPath);
+            UnloadImage(shot);
             break;
         }
     }

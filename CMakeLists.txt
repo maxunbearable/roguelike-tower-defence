@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(td LANGUAGES CXX)
+project(td LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,5 +69,40 @@ target_compile_definitions(td_app PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
     TD_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets")
 
+# --- td_shot : the same game, rendered without a display -------------------
+# Eleven rounds shipped UI changes that could not be looked at, because macOS
+# denies a locked screen's processes an active display: CoreGraphics reports the
+# monitor online but not active, GLFW then enumerates zero monitors, and raylib
+# aborts InitWindow -- purely because it cannot decide where to centre a window.
+# raylib ships a software rasteriser (rlsw) and a display-free backend for
+# exactly this, so the capture tool is the identical game code linked against
+# raylib built on PLATFORM_MEMORY. Verification no longer depends on the screen.
+add_library(raylib_sw STATIC
+    ${raylib_SOURCE_DIR}/src/rcore.c
+    ${raylib_SOURCE_DIR}/src/rshapes.c
+    ${raylib_SOURCE_DIR}/src/rtext.c
+    ${raylib_SOURCE_DIR}/src/rtextures.c
+    ${raylib_SOURCE_DIR}/src/rmodels.c
+    ${raylib_SOURCE_DIR}/src/raudio.c)
+target_include_directories(raylib_sw PUBLIC ${raylib_SOURCE_DIR}/src)
+# rlsw's texture pool defaults to 128 entries and the game loads well over
+# three hundred, so every texture past the 128th silently failed and its art
+# rendered as nothing -- which is why the terrain and every UI panel came back
+# black on the first capture. The pool holds descriptors, not pixels, so a
+# generous ceiling costs almost nothing.
+target_compile_definitions(raylib_sw PUBLIC PLATFORM_MEMORY GRAPHICS_API_OPENGL_SOFTWARE
+                           SW_MAX_TEXTURES=1024)
+if(APPLE)
+  target_link_libraries(raylib_sw PUBLIC "-framework CoreAudio" "-framework AudioToolbox")
+endif()
+
+add_executable(td_shot ${APP_SRC})
+target_link_libraries(td_shot PRIVATE td_core raylib_sw)
+target_compile_definitions(td_shot PRIVATE
+    TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content"
+    TD_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
+    TD_HEADLESS=1)
+
 enable_testing()
 add_subdirectory(tests)
+add_subdirectory(uitests)

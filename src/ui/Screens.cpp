@@ -829,7 +829,11 @@ PauseAction pauseHitTest(core::Vec2 m) {
 
 void drawPause(const render::SpriteAtlas& atlas, float musicVol, float sfxVol, bool colorAlt,
                float shake, bool integerScaling, core::Vec2 mouse) {
-    DrawRectangle(0, 0, kVirtualW, kPlayH, Color{14, 12, 20, 170});
+    // kVirtualH, not kPlayH: stopping at the play area left the 96px HUD strip
+    // at full brightness under the modal, so half the screen dimmed and half
+    // did not. Measured before the fix, the strip came back (204,184,141) with
+    // the modal open and closed alike.
+    DrawRectangle(0, 0, kVirtualW, kVirtualH, Color{14, 12, 20, 170});
     const auto hit = pauseHitTest(mouse);
 
     panel(atlas, pauseX(), pauseY(), kPauseW, kPauseH);
