@@ -13,7 +13,7 @@ build that cleared the last one is the wrong build for the next.
 [![build](https://github.com/maxunbearable/roguelike-tower-defence/actions/workflows/ci.yml/badge.svg)](https://github.com/maxunbearable/roguelike-tower-defence/actions/workflows/ci.yml)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)
 ![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
-![tests](https://img.shields.io/badge/tests-330%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-332%20passing-brightgreen)
 [![licence](https://img.shields.io/badge/licence-proprietary-blue)](LICENSE)
 
 ![Gameplay](docs/screenshots/01-gameplay.png)

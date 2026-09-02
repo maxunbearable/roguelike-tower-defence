@@ -9,6 +9,12 @@ namespace td::core {
 // Where saves live. Honours TD_SAVE_DIR, which is what lets tests run without
 // touching the player's real profile directory.
 std::filesystem::path saveDir();
+
+// Moves `legacy` to `current` if `current` does not exist yet, and returns
+// `current`. The save directory was named after an internal working title;
+// renaming it outright would orphan anyone's saves.
+std::filesystem::path adoptLegacySaveDir(const std::filesystem::path& current,
+                                         const std::filesystem::path& legacy);
 std::filesystem::path slotPath(int slot);
 
 // A slot that has never been written, or whose file is corrupt, comes back as

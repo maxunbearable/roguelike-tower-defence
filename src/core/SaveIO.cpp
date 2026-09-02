@@ -6,20 +6,42 @@
 
 namespace td::core {
 
-std::filesystem::path saveDir() {
-    if (const char* override = std::getenv("TD_SAVE_DIR")) return std::filesystem::path(override);
+namespace {
+
+// Where the platform wants an application's data, for a given product name.
+std::filesystem::path productDir(const char* name) {
     const char* home = std::getenv("HOME");
-    const std::filesystem::path base = home ? std::filesystem::path(home) : std::filesystem::path(".");
+    const std::filesystem::path base =
+        home ? std::filesystem::path(home) : std::filesystem::path(".");
 #if defined(__APPLE__)
-    return base / "Library" / "Application Support" / "PixelTD";
+    return base / "Library" / "Application Support" / name;
 #elif defined(_WIN32)
     if (const char* appdata = std::getenv("APPDATA")) {
-        return std::filesystem::path(appdata) / "PixelTD";
+        return std::filesystem::path(appdata) / name;
     }
-    return base / "PixelTD";
+    return base / name;
 #else
-    return base / ".local" / "share" / "PixelTD";
+    return base / ".local" / "share" / name;
 #endif
+}
+
+}  // namespace
+
+std::filesystem::path adoptLegacySaveDir(const std::filesystem::path& current,
+                                         const std::filesystem::path& legacy) {
+    std::error_code ec;
+    if (!std::filesystem::exists(current, ec) && std::filesystem::is_directory(legacy, ec)) {
+        std::filesystem::create_directories(current.parent_path(), ec);
+        std::filesystem::rename(legacy, current, ec);
+    }
+    return current;
+}
+
+std::filesystem::path saveDir() {
+    if (const char* override = std::getenv("TD_SAVE_DIR")) return std::filesystem::path(override);
+    static const std::filesystem::path dir =
+        adoptLegacySaveDir(productDir("Wardstone"), productDir("PixelTD"));
+    return dir;
 }
 
 std::filesystem::path slotPath(int slot) {

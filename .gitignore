@@ -15,3 +15,6 @@ assets/sprites/*.png
 # which would redistribute the licensed art in extractable form. The curated
 # gameplay screenshots in docs/screenshots/ are composites and are committed.
 docs/previews/
+
+# Packaging output (cpack -B dist).
+dist/

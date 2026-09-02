@@ -5,8 +5,10 @@
 
 #include <filesystem>
 #include <fstream>
+#include <string>
 
 #include "core/Paths.h"
+#include "core/SaveIO.h"
 
 using namespace td;
 namespace fs = std::filesystem;
@@ -83,4 +85,32 @@ TEST_CASE("the running test binary can find the real content", "[paths]") {
     // End to end, against the actual repository rather than a fixture.
     REQUIRE(fs::is_directory(core::contentDir()));
     CHECK(fs::is_regular_file(core::contentDir() / "maps" / "greenfields.toml"));
+}
+
+TEST_CASE("an old save directory is adopted, not orphaned", "[paths]") {
+    // The directory was named after an internal working title. Renaming it
+    // outright would lose anyone's progress.
+    TempTree t("savemigrate");
+    const auto legacy = t.at("PixelTD");
+    std::ofstream(legacy / "slot0.json") << R"({"used":true})";
+    const auto current = t.root / "Wardstone";
+
+    CHECK(core::adoptLegacySaveDir(current, legacy) == current);
+    CHECK(fs::is_regular_file(current / "slot0.json"));
+    CHECK_FALSE(fs::exists(legacy));
+}
+
+TEST_CASE("an existing save directory is left alone", "[paths]") {
+    TempTree t("savekeep");
+    const auto legacy = t.at("PixelTD");
+    std::ofstream(legacy / "slot0.json") << R"({"old":true})";
+    const auto current = t.at("Wardstone");
+    std::ofstream(current / "slot0.json") << R"({"new":true})";
+
+    CHECK(core::adoptLegacySaveDir(current, legacy) == current);
+    // Neither is touched: the current one wins and the old one stays put.
+    CHECK(fs::exists(legacy / "slot0.json"));
+    std::string body;
+    std::getline(std::ifstream(current / "slot0.json"), body);
+    CHECK(body.find("new") != std::string::npos);
 }
