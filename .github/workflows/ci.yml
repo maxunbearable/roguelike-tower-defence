@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# A push supersedes the run before it, instead of three piling up on one branch.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: ${{ matrix.os }}
