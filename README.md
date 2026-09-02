@@ -161,11 +161,14 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 277 tests
+ctest --test-dir build          # 283 tests
 ```
 
-The suite takes several minutes, dominated by the 270-combination matrix and the
-five full-map autoplay runs. Two opt-in reports are worth running by hand:
+A plain `cmake -B build` produces an optimised `RelWithDebInfo` build, which is
+what the line above assumes: the same suite takes **9 seconds** there against
+**450 seconds** under `-DCMAKE_BUILD_TYPE=Debug`. The default used to be Debug,
+so anyone following these instructions to *play* the game got an unoptimised,
+assert-enabled binary. Two opt-in reports are worth running by hand:
 
 ```sh
 ./build/tests/td_tests "print the combination matrix" -c "[.report]"

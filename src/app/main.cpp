@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 
@@ -6,6 +7,7 @@
 
 #include "app/Game.h"
 #include "content/Registry.h"
+#include "content/Startup.h"
 #include "content/Validate.h"
 #include "render/PixelCanvas.h"
 #include "sim/World.h"
@@ -97,14 +99,31 @@ int main(int argc, char** argv) {
 
     }
 
+    // Content problems are reported and fatal, not thrown and not ignored.
+    // loadAll used to be called with no try/catch, so a malformed file aborted
+    // the process with "libc++abi: terminating due to uncaught exception" -- the
+    // loader's precise message was produced and then discarded. Validation
+    // errors were logged and the game started anyway, which meant content the
+    // validator had already declared broken ran in an undefined state.
     content::Registry registry;
-    registry.loadAll(std::filesystem::path(TD_CONTENT_DIR));
-    for (const auto& err : content::validate(registry)) {
-        TraceLog(LOG_ERROR, "content: %s", err.c_str());
+    if (const auto outcome = content::loadAndValidate(registry, TD_CONTENT_DIR); !outcome.ok) {
+        std::fprintf(stderr, "\nCannot start: %s\n\n", outcome.problem.c_str());
+        return 2;
     }
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(render::kVirtualW, render::kVirtualH, "Tower Defense");
+    InitWindow(render::kVirtualW, render::kVirtualH, "Wardstone");
+    if (!IsWindowReady()) {
+        // Without this the game runs on regardless and buries the player in
+        // "GLFW: Failed to find selected monitor" and framebuffer warnings. The
+        // common cause on macOS is a locked screen, which denies a process the
+        // window server -- worth naming, because the message otherwise looks
+        // like a graphics driver fault.
+        std::fprintf(stderr,
+                     "\nCannot open a window. The display is unavailable -- on macOS this "
+                     "usually means the screen is locked.\n\n");
+        return 3;
+    }
     InitAudioDevice();
     SetMasterVolume(0.65f);
     const int s = bestWindowScale();
