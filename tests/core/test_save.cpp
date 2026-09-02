@@ -120,7 +120,7 @@ TEST_CASE("a save from an unsupported version is refused", "[save]") {
 
 TEST_CASE("a run snapshot restores an identical world", "[save]") {
     const auto reg = loadReg();
-    sim::World a(reg, reg.map("greenfields"), 7, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World a(reg, reg.map("greenfields"), 7, tdtest::owningAll(), /*goldOverride=*/5000);
     a.placeTower(PLOT(0), "arrow");
     while (a.upgradeCost(PLOT(0)) > 0) a.upgradeTower(PLOT(0));
     a.attachElement(PLOT(0), "earth");
@@ -132,7 +132,7 @@ TEST_CASE("a run snapshot restores an identical world", "[save]") {
     REQUIRE(a.canSnapshot());
     const auto snap = a.snapshot();
 
-    sim::World b(reg, reg.map("greenfields"), 1);
+    sim::World b(reg, reg.map("greenfields"), 1, tdtest::owningAll());
     b.restore(snap);
 
     REQUIRE(b.gold() == a.gold());
@@ -160,13 +160,13 @@ TEST_CASE("a run snapshot restores an identical world", "[save]") {
 
 TEST_CASE("restoring does not charge for the towers again", "[save]") {
     const auto reg = loadReg();
-    sim::World a(reg, reg.map("greenfields"), 7, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World a(reg, reg.map("greenfields"), 7, tdtest::owningAll(), /*goldOverride=*/5000);
     a.placeTower(PLOT(0), "arrow");
     while (a.upgradeCost(PLOT(0)) > 0) a.upgradeTower(PLOT(0));
     a.specialiseTower(PLOT(0), "sniper");
     const int goldBefore = a.gold();
 
-    sim::World b(reg, reg.map("greenfields"), 1);
+    sim::World b(reg, reg.map("greenfields"), 1, tdtest::owningAll());
     b.restore(a.snapshot());
     REQUIRE(b.gold() == goldBefore);
 }
@@ -174,10 +174,10 @@ TEST_CASE("restoring does not charge for the towers again", "[save]") {
 TEST_CASE("a resumed run continues the same random sequence", "[save]") {
     const auto reg = loadReg();
     auto play = [&](bool viaSave) {
-        sim::World w(reg, reg.map("greenfields"), 99, core::Loadout{}, /*goldOverride=*/5000);
+        sim::World w(reg, reg.map("greenfields"), 99, tdtest::owningAll(), /*goldOverride=*/5000);
         w.placeTower(PLOT(0), "arrow");
         if (viaSave) {
-            sim::World other(reg, reg.map("greenfields"), 1);
+            sim::World other(reg, reg.map("greenfields"), 1, tdtest::owningAll());
             other.restore(w.snapshot());
             other.startNextWave();
             for (int i = 0; i < 1200; ++i) other.tick(sim::kFixedDt);

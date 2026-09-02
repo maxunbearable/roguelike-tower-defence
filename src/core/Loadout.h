@@ -18,7 +18,12 @@ struct Loadout {
     std::string elementSpec;
 
     std::set<std::string> ownedNodes;
-    bool ownAll = true;  // Plan 3 replaces this with the meta save
+    // A loadout owns NOTHING unless told otherwise. This defaulted to true as
+    // plan 3 scaffolding -- "own everything until the meta save exists" -- and
+    // the meta save arrived twenty-odd plans ago while the default stayed. It
+    // meant any `Loadout{}` silently granted the entire skill tree, which is the
+    // most expensive thing in the game to hand out by accident.
+    bool ownAll = false;
 
     bool owns(const std::string& nodeId) const {
         return ownAll || ownedNodes.count(nodeId) > 0;

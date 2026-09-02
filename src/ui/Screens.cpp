@@ -286,7 +286,7 @@ void drawSlots(const render::SpriteAtlas& atlas, const std::vector<core::SaveSlo
         centredIn("ERASE", dx + kDelW / 2, dy + 8, 10, kInk);
     }
 
-    centred("click a profile to enter its skill trees", kVirtualH - 56, 10,
+    centred("click a profile to play", kVirtualH - 56, 10,
             palette::kHudDim);
 }
 
@@ -388,6 +388,14 @@ void drawHub(const render::SpriteAtlas& atlas, const content::Registry& reg,
             DrawCircleLines(lx + 6, kPanelY + 28, 7, kInk);
             DrawText(k.label, lx + 20, kPanelY + 23, 10, kInkDim);
             lx += 30 + MeasureText(k.label, 10) + 26;
+        }
+        // Somebody looking at a board of locked nodes with an empty purse needs
+        // to be told where shards come from. Every price on screen is red and
+        // nothing else here says the answer is "go and play".
+        if (slot.meta.shards == 0) {
+            const char* hint = "shards are earned by playing -- START RUN below";
+            DrawText(hint, kPanelX + kPanelW - 26 - MeasureText(hint, 10), kPanelY + 23, 10,
+                     Color{188, 122, 96, 255});
         }
     }
 

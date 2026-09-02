@@ -42,6 +42,10 @@ public:
     Screen screen() const { return screen_; }
     void requestStart(bool demoTowers = false, const std::string& mapId = {});
     void openHub(int slot);                      // dev capture: jump straight to the hub
+    // Opening a profile the way clicking its card does, which is not the same as
+    // jumping to the hub: where it lands depends on whether the profile can buy
+    // anything yet.
+    void openSlot(int slot);
     void showArtCompare() { screen_ = Screen::ArtCompare; }
     void showSpriteSheet() { screen_ = Screen::SpriteSheet; }
     // Dev capture: the two screens that otherwise need live input to reach.
@@ -162,6 +166,7 @@ private:
     // them. Called on load and whenever an option changes, so a setting can
     // never be stored but unapplied.
     void applySettings();
+    int cheapestNodeCost() const;
     // Advances the guided first run when the player has actually done the step,
     // and returns the SKIP rectangle so the click handler can find it.
     void updateTutorial();

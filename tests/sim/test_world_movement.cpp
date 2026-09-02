@@ -6,6 +6,8 @@
 #include "content/Registry.h"
 #include "sim/World.h"
 
+#include "support/Plots.h"
+
 using namespace td;
 
 static content::Registry loadReg() {
@@ -114,7 +116,7 @@ TEST_CASE("the simulation is deterministic for a fixed seed", "[sim]") {
 
 TEST_CASE("the global tree raises starting gold and lives", "[sim][trees]") {
     const auto reg = loadReg();
-    sim::World withTree(reg, reg.map("greenfields"), 1);          // default owns everything
+    sim::World withTree(reg, reg.map("greenfields"), 1, tdtest::owningAll());
     sim::World without(reg, reg.map("greenfields"), 1, bare());
     REQUIRE(withTree.gold() > without.gold());
     REQUIRE(withTree.lives() > without.lives());

@@ -18,7 +18,7 @@ static content::Registry loadReg() {
 
 TEST_CASE("combat emits the visual events the renderer needs", "[events]") {
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/5000);
     w.placeTower(PLOT(0), "arrow");
     w.placeTower(PLOT(1), "arrow");
     w.startNextWave();
@@ -36,7 +36,7 @@ TEST_CASE("combat emits the visual events the renderer needs", "[events]") {
 
 TEST_CASE("hit events carry damage and a position", "[events]") {
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/5000);
     w.placeTower(PLOT(0), "arrow");
     w.startNextWave();
 
@@ -56,7 +56,7 @@ TEST_CASE("hit events carry damage and a position", "[events]") {
 
 TEST_CASE("the quake element announces its eruptions", "[events]") {
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/5000);
     w.placeTower(PLOT(0), "arrow");
     while (w.upgradeCost(PLOT(0)) > 0) w.upgradeTower(PLOT(0));
     w.attachElement(PLOT(0), "earth");
@@ -80,7 +80,7 @@ TEST_CASE("a headless run never accumulates events without bound", "[events]") {
     // Nothing drains in a headless run, so the queue must be capped or a long
     // simulation would grow it forever.
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/5000);
     w.placeTower(PLOT(0), "arrow");
     w.startNextWave();
     for (int i = 0; i < static_cast<int>(120.0f / sim::kFixedDt); ++i) w.tick(sim::kFixedDt);

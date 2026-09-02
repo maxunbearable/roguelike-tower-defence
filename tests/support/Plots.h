@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "content/Registry.h"
+#include "core/Loadout.h"
 
 namespace tdtest {
 
@@ -54,6 +55,23 @@ inline std::pair<int, int> plotNear(float x, float y) {
         }
     }
     return best;
+}
+
+}  // namespace tdtest
+
+namespace tdtest {
+
+// A profile that owns the whole tree.
+//
+// `core::Loadout{}` used to mean this: `ownAll` defaulted to true as plan-3
+// scaffolding and stayed that way long after the meta save arrived, so any test
+// that built a world without saying what it owned silently got a fully upgraded
+// profile. The default is now "owns nothing", which is the honest one, and tests
+// that need the tree ask for it here.
+inline td::core::Loadout owningAll() {
+    td::core::Loadout lo;
+    lo.ownAll = true;
+    return lo;
 }
 
 }  // namespace tdtest

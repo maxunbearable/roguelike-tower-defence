@@ -42,7 +42,9 @@ int main(int argc, char** argv) {
     const char* shotPath = nullptr;
     float shotAfter = 0.0f;
     bool autostart = false;
+    bool freshRun = false;
     bool hub = false;
+    int openSlot = -1;
     bool artCompare = false;
     bool spriteSheet = false;
     bool menuAt = false;
@@ -63,8 +65,14 @@ int main(int argc, char** argv) {
             shotAfter = static_cast<float>(std::atof(argv[++i]));
         else if (std::strcmp(argv[i], "--autostart") == 0)
             autostart = true;
+        // The REAL opening: a starting purse and an empty board, which is what a
+        // new player meets. --autostart is the dev run with money and towers.
+        else if (std::strcmp(argv[i], "--freshrun") == 0)
+            freshRun = true;
         else if (std::strcmp(argv[i], "--hub") == 0)
             hub = true;
+        else if (std::strcmp(argv[i], "--openslot") == 0 && i + 1 < argc)
+            openSlot = std::atoi(argv[++i]);
         else if (std::strcmp(argv[i], "--artcompare") == 0)
             artCompare = true;
         else if (std::strcmp(argv[i], "--tab") == 0 && i + 1 < argc)
@@ -144,7 +152,9 @@ int main(int argc, char** argv) {
         if (jumpWave > 0) game.devJumpToWave(jumpWave);
         if (pauseIt) game.devPause();
     }
+    if (freshRun) game.requestStart(/*demoTowers=*/false, forceMap ? forceMap : "");
     if (hub) { game.openHub(0); game.devSetHubTab(hubTab); }
+    if (openSlot >= 0) game.openSlot(openSlot);
     if (artCompare) game.showArtCompare();
     if (spriteSheet) game.showSpriteSheet();
     if (menuAt) {

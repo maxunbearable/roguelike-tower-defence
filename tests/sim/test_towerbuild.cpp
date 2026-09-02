@@ -20,7 +20,7 @@ static content::Registry loadReg() {
     return r;
 }
 static sim::World rich(const content::Registry& r) {
-    return sim::World(r, r.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/100000);
+    return sim::World(r, r.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/100000);
 }
 static bool has(const std::vector<std::string>& v, const std::string& s) {
     return std::find(v.begin(), v.end(), s) != v.end();
@@ -256,7 +256,7 @@ TEST_CASE("an unspecialised tower still fights, just plainly", "[build]") {
 TEST_CASE("purchases are unaffordable when gold runs out", "[build]") {
     const auto reg = loadReg();
     // Just enough for the tower itself and nothing more.
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{},
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(),
                  /*goldOverride=*/reg.tower("arrow").buildCost);
     REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     REQUIRE(w.gold() == 0);

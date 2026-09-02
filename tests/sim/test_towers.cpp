@@ -68,7 +68,7 @@ TEST_CASE("gold runs out", "[towers]") {
 
 TEST_CASE("upgrading raises level and applies the authored multiplier", "[towers]") {
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/1000);
+    sim::World w(reg, reg.map("greenfields"), 1, tdtest::owningAll(), /*goldOverride=*/1000);
     w.placeTower(PLOT(0), "arrow");
     const auto t = w.towerAt(PLOT(0));
     const float baseDamage = w.reg().get<sim::TowerStats>(t).damage;

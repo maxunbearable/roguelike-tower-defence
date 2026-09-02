@@ -25,7 +25,7 @@ TEST_CASE("the upgrade preview matches what upgrading actually produces",
     // drift from the real result, it is worse than showing nothing.
     const auto reg = loadReg();
     for (const auto& [towerId, def] : reg.towers()) {
-        sim::World w(reg, reg.map("greenfields"), 55, core::Loadout{}, 1000000);
+        sim::World w(reg, reg.map("greenfields"), 55, tdtest::owningAll(), 1000000);
         REQUIRE(w.placeTower(PLOT(0), towerId) == sim::World::PlaceResult::Ok);
 
         while (w.upgradeCost(PLOT(0)) > 0) {
@@ -49,7 +49,7 @@ TEST_CASE("the upgrade preview matches what upgrading actually produces",
 
 TEST_CASE("an upgrade preview improves the stats it claims to", "[towers][preview]") {
     const auto reg = loadReg();
-    sim::World w(reg, reg.map("greenfields"), 55, core::Loadout{}, 1000000);
+    sim::World w(reg, reg.map("greenfields"), 55, tdtest::owningAll(), 1000000);
     REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     const auto now = w.reg().get<sim::TowerStats>(w.towerAt(PLOT(0)));
     sim::TowerStats next;

@@ -5,6 +5,7 @@
 #include <cstdlib>
 
 #include "content/SpecFacts.h"
+#include "core/Onboarding.h"
 #include "core/Settings.h"
 #include "sim/Tutorial.h"
 
@@ -316,8 +317,11 @@ void Game::startRun(int goldOverride) {
     // Seeded like a real run, or a capture would never show the wave variation
     // the rest of the game now has -- and this path is exactly what screenshots
     // and the tutorial run go through.
+    // The profile's real loadout, not an empty one. While `Loadout{}` meant
+    // "owns everything" this path quietly played the whole skill tree, so a
+    // capture of "the opening" showed 655 gold where a new player gets 275.
     world_ = std::make_unique<sim::World>(*registry_, registry_->map(runMapId_), newRunSeed(),
-                                          core::Loadout{}, goldOverride);
+                                          metaLoadout(), goldOverride);
     screen_ = Screen::Playing;
     accumulator_ = 0.0f;
     hud_ = ui::HudState{};
@@ -335,16 +339,35 @@ void Game::updateSlots() {
     }
     if (act.kind != ui::SlotAction::Kind::Open) return;
 
-    activeSlot_ = act.slot;
+    openSlot(act.slot);
+}
+
+void Game::openSlot(int slot) {
+    activeSlot_ = slot;
     if (!active().used) {
         active() = core::SaveSlot{};
         active().used = true;
-        active().profileName = "Slot " + std::to_string(act.slot + 1);
+        active().profileName = "Slot " + std::to_string(slot + 1);
         persist();
     }
     hubTab_ = 0;
     hubMessage_.clear();
-    screen_ = Screen::Hub;
+    // A profile with nothing banked and no runs behind it cannot buy anything,
+    // so the trees would be a wall of locked nodes. The slot card says "click to
+    // begin a new game"; this makes that true.
+    screen_ = core::landingFor(active().meta, cheapestNodeCost()) == core::Landing::Maps
+                  ? Screen::Maps
+                  : Screen::Hub;
+}
+
+int Game::cheapestNodeCost() const {
+    int best = 0;
+    for (const auto& [id, tree] : registry_->trees()) {
+        for (const auto& n : tree.nodes) {
+            if (n.cost > 0 && (best == 0 || n.cost < best)) best = n.cost;
+        }
+    }
+    return best;
 }
 
 void Game::updateHub() {

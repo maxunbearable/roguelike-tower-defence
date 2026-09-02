@@ -414,3 +414,53 @@ TEST_CASE("report fresh-run tower counts by seed", "[balance][.report]") {
     UNSCOPED_INFO(out.str());
     CHECK(true);
 }
+
+TEST_CASE("report the endgame across difficulties", "[balance][.report]") {
+    // Is there anything left once the tree is bought? The campaign ladder is
+    // measured with a profile that owns nothing; this is the other end.
+    const auto reg = loadReg();
+    const core::Difficulty diffs[] = {core::Difficulty::Relaxed, core::Difficulty::Standard,
+                                      core::Difficulty::Brutal};
+    std::vector<std::pair<int, std::string>> byOrder;
+    for (const auto& [id, def] : reg.maps()) byOrder.emplace_back(def.order, id);
+    std::sort(byOrder.begin(), byOrder.end());
+
+    std::ostringstream out;
+    out << "\nfully upgraded profile, waves survived of 50 (mean of 8 seeds), cleared count\n";
+    out << std::left << std::setw(16) << "map";
+    for (auto d : diffs) out << std::right << std::setw(18) << core::difficultyName(d);
+    out << "\n";
+    for (const auto& [order, id] : byOrder) {
+        out << std::left << std::setw(16) << id;
+        for (auto d : diffs) {
+            float mean = 0.0f;
+            int cleared = 0;
+            constexpr int kSeeds = 8;
+            for (int s = 1; s <= kSeeds; ++s) {
+                const auto r = sim::autoPlay(reg, reg.map(id), fullyUpgraded(),
+                                             static_cast<uint64_t>(s), 60, d);
+                mean += static_cast<float>(r.wavesSurvived);
+                cleared += r.cleared ? 1 : 0;
+            }
+            std::ostringstream cell;
+            cell << std::fixed << std::setprecision(1) << mean / kSeeds << " (" << cleared << "/8)";
+            out << std::right << std::setw(18) << cell.str();
+        }
+        out << "\n";
+    }
+    UNSCOPED_INFO(out.str());
+    CHECK(true);
+}
+
+TEST_CASE("report the opening purse", "[balance][.report]") {
+    const auto reg = loadReg();
+    std::ostringstream out;
+    out << "\nstarting gold, empty loadout, Standard\n";
+    for (const auto& [id, def] : reg.maps()) {
+        sim::World w(reg, def, 1);
+        out << "  " << std::left << std::setw(16) << id << " map startGold "
+            << std::setw(5) << def.startGold << " -> world gold " << w.gold() << "\n";
+    }
+    UNSCOPED_INFO(out.str());
+    CHECK(true);
+}
