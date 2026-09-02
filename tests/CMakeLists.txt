@@ -1,6 +1,7 @@
 file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS *.cpp)
 add_executable(td_tests ${TEST_SRC})
 target_link_libraries(td_tests PRIVATE td_core Catch2::Catch2WithMain)
+target_include_directories(td_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(td_tests PRIVATE
     TD_CONTENT_DIR="${CMAKE_SOURCE_DIR}/content")
 

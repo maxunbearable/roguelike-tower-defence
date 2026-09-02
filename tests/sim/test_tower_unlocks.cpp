@@ -3,6 +3,8 @@
 #include <filesystem>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/World.h"
 
 using namespace td;
@@ -28,12 +30,12 @@ TEST_CASE("a fresh profile can build the arrow tower and nothing else",
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning({}), 1000000);
     REQUIRE(w.towerUnlocked("arrow"));
-    REQUIRE(w.placeTower(1, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
 
     for (const char* id : {"cannon", "arcane", "ballista", "brazier"}) {
         UNSCOPED_INFO(id);
         REQUIRE_FALSE(w.towerUnlocked(id));
-        REQUIRE(w.placeTower(3, 0, id) == sim::World::PlaceResult::Locked);
+        REQUIRE(w.placeTower(PLOT(1), id) == sim::World::PlaceResult::Locked);
     }
 }
 
@@ -41,10 +43,10 @@ TEST_CASE("buying a charter unlocks exactly that tower", "[towers][unlock]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning({"cannon.unlock"}), 1000000);
     REQUIRE(w.towerUnlocked("cannon"));
-    REQUIRE(w.placeTower(3, 0, "cannon") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(1), "cannon") == sim::World::PlaceResult::Ok);
     // And no others come along with it.
     REQUIRE_FALSE(w.towerUnlocked("arcane"));
-    REQUIRE(w.placeTower(5, 0, "arcane") == sim::World::PlaceResult::Locked);
+    REQUIRE(w.placeTower(PLOT(2), "arcane") == sim::World::PlaceResult::Locked);
 }
 
 TEST_CASE("a locked tower is rejected before its cost is charged",
@@ -54,7 +56,7 @@ TEST_CASE("a locked tower is rejected before its cost is charged",
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning({}), 1000000);
     const int before = w.gold();
-    REQUIRE(w.placeTower(3, 0, "arcane") == sim::World::PlaceResult::Locked);
+    REQUIRE(w.placeTower(PLOT(1), "arcane") == sim::World::PlaceResult::Locked);
     REQUIRE(w.gold() == before);
 }
 

@@ -61,15 +61,87 @@ def verify(name, waypoints):
     return tiles
 
 
-def tile_rows(tiles):
+# Build plots, not open grass. Measured before this change: greenfields offered
+# 144 buildable tiles and the strongest possible run used 34 of them, so a plot
+# was never a scarce thing and the only question a tower asked was what it cost.
+# That made the cheapest tower the right answer for every marginal build, and
+# every tower unlocked with shards a worse buy than the free starting one.
+#
+# Plots hug the path, because a tower that cannot reach the road is not a
+# choice, and they are kept apart so each one is a distinct position rather than
+# a blob. `plotEvery` sets how many path tiles pass between them.
+def place_plots(grid, tiles, every):
+    """Plots in small clumps beside the road, sampled along the path.
+
+    Clumped, not scattered: the brazier's forge spec trades 61% of its own
+    output for an aura over towers within 2.6 tiles, so it breaks even only at
+    1.57 buffed neighbours. Plots spaced further apart than that would leave the
+    game's one support archetype structurally dead -- a whole tower spec deleted
+    by a map-generation rule. Each clump holds up to three plots, all within the
+    aura, so a support build has something to support.
+    """
+    path = set(tiles)
+    plots = []
+    for i, (x, y) in enumerate(tiles):
+        if i % every:
+            continue
+        # Direction along the path here, and the two sides of the road.
+        nx, ny = tiles[min(i + 1, len(tiles) - 1)]
+        dx, dy = (nx - x, ny - y) if (nx, ny) != (x, y) else (1, 0)
+        for perp in ((-dy, dx), (dy, -dx)):
+            first = (x + perp[0], y + perp[1])
+            # Beside a horizontal road the clump runs ALONG it, three abreast:
+            # stacking plots outward would put the far ones at the edge of a
+            # tower's reach, and a forge's aura would then land on towers that
+            # can barely fire -- measured, that scored the support spec below
+            # plain arrow.
+            #
+            # Beside a VERTICAL road it runs across instead. Along would mean two
+            # plots in the same column, and a tower sprite is taller than its
+            # tile, so the upper one is drawn through the lower one. Two wide
+            # rather than three keeps both within reach of the road.
+            if dy == 0:
+                clump = [first,
+                         (first[0] + dx, first[1] + dy),
+                         (first[0] + 2 * dx, first[1] + 2 * dy)]
+            else:
+                # A zigzag, so no two plots share a column on consecutive rows.
+                # Two in one column would draw through each other; spacing them
+                # two rows apart keeps them clear and still inside the aura,
+                # which a plain two-wide pair was not -- obsidian-gate fell to
+                # 1.18 mean neighbours that way, under forge's 1.57 break-even.
+                clump = [first,
+                         (first[0] + perp[0], first[1] + dy),
+                         (first[0], first[1] + 2 * dy)]
+            placed = []
+            for (px, py) in clump:
+                if not (0 <= px < GRID_W and 0 <= py < GRID_H):
+                    continue
+                if (px, py) in path or grid[py][px] != ".":
+                    continue
+                # Keep clumps apart from each other so they read as distinct
+                # positions on the board rather than one long wall of pads.
+                if any(abs(px - qx) <= 1 and abs(py - qy) <= 1 for (qx, qy) in plots
+                       if (qx, qy) not in placed):
+                    continue
+                grid[py][px] = "o"
+                placed.append((px, py))
+            plots.extend(placed)
+            if placed:
+                break
+    return plots
+
+
+def tile_rows(tiles, plot_every):
     grid = [["." for _ in range(GRID_W)] for _ in range(GRID_H)]
     for (x, y) in tiles:
         grid[y][x] = "="
+    plots = place_plots(grid, tiles, plot_every)
     sx, sy = tiles[0]
     ex, ey = tiles[-1]
     grid[sy][sx] = "S"
     grid[ey][ex] = "E"
-    return ["".join(row) for row in grid]
+    return ["".join(row) for row in grid], plots
 
 
 # Difficulty is normalised against PATH LENGTH, because total damage a board can
@@ -95,7 +167,8 @@ def emit(m):
     hp, w50 = hp_per_wave(m["target"], count50, len(tiles), m["hpCurveExp"])
     m = dict(m, hpPerWave=round(hp, 4))
     m["_w50"] = round(w50, 1)
-    rows = tile_rows(tiles)
+    rows, plots = tile_rows(tiles, m.get("plotEvery", 8))
+    m["_plots"] = len(plots)
     wp = ",".join(f"[{x},{y}]" for x, y in m["path"])
     pool = "\n\n".join(
         f'[[waves.pool]]\nenemy = "{e}"\nfromWave = {w}' for e, w in m["pool"])
@@ -117,7 +190,7 @@ buildTime = {m['buildTime']}
 
 # {m['blurb']}
 
-# '.' buildable   '#' blocked scenery   '=' path   'S' spawn   'E' exit
+# 'o' build plot   '.' open ground   '#' blocked scenery   '=' path   'S' spawn   'E' exit
 tiles = """
 {chr(10).join(rows)}
 """

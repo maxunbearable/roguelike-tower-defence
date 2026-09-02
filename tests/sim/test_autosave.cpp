@@ -17,6 +17,8 @@
 #include <filesystem>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/Autosave.h"
 #include "sim/World.h"
 
@@ -54,7 +56,7 @@ TEST_CASE("building a tower makes the run worth writing", "[autosave]") {
     auto written = sim::saveMarkOf(w);
     REQUIRE_FALSE(sim::shouldAutosave(w, written));
 
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     CHECK(sim::shouldAutosave(w, written));
 }
 
@@ -63,26 +65,26 @@ TEST_CASE("upgrading and specialising are noticed too", "[autosave]") {
     // would miss them -- and they are the expensive purchases.
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     auto written = sim::saveMarkOf(w);
 
-    REQUIRE(w.upgradeTower(2, 0));
+    REQUIRE(w.upgradeTower(PLOT(0)));
     CHECK(sim::shouldAutosave(w, written));
 
     written = sim::saveMarkOf(w);
-    while (w.upgradeCost(2, 0) > 0 && w.upgradeTower(2, 0)) {
+    while (w.upgradeCost(PLOT(0)) > 0 && w.upgradeTower(PLOT(0))) {
     }
     written = sim::saveMarkOf(w);
-    REQUIRE(w.attachElement(2, 0, "earth"));
+    REQUIRE(w.attachElement(PLOT(0), "earth"));
     CHECK(sim::shouldAutosave(w, written));
 }
 
 TEST_CASE("selling is noticed", "[autosave]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     const auto written = sim::saveMarkOf(w);
-    REQUIRE(w.sellTower(2, 0));
+    REQUIRE(w.sellTower(PLOT(0)));
     CHECK(sim::shouldAutosave(w, written));
 }
 
@@ -100,7 +102,7 @@ TEST_CASE("a run mid-wave is never written", "[autosave]") {
     REQUIRE_FALSE(w.canSnapshot());
     CHECK_FALSE(sim::shouldAutosave(w, nothingWritten));
     // Even building during a wave must not force a write.
-    REQUIRE(w.placeTower(4, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(1), "arrow") == sim::World::PlaceResult::Ok);
     CHECK_FALSE(sim::shouldAutosave(w, nothingWritten));
 }
 

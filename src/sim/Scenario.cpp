@@ -1,5 +1,7 @@
 #include "sim/Scenario.h"
 
+#include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "sim/World.h"
@@ -101,32 +103,85 @@ ComboResult simulateCombo(const content::Registry& reg, const std::string& tower
     // ONE specialised tower, because a specialisation is unique on the map --
     // two snipers is not a configuration a player can ever build. A pair of
     // plain arrow towers stands in for the supporting fire a real board has.
-    w.placeTower(5, 0, towerId);
+    // Plots are a finite authored set now, so the harness asks the map where it
+    // may build instead of naming tiles, which would have silently stopped
+    // measuring anything the day the maps grew build plots.
+    core::Vec2 focus{0.0f, 0.0f};
+    const auto stands = layout(kind);
+    for (const auto& p : stands) {
+        const auto v = w.path().positionAt(p.distance);
+        focus.x += v.x;
+        focus.y += v.y;
+    }
+    focus.x /= static_cast<float>(stands.size());
+    focus.y /= static_cast<float>(stands.size());
+
+    std::vector<std::pair<int, int>> plots;
+    for (int y = 0; y < w.map().gridH; ++y) {
+        for (int x = 0; x < w.map().gridW; ++x) {
+            if (w.map().buildableAt(x, y)) plots.emplace_back(x, y);
+        }
+    }
+    const auto d2 = [&](std::pair<int, int> q) {
+        const float dx = static_cast<float>(q.first) + 0.5f - focus.x;
+        const float dy = static_cast<float>(q.second) + 0.5f - focus.y;
+        return dx * dx + dy * dy;
+    };
+    // Anchor on a plot that has COMPANY near the enemies, not merely the plot
+    // nearest to them. Maps place plots in clumps and the closest one to the
+    // road is sometimes a lone pad -- a forge sited there buffs a single
+    // neighbour, below its 1.57 break-even, and the harness then reports the
+    // game's one support spec as worse than taking no spec at all. That
+    // measures a bad placement, not the specialisation. A player puts a forge in
+    // a clump, so this does too.
+    const auto companions = [&](std::pair<int, int> q) {
+        int n = 0;
+        for (const auto& o : plots) {
+            if (o == q) continue;
+            const float dx = static_cast<float>(o.first - q.first);
+            const float dy = static_cast<float>(o.second - q.second);
+            if (dx * dx + dy * dy <= 2.5f * 2.5f) ++n;
+        }
+        return n;
+    };
+    std::sort(plots.begin(), plots.end(), [&](auto l, auto r) {
+        const int cl = std::min(companions(l), 3), cr = std::min(companions(r), 3);
+        if (cl != cr) return cl > cr;
+        return d2(l) < d2(r);
+    });
+    if (!plots.empty()) {
+        const auto anchor = plots.front();
+        const auto near2 = [&](std::pair<int, int> q) {
+            const float dx = static_cast<float>(q.first - anchor.first);
+            const float dy = static_cast<float>(q.second - anchor.second);
+            return dx * dx + dy * dy;
+        };
+        std::sort(plots.begin() + 1, plots.end(),
+                  [&](auto l, auto r) { return near2(l) < near2(r); });
+    }
+
+    // ONE specialised tower, because a specialisation is unique on the map --
+    // two snipers is not a configuration a player can ever build.
+    const int sx = plots.at(0).first, sy = plots.at(0).second;
+    w.placeTower(sx, sy, towerId);
     // Specialising requires a fully levelled tower, so the matrix measures a
-    // maxed tower -- which is the only configuration that can carry a spec.
-    while (w.upgradeCost(5, 0) > 0) w.upgradeTower(5, 0);
-    w.attachElement(5, 0, elementId);
-    w.specialiseTower(5, 0, towerSpec);
-    w.specialiseElement(5, 0, elementSpec);
-    // THREE plain towers, not one. The comment above always said "a pair of
-    // plain towers stands in for the supporting fire a real board has", but the
-    // code placed a single one -- and that quietly made this harness unable to
-    // measure the only SUPPORT specialisation in the game.
+    // maxed tower -- the only configuration that can carry a spec.
+    while (w.upgradeCost(sx, sy) > 0) w.upgradeTower(sx, sy);
+    w.attachElement(sx, sy, elementId);
+    w.specialiseTower(sx, sy, towerSpec);
+    w.specialiseElement(sx, sy, elementSpec);
+    // THREE plain towers, not one, and LEVELLED like the specialised one.
     //
     // Forge trades 61% of its own output (damage x0.55, rate x0.7) for +18%
-    // damage and +18% rate on every tower in radius. It breaks even at 1.57
+    // damage and +18% rate on every tower in radius, so it breaks even at 1.57
     // buffed neighbours. With exactly one it is structurally behind, and it
     // measured 3% against a 20% median across the matrix -- read for the whole
-    // project as a dead build, when it was a mismeasured one. A real board holds
-    // twelve to thirty-four towers; two is not representative of anything.
-    // ...and LEVELLED, like the specialised one. Leaving them at level 1 made
-    // this a maxed tower standing among beginners rather than a board, and it
-    // distorted anything whose value lands on its neighbours: forge had to be
-    // tuned to a +100% aura to clear the bar against level-1 supporters, which
-    // would be far too strong beside maxed ones. A support build must be
-    // measured against the board a player actually has.
-    for (const auto& [tx, ty] :
-         {std::pair<int, int>{5, 2}, {4, 2}, {6, 2}}) {
+    // project as a dead build, when it was a mismeasured one. Leaving the
+    // supporters at level 1 made this a maxed tower standing among beginners
+    // rather than a board. A support build must be measured against the board a
+    // player actually has.
+    for (size_t i = 1; i < 4 && i < plots.size(); ++i) {
+        const int tx = plots[i].first, ty = plots[i].second;
         w.placeTower(tx, ty, towerId);
         while (w.upgradeCost(tx, ty) > 0 && w.upgradeTower(tx, ty)) {
         }

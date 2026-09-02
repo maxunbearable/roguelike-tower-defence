@@ -88,6 +88,23 @@ void validateMap(const MapDef& m, const Registry& reg, std::vector<std::string>&
         out.push_back(at(m.id) + "last waypoint is not on an 'E' tile");
     }
 
+    // A map with no build plots cannot be played at all, and a map with a
+    // handful cannot be defended. Towers may only stand on 'o', so this is the
+    // difference between a level and a corridor -- worth refusing to start over
+    // rather than discovering on the board.
+    {
+        int plots = 0;
+        for (int y = 0; y < m.gridH; ++y) {
+            for (int x = 0; x < m.gridW; ++x) {
+                if (m.buildableAt(x, y)) ++plots;
+            }
+        }
+        if (plots < 8) {
+            out.push_back(at(m.id) + "has only " + std::to_string(plots) +
+                          " build plots ('o' tiles); a map needs at least 8 to be playable");
+        }
+    }
+
     if (axisOk) {
         // 7: every tile the route crosses must be path, spawn or exit
         std::set<std::pair<int, int>> covered;

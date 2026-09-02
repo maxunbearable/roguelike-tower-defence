@@ -5,6 +5,8 @@
 
 #include <filesystem>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 #include "content/Registry.h"
 #include "sim/AutoPlayer.h"
@@ -195,4 +197,64 @@ TEST_CASE("skill tree investment measurably extends a run", "[balance]") {
     const auto strong = sim::autoPlay(reg, reg.map("greenfields"), fullyUpgraded(), 7);
     UNSCOPED_INFO("fresh " << weak.wavesSurvived << " vs upgraded " << strong.wavesSurvived);
     REQUIRE(strong.wavesSurvived > weak.wavesSurvived);
+}
+
+TEST_CASE("plots bind the endgame board and gold binds the opening", "[balance]") {
+    // The design intent of finite build plots, stated as a measurement.
+    //
+    // Greenfields used to offer 144 buildable tiles and the strongest possible
+    // run used 34 of them, so a plot was never scarce and a tower's only cost
+    // was gold. Every placement was interchangeable with a hundred others. Now
+    // the map authors its plots and the late board fills them.
+    //
+    // Note what this does NOT claim. The endgame is not rich: it spends what it
+    // has on levels rather than banking it, so both resources are tight at the
+    // end. What changed is that one of them is now a position on the map.
+    const auto reg = loadReg();
+    const auto& map = reg.map("greenfields");
+    int plots = 0;
+    for (int y = 0; y < map.gridH; ++y)
+        for (int x = 0; x < map.gridW; ++x)
+            if (map.buildableAt(x, y)) ++plots;
+    REQUIRE(plots > 0);
+
+    const auto strong = sim::autoPlay(reg, map, fullyUpgraded(), 1);
+    UNSCOPED_INFO("plots " << plots << ", endgame built " << strong.towersBuilt);
+    CHECK(strong.towersBuilt >= plots - 2);  // it fills the map
+    CHECK(strong.towersBuilt <= plots);      // and cannot exceed it
+
+    // Early on the opposite must hold, or the opening becomes a formality: a
+    // fresh profile is stopped by its purse, not by the map.
+    const auto weak = sim::autoPlay(reg, map, fresh(), 1);
+    UNSCOPED_INFO("fresh built " << weak.towersBuilt << " of " << plots << " plots");
+    CHECK(weak.towersBuilt < plots - 4);
+}
+
+TEST_CASE("a build plot has neighbours a support aura can reach", "[balance]") {
+    // The brazier's forge spec trades 61% of its own output for an aura over
+    // towers within 2.6 tiles, so it breaks even only at 1.57 buffed
+    // neighbours. A map generator that scattered its plots further apart than
+    // that would delete a tower specialisation without touching a line of its
+    // content -- and the first version of the plot layout did exactly that,
+    // measuring forge below plain arrow.
+    const auto reg = loadReg();
+    for (const auto& [id, map] : reg.maps()) {
+        std::vector<std::pair<int, int>> plots;
+        for (int y = 0; y < map.gridH; ++y)
+            for (int x = 0; x < map.gridW; ++x)
+                if (map.buildableAt(x, y)) plots.emplace_back(x, y);
+        REQUIRE(plots.size() > 8);
+        float total = 0.0f;
+        for (const auto& p : plots) {
+            for (const auto& q : plots) {
+                if (p == q) continue;
+                const float dx = static_cast<float>(p.first - q.first);
+                const float dy = static_cast<float>(p.second - q.second);
+                if (dx * dx + dy * dy <= 2.6f * 2.6f) total += 1.0f;
+            }
+        }
+        const float mean = total / static_cast<float>(plots.size());
+        UNSCOPED_INFO(id << ": " << plots.size() << " plots, mean aura neighbours " << mean);
+        CHECK(mean > 1.57f);
+    }
 }

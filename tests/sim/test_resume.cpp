@@ -20,6 +20,8 @@
 #include "core/SaveGame.h"
 #include "sim/World.h"
 
+#include "support/Plots.h"
+
 using namespace td;
 
 namespace {
@@ -40,9 +42,9 @@ core::Loadout owning() {
 // spent. Left in the build phase, which is the only state a run may be saved in.
 // World is neither copyable nor movable, so this fills one in place.
 void playRun(sim::World& w) {
-    for (int x = 2; x <= 8; x += 2) {
-        if (w.placeTower(x, 0, "arrow") != sim::World::PlaceResult::Ok) continue;
-        while (w.upgradeCost(x, 0) > 0 && w.upgradeTower(x, 0)) {
+    for (int i = 0; i < 4; ++i) {
+        if (w.placeTower(PLOT(i), "arrow") != sim::World::PlaceResult::Ok) continue;
+        while (w.upgradeCost(PLOT(i)) > 0 && w.upgradeTower(PLOT(i))) {
         }
     }
     w.startNextWave();

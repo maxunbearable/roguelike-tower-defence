@@ -4,6 +4,8 @@
 #include <map>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/World.h"
 
 using namespace td;
@@ -17,8 +19,8 @@ static content::Registry loadReg() {
 TEST_CASE("combat emits the visual events the renderer needs", "[events]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
-    w.placeTower(3, 0, "arrow");
-    w.placeTower(6, 0, "arrow");
+    w.placeTower(PLOT(0), "arrow");
+    w.placeTower(PLOT(1), "arrow");
     w.startNextWave();
 
     std::map<int, int> counts;
@@ -35,7 +37,7 @@ TEST_CASE("combat emits the visual events the renderer needs", "[events]") {
 TEST_CASE("hit events carry damage and a position", "[events]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
-    w.placeTower(3, 0, "arrow");
+    w.placeTower(PLOT(0), "arrow");
     w.startNextWave();
 
     bool sawHit = false;
@@ -55,10 +57,10 @@ TEST_CASE("hit events carry damage and a position", "[events]") {
 TEST_CASE("the quake element announces its eruptions", "[events]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
-    w.placeTower(3, 0, "arrow");
-    while (w.upgradeCost(3, 0) > 0) w.upgradeTower(3, 0);
-    w.attachElement(3, 0, "earth");
-    w.specialiseElement(3, 0, "quake");
+    w.placeTower(PLOT(0), "arrow");
+    while (w.upgradeCost(PLOT(0)) > 0) w.upgradeTower(PLOT(0));
+    w.attachElement(PLOT(0), "earth");
+    w.specialiseElement(PLOT(0), "quake");
     w.startNextWave();
 
     int quakes = 0;
@@ -79,7 +81,7 @@ TEST_CASE("a headless run never accumulates events without bound", "[events]") {
     // simulation would grow it forever.
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
-    w.placeTower(3, 0, "arrow");
+    w.placeTower(PLOT(0), "arrow");
     w.startNextWave();
     for (int i = 0; i < static_cast<int>(120.0f / sim::kFixedDt); ++i) w.tick(sim::kFixedDt);
     REQUIRE(w.drainEvents().size() <= 512);

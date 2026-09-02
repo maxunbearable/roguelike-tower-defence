@@ -17,8 +17,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 
 #include "content/Registry.h"
@@ -150,4 +152,36 @@ TEST_CASE("a missing content folder is reported, not thrown", "[startup]") {
     INFO(out.problem);
     REQUIRE_FALSE(out.ok);
     CHECK(mentions(out.problem, "not found"));
+}
+
+TEST_CASE("a map with no build plots refuses to start", "[startup]") {
+    // Towers may only stand on 'o'. A map that lost its plots would load, draw,
+    // and be completely unplayable -- the kind of content mistake that is
+    // obvious on the board and invisible in review.
+    ContentCopy c("noplots");
+    const auto path = c.dir / "maps" / "greenfields.toml";
+    std::string text;
+    {
+        std::ifstream in(path);
+        text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    const auto tiles = text.find("tiles = \"\"\"");
+    REQUIRE(tiles != std::string::npos);
+    const auto end = text.find("\"\"\"", tiles + 11);
+    REQUIRE(end != std::string::npos);
+    std::string block = text.substr(tiles, end - tiles);
+    REQUIRE(block.find('o') != std::string::npos);  // there were plots to remove
+    std::string stripped = block;
+    std::replace(stripped.begin(), stripped.end(), 'o', '.');
+    text.replace(tiles, end - tiles, stripped);
+    {
+        std::ofstream out(path, std::ios::trunc);
+        out << text;
+    }
+
+    content::Registry reg;
+    const auto outcome = content::loadAndValidate(reg, c.dir);
+    INFO(outcome.problem);
+    REQUIRE_FALSE(outcome.ok);
+    CHECK(outcome.problem.find("build plots") != std::string::npos);
 }

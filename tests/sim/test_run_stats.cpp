@@ -10,6 +10,8 @@
 #include <filesystem>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/World.h"
 
 using namespace td;
@@ -40,13 +42,13 @@ TEST_CASE("a fresh run has empty statistics", "[runstats]") {
 TEST_CASE("building towers is counted", "[runstats]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
-    REQUIRE(w.placeTower(4, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(1), "arrow") == sim::World::PlaceResult::Ok);
     CHECK(w.stats().towersBuilt == 2);
 
     // Selling removes the tower but must NOT un-count it: the statistic is what
     // the player did over the run, not what is standing at the end.
-    REQUIRE(w.sellTower(2, 0));
+    REQUIRE(w.sellTower(PLOT(0)));
     CHECK(w.stats().towersBuilt == 2);
     CHECK(w.towerCount() == 1);
 }
@@ -55,9 +57,9 @@ TEST_CASE("kills and bounty are counted against the gold actually paid", "[runst
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
     // A dense line of maxed towers, so wave one dies rather than leaks.
-    for (int x = 2; x <= 10; x += 2) {
-        if (w.placeTower(x, 0, "arrow") != sim::World::PlaceResult::Ok) continue;
-        while (w.upgradeCost(x, 0) > 0 && w.upgradeTower(x, 0)) {
+    for (int i = 0; i < 5; ++i) {
+        if (w.placeTower(PLOT(i), "arrow") != sim::World::PlaceResult::Ok) continue;
+        while (w.upgradeCost(PLOT(i)) > 0 && w.upgradeTower(PLOT(i))) {
         }
     }
     w.startNextWave();

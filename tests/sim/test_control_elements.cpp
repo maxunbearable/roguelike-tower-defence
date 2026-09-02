@@ -11,6 +11,8 @@
 #include <filesystem>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/World.h"
 
 using namespace td;
@@ -32,14 +34,19 @@ core::Loadout ownAll() {
 // A world with one fully levelled, fully specialised tower on the path.
 std::unique_ptr<sim::World> withTower(const content::Registry& reg, const char* towerId,
                                      const char* towerSpec, const char* elementId,
-                                     const char* elementSpec) {
+                                     const char* elementSpec, float coversDistance = 2.0f) {
     auto w = std::make_unique<sim::World>(reg, reg.map("greenfields"), 31337, ownAll(),
                                           /*goldOverride=*/1000000);
-    REQUIRE(w->placeTower(5, 0, towerId) == sim::World::PlaceResult::Ok);
-    while (w->upgradeCost(5, 0) > 0) w->upgradeTower(5, 0);
-    w->attachElement(5, 0, elementId);
-    w->specialiseTower(5, 0, towerSpec);
-    w->specialiseElement(5, 0, elementSpec);
+    // Sited to cover the stretch of road the caller cares about. Build plots are
+    // a finite authored set, so "the first plot" is wherever the map put it --
+    // which for a test that parks an enemy nine tiles along is out of range.
+    const auto at = w->path().positionAt(coversDistance);
+    const auto [px, py] = tdtest::plotNear(at.x, at.y);
+    REQUIRE(w->placeTower(px, py, towerId) == sim::World::PlaceResult::Ok);
+    while (w->upgradeCost(px, py) > 0) w->upgradeTower(px, py);
+    w->attachElement(px, py, elementId);
+    w->specialiseTower(px, py, towerSpec);
+    w->specialiseElement(px, py, elementSpec);
     w->enterSandbox();
     return w;
 }
@@ -156,7 +163,7 @@ TEST_CASE("a boss resists the shove far more than a regular enemy", "[control][b
     const auto reg = loadReg();
 
     const auto pushedBackBy = [&](const char* enemyId) {
-        auto w = withTower(reg, "arrow", "elf", "wind", "gust");
+        auto w = withTower(reg, "arrow", "elf", "wind", "gust", /*coversDistance=*/9.0f);
         w->spawnEnemy(enemyId, kTanky);
         const auto e = firstEnemy(*w);
         REQUIRE((e != entt::null));
@@ -192,13 +199,13 @@ TEST_CASE("a forge raises the output of the tower beside it", "[control][support
     const auto damageFrom = [&](bool withForge) {
         auto w = std::make_unique<sim::World>(reg, reg.map("greenfields"), 8181, ownAll(),
                                              /*goldOverride=*/1000000);
-        REQUIRE(w->placeTower(5, 0, "arrow") == sim::World::PlaceResult::Ok);
-        while (w->upgradeCost(5, 0) > 0) w->upgradeTower(5, 0);
+        REQUIRE(w->placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
+        while (w->upgradeCost(PLOT(0)) > 0) w->upgradeTower(PLOT(0));
 
         if (withForge) {
-            REQUIRE(w->placeTower(6, 0, "brazier") == sim::World::PlaceResult::Ok);
-            while (w->upgradeCost(6, 0) > 0) w->upgradeTower(6, 0);
-            w->specialiseTower(6, 0, "forge");
+            REQUIRE(w->placeTower(PLOT(1), "brazier") == sim::World::PlaceResult::Ok);
+            while (w->upgradeCost(PLOT(1)) > 0) w->upgradeTower(PLOT(1));
+            w->specialiseTower(PLOT(1), "forge");
         }
         w->enterSandbox();
         w->spawnEnemy("goblin", kTanky);

@@ -148,9 +148,21 @@ void Game::requestStart(bool demoTowers, const std::string& mapId) {
     if (!demoTowers) return;
 
     struct Build { int x, y; };
-    // y=0 and y=2 flank the long y=1 route; picked so the dev layout survives
-    // a change to the map's path.
-    const Build spots[] = {{3, 0}, {8, 2}, {13, 0}, {16, 2}};
+    // Taken from the map's own build plots, spread along the route. Named tiles
+    // used to work when any open grass was buildable; now that plots are an
+    // authored set, a hardcoded spot is simply wrong on every map.
+    std::vector<Build> spots;
+    for (int y = 0; y < world_->map().gridH; ++y) {
+        for (int x = 0; x < world_->map().gridW; ++x) {
+            if (world_->map().buildableAt(x, y)) spots.push_back({x, y});
+        }
+    }
+    if (spots.size() > 4) {
+        std::vector<Build> spread;
+        for (int i = 0; i < 4; ++i)
+            spread.push_back(spots[spots.size() * static_cast<size_t>(i) / 4]);
+        spots = spread;
+    }
     // Buildable tiles differ per map, so skip any spot this map does not allow
     // rather than silently ending up with fewer towers than the loop assumes.
     std::vector<Build> placed;

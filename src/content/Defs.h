@@ -169,7 +169,11 @@ struct MapDef {
         if (x < 0 || y < 0 || x >= gridW || y >= gridH) return '\0';
         return tileRows[static_cast<size_t>(y)][static_cast<size_t>(x)];
     }
-    bool buildableAt(int x, int y) const { return tileAt(x, y) == '.'; }
+    // 'o' only. Open ground used to be buildable everywhere, which made a plot
+    // an unlimited resource and gold the single binding constraint -- so the
+    // cheapest tower won every marginal build and every shard-unlocked tower was
+    // a worse buy than the free one. Plots are now authored and finite.
+    bool buildableAt(int x, int y) const { return tileAt(x, y) == 'o'; }
 };
 
 }  // namespace td::content

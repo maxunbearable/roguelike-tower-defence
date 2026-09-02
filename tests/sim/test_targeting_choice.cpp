@@ -12,6 +12,8 @@
 #include <vector>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/Components.h"
 #include "core/Vec2.h"
 #include "sim/World.h"
@@ -37,17 +39,17 @@ core::Loadout owning() {
 TEST_CASE("a tower's targeting priority can be changed and is remembered", "[targeting]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
 
     // Whatever the tower was authored with, the player can pick another.
-    REQUIRE(w.setTowerPriority(2, 0, sim::TargetPriority::Strongest));
-    CHECK(w.towerPriority(2, 0) == sim::TargetPriority::Strongest);
+    REQUIRE(w.setTowerPriority(PLOT(0), sim::TargetPriority::Strongest));
+    CHECK(w.towerPriority(PLOT(0)) == sim::TargetPriority::Strongest);
 
-    REQUIRE(w.setTowerPriority(2, 0, sim::TargetPriority::Last));
-    CHECK(w.towerPriority(2, 0) == sim::TargetPriority::Last);
+    REQUIRE(w.setTowerPriority(PLOT(0), sim::TargetPriority::Last));
+    CHECK(w.towerPriority(PLOT(0)) == sim::TargetPriority::Last);
 
     // An empty tile has nothing to set.
-    CHECK_FALSE(w.setTowerPriority(11, 0, sim::TargetPriority::First));
+    CHECK_FALSE(w.setTowerPriority(PLOT(1), sim::TargetPriority::First));
 }
 
 TEST_CASE("the choice survives an upgrade", "[targeting]") {
@@ -57,14 +59,14 @@ TEST_CASE("the choice survives an upgrade", "[targeting]") {
     // time the tower changed in any way.
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
-    REQUIRE(w.setTowerPriority(2, 0, sim::TargetPriority::Weakest));
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.setTowerPriority(PLOT(0), sim::TargetPriority::Weakest));
 
-    REQUIRE(w.upgradeTower(2, 0));
-    CHECK(w.towerPriority(2, 0) == sim::TargetPriority::Weakest);
+    REQUIRE(w.upgradeTower(PLOT(0)));
+    CHECK(w.towerPriority(PLOT(0)) == sim::TargetPriority::Weakest);
 
     // And the stats the targeting system actually reads agree with the tag.
-    const auto e = w.towerAt(2, 0);
+    const auto e = w.towerAt(PLOT(0));
     REQUIRE((e != entt::null));
     CHECK(w.reg().get<sim::TowerStats>(e).priority == sim::TargetPriority::Weakest);
 }
@@ -79,8 +81,8 @@ TEST_CASE("targeting priority decides which enemy is shot", "[targeting]") {
     // already been invalidated once by a map rework.
     const auto runWith = [&](sim::TargetPriority p) {
         sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-        REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
-        const auto tower = w.towerAt(2, 0);
+        REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
+        const auto tower = w.towerAt(PLOT(0));
         REQUIRE((tower != entt::null));
         const float range = w.reg().get<sim::TowerStats>(tower).range;
         const core::Vec2 tp = w.reg().get<sim::Position>(tower).v;
@@ -112,7 +114,7 @@ TEST_CASE("targeting priority decides which enemy is shot", "[targeting]") {
         };
         const auto lead = make(ahead);
         const auto trail = make(behind);
-        REQUIRE(w.setTowerPriority(2, 0, p));
+        REQUIRE(w.setTowerPriority(PLOT(0), p));
 
         const float leadFull = r.get<sim::Health>(lead).hp;
         const float trailFull = r.get<sim::Health>(trail).hp;

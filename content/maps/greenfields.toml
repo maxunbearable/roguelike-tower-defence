@@ -8,24 +8,24 @@ order = 1
 blurb = "Open meadow. Where every build starts."
 gridW = 22
 gridH = 11
-startGold = 300
+startGold = 275
 buildTime = 12.0
 
 # Open meadow. Where every build starts.
 
-# '.' buildable   '#' blocked scenery   '=' path   'S' spawn   'E' exit
+# 'o' build plot   '.' open ground   '#' blocked scenery   '=' path   'S' spawn   'E' exit
 tiles = """
 ......................
 S===================..
-...................=..
+ooo...o.ooo...o.ooo=..
 ..==================..
 ..=...................
 ..==================..
-...................=..
+..ooo.o...ooo.o...o=o.
 ..==================..
 ..=...................
 ..===================E
-......................
+....ooo.....ooo.....oo
 """
 
 path = [[0,1],[19,1],[19,3],[2,3],[2,5],[19,5],[19,7],[2,7],[2,9],[21,9]]

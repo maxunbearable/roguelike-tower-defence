@@ -9,6 +9,8 @@
 #include <filesystem>
 
 #include "content/Registry.h"
+
+#include "support/Plots.h"
 #include "sim/Tutorial.h"
 #include "sim/World.h"
 
@@ -68,7 +70,7 @@ TEST_CASE("no step passes before the player has done it", "[tutorial]") {
 TEST_CASE("building satisfies the build step and nothing else", "[tutorial]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     CHECK(sim::tutorialSatisfied(sim::TutorialStep::Build, w, false));
     // Placing a tower must not accidentally tick off later lessons.
     CHECK_FALSE(sim::tutorialSatisfied(sim::TutorialStep::StartWave, w, false));
@@ -85,17 +87,17 @@ TEST_CASE("starting the wave satisfies the wave step", "[tutorial]") {
 TEST_CASE("upgrading any tower satisfies the upgrade step", "[tutorial]") {
     const auto reg = loadReg();
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
-    REQUIRE(w.placeTower(2, 0, "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.placeTower(PLOT(0), "arrow") == sim::World::PlaceResult::Ok);
     CHECK_FALSE(sim::tutorialSatisfied(sim::TutorialStep::Upgrade, w, false));
-    REQUIRE(w.upgradeTower(2, 0));
+    REQUIRE(w.upgradeTower(PLOT(0)));
     CHECK(sim::tutorialSatisfied(sim::TutorialStep::Upgrade, w, false));
 
     // Selling the tower it was taught on must not un-teach the lesson... but it
     // does leave no levelled tower, so the step asks for ANY tower past level 1
     // rather than a specific one. Build and level a second to prove that.
-    REQUIRE(w.placeTower(4, 0, "arrow") == sim::World::PlaceResult::Ok);
-    REQUIRE(w.upgradeTower(4, 0));
-    REQUIRE(w.sellTower(2, 0));
+    REQUIRE(w.placeTower(PLOT(1), "arrow") == sim::World::PlaceResult::Ok);
+    REQUIRE(w.upgradeTower(PLOT(1)));
+    REQUIRE(w.sellTower(PLOT(0)));
     CHECK(sim::tutorialSatisfied(sim::TutorialStep::Upgrade, w, false));
 }
 

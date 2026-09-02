@@ -8,23 +8,23 @@ order = 3
 blurb = "A long winding route. Every tower gets several passes if placed well."
 gridW = 22
 gridH = 11
-startGold = 324
+startGold = 297
 buildTime = 12.0
 
 # A long winding route. Every tower gets several passes if placed well.
 
-# '.' buildable   '#' blocked scenery   '=' path   'S' spawn   'E' exit
+# 'o' build plot   '.' open ground   '#' blocked scenery   '=' path   'S' spawn   'E' exit
 tiles = """
 S=====================
-.....................=
+ooo.o...ooo.o...ooo.o=
 ..====================
 ..=...................
 ..==================..
-...................=..
+......ooo.o...ooo.o=..
 ....================..
 ....=.................
 ....==============....
-.................=....
+....ooo.....ooo..=ooo.
 .................====E
 """
 
