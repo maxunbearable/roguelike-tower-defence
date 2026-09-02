@@ -6,7 +6,9 @@
 // it teaches the wrong thing and then gets in the way.
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
+#include <vector>
 
 #include "content/Registry.h"
 
@@ -117,4 +119,88 @@ TEST_CASE("the inspect step reads UI state", "[tutorial]") {
     sim::World w(reg, reg.map("greenfields"), 1, owning(), 100000);
     CHECK_FALSE(sim::tutorialSatisfied(sim::TutorialStep::Inspect, w, false));
     CHECK(sim::tutorialSatisfied(sim::TutorialStep::Inspect, w, true));
+}
+
+namespace {
+
+// Walks the tutorial the way the game does, performing everything the profile is
+// actually able to perform, and reports the steps it managed to teach.
+std::vector<sim::TutorialStep> walkTutorial(sim::World& w) {
+    std::vector<sim::TutorialStep> taught;
+    auto step = sim::TutorialStep::Build;
+    int guard = 0;
+    while (step != sim::TutorialStep::Done && guard++ < 24) {
+        if (sim::tutorialSatisfied(step, w, /*menuOnTower=*/true)) {
+            taught.push_back(step);
+            step = sim::tutorialNext(step);
+            continue;
+        }
+        switch (step) {
+            case sim::TutorialStep::Build:
+                w.placeTower(PLOT(0), "arrow");
+                break;
+            case sim::TutorialStep::StartWave:
+                w.startNextWave();
+                break;
+            case sim::TutorialStep::Ability:
+                w.castAbility(sim::Ability::Strike, w.path().positionAt(3.0f));
+                break;
+            case sim::TutorialStep::Upgrade:
+                if (!w.upgradeTower(PLOT(0))) return taught;  // cannot: levels are bought
+                break;
+            default:
+                return taught;
+        }
+    }
+    return taught;
+}
+
+bool taughtStep(const std::vector<sim::TutorialStep>& v, sim::TutorialStep s) {
+    return std::find(v.begin(), v.end(), s) != v.end();
+}
+
+}  // namespace
+
+TEST_CASE("a first run is taught everything it can actually do", "[tutorial]") {
+    // Tower levels are bought in the skill trees, so on a first run no tower can
+    // pass level 1 and the step asking the player to "level the tower up" cannot
+    // be satisfied. That step used to sit FOURTH, ahead of the ability lesson, so
+    // the tutorial stalled there and a new player was never shown Strike -- a
+    // free ability on a cooldown, and the only thing they get for nothing.
+    const auto reg = loadReg();
+    sim::World w(reg, reg.map("greenfields"), 1, core::Loadout{}, /*goldOverride=*/5000);
+    REQUIRE_FALSE(w.levelUnlocked(2));
+
+    const auto taught = walkTutorial(w);
+    INFO("steps taught: " << taught.size());
+    CHECK(taughtStep(taught, sim::TutorialStep::Build));
+    CHECK(taughtStep(taught, sim::TutorialStep::StartWave));
+    CHECK(taughtStep(taught, sim::TutorialStep::Inspect));
+    CHECK(taughtStep(taught, sim::TutorialStep::Ability));
+    // ...and it waits on the one thing the profile cannot do yet, rather than
+    // blocking the rest behind it.
+    CHECK_FALSE(taughtStep(taught, sim::TutorialStep::Upgrade));
+}
+
+TEST_CASE("the tutorial finishes once tower levels are bought", "[tutorial]") {
+    const auto reg = loadReg();
+    core::Loadout lo;
+    lo.ownedNodes.insert("global.level2");
+    sim::World w(reg, reg.map("greenfields"), 1, lo, /*goldOverride=*/5000);
+    REQUIRE(w.levelUnlocked(2));
+
+    const auto taught = walkTutorial(w);
+    CHECK(taughtStep(taught, sim::TutorialStep::Ability));
+    CHECK(taughtStep(taught, sim::TutorialStep::Upgrade));
+}
+
+TEST_CASE("the level-up step says where levels come from when they are locked",
+          "[tutorial]") {
+    // Asking for something impossible is worse than saying nothing; the step
+    // names the node and its place instead.
+    const auto locked = sim::tutorialPrompt(sim::TutorialStep::Upgrade, /*levelsUnlocked=*/false);
+    const auto open = sim::tutorialPrompt(sim::TutorialStep::Upgrade, /*levelsUnlocked=*/true);
+    REQUIRE(std::string(locked.title) != std::string(open.title));
+    CHECK(std::string(locked.body).find("skill trees") != std::string::npos);
+    CHECK(std::string(open.body).find("Level the tower up") != std::string::npos);
 }

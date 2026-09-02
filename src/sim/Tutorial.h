@@ -21,8 +21,17 @@ class World;
 //     single current step rather than a panel of instructions.
 //  2. Learn by doing. Every step is gated on the player actually performing the
 //     action -- `satisfied()` observes the world, it is never a timer and never
-//     a "click to continue". A step the player cannot yet perform is skipped.
+//     a "click to continue".
+//  2b. A step the player cannot yet perform WAITS, and says what would unlock
+//     it. It used to claim it was skipped, and was not: levelling a tower is
+//     bought in the skill trees, so on a first run -- the only run a tutorial
+//     ever sees -- that step could never be satisfied and the tutorial stalled
+//     on it permanently. Anything sequenced behind it was never taught at all.
+//     Steps that depend on a purchase therefore come LAST, so a first run is
+//     taught everything it can actually do.
 //  3. Always skippable, and never repeated once finished.
+// The ORDER of this enum is the save format -- it is serialised as an integer
+// into the profile -- so the sequence lives in `tutorialNext`, not here.
 enum class TutorialStep {
     Build,      // place the first tower
     StartWave,  // send the wave
@@ -37,7 +46,11 @@ struct TutorialPrompt {
     const char* body;
 };
 
-TutorialPrompt tutorialPrompt(TutorialStep s);
+// `levelsUnlocked` is whether this profile may raise a tower past level 1. Tower
+// levels are bought in the skill trees, so on a first run they are not
+// available, and the step that asks for one has to say where they come from
+// instead of asking for something the player cannot do.
+TutorialPrompt tutorialPrompt(TutorialStep s, bool levelsUnlocked = true);
 
 // What the player has to be doing on screen for a step to count. `menuOnTower`
 // is the one piece of UI state the simulation cannot see; passing it in keeps

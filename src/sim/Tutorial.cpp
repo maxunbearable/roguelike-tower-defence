@@ -5,7 +5,7 @@
 
 namespace td::sim {
 
-TutorialPrompt tutorialPrompt(TutorialStep s) {
+TutorialPrompt tutorialPrompt(TutorialStep s, bool levelsUnlocked) {
     switch (s) {
         case TutorialStep::Build:
             return {"Build a tower", "Click one of the marked plots beside the road."};
@@ -15,6 +15,15 @@ TutorialPrompt tutorialPrompt(TutorialStep s) {
         case TutorialStep::Inspect:
             return {"Open your tower", "Click it. The panel shows exactly what it does."};
         case TutorialStep::Upgrade:
+            if (!levelsUnlocked) {
+                // A first run cannot level anything: the flag is bought. Asking
+                // for it anyway stranded the tutorial here forever, and since
+                // this step came before the ability lesson, a new player was
+                // never shown Strike either.
+                return {"Unlock tower levels",
+                        "Towers stay at level 1 until you buy Reinforced Foundations in "
+                        "the skill trees. Your first shards are best spent there."};
+            }
             return {"Spend your gold", "Level the tower up. Gold is scarce here, so every "
                                        "coin is a decision."};
         case TutorialStep::Ability:
@@ -30,9 +39,13 @@ TutorialStep tutorialNext(TutorialStep s) {
     switch (s) {
         case TutorialStep::Build: return TutorialStep::StartWave;
         case TutorialStep::StartWave: return TutorialStep::Inspect;
-        case TutorialStep::Inspect: return TutorialStep::Upgrade;
-        case TutorialStep::Upgrade: return TutorialStep::Ability;
-        case TutorialStep::Ability: return TutorialStep::Done;
+        // Strike BEFORE the level-up. Strike is free and always available, so a
+        // first run can be taught it; levelling is bought, so the step that
+        // needs it comes last and waits for the run after the purchase rather
+        // than blocking everything behind it.
+        case TutorialStep::Inspect: return TutorialStep::Ability;
+        case TutorialStep::Ability: return TutorialStep::Upgrade;
+        case TutorialStep::Upgrade: return TutorialStep::Done;
         case TutorialStep::Done: break;
     }
     return TutorialStep::Done;

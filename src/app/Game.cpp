@@ -1073,7 +1073,8 @@ void Game::renderCanvas(float alpha) {
             drawHoveredEnemy();
             if (tutorialActive()) {
                 const auto pr = sim::tutorialPrompt(
-                    sim::tutorialFromIndex(activeConst().meta.tutorialStep));
+                    sim::tutorialFromIndex(activeConst().meta.tutorialStep),
+                    world_->levelUnlocked(2));
                 tutorialBox_ = ui::drawTutorial(renderer_.atlas(), pr.title, pr.body,
                                                 mouseVirtual());
             }

@@ -152,9 +152,12 @@ int main(int argc, char** argv) {
         if (jumpWave > 0) game.devJumpToWave(jumpWave);
         if (pauseIt) game.devPause();
     }
+    // Order matters: opening a profile has to come first, or a run started
+    // before it has no profile and reads a default one -- which is how a capture
+    // of "the tutorial" came back showing step 0 whatever the save said.
+    if (openSlot >= 0) game.openSlot(openSlot);
     if (freshRun) game.requestStart(/*demoTowers=*/false, forceMap ? forceMap : "");
     if (hub) { game.openHub(0); game.devSetHubTab(hubTab); }
-    if (openSlot >= 0) game.openSlot(openSlot);
     if (artCompare) game.showArtCompare();
     if (spriteSheet) game.showSpriteSheet();
     if (menuAt) {
