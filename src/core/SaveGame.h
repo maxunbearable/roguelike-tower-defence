@@ -42,6 +42,21 @@ struct RunSave {
     int lives = 0;
     float buildTimer = 0.0f;
     std::vector<TowerSave> towers;
+
+    // Run statistics. Without these, resuming a run reset everything the results
+    // screen reports -- measured at towersBuilt 1 before a save and 0 after -- so
+    // a player who quit and came back was told they had done nothing.
+    // Plain fields rather than the sim's RunStats: core must not depend on sim.
+    int enemiesKilled = 0;
+    int leaked = 0;
+    int goldEarned = 0;
+    int towersBuilt = 0;
+
+    // Remaining ability cooldowns, indexed like sim::Ability. Cooldowns tick
+    // during the BUILD phase, which is exactly when the game autosaves, so
+    // without these a player could fire an ability, quit to the hub and resume
+    // with it ready again: measured at 13.0s before a save and 0s after.
+    std::vector<float> abilityCooldowns;
 };
 
 // How far a profile has got on one map.

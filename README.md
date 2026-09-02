@@ -135,7 +135,10 @@ Other load-bearing decisions:
 
 - **Deterministic.** One seeded `std::mt19937_64` per run, injected everywhere;
   `rand()` is prohibited; the RNG state is serialised into saves, so resuming a
-  run continues the same random sequence.
+  run continues the same random sequence. Resuming also restores the run's
+  statistics and its ability cooldowns — neither used to be saved, so a reload
+  wiped everything the results screen reports and handed back any ability the
+  player had just spent.
 - **Fixed 1/60s timestep** with an accumulator, and render interpolation.
 - **Music is generated, not licensed.** `core::Music` composes two minor-key
   loops from the same raylib-free synthesiser the sound effects use, wraps the PCM
@@ -161,7 +164,7 @@ cmake --build build
 Tests:
 
 ```sh
-ctest --test-dir build          # 283 tests
+ctest --test-dir build          # 287 tests
 ```
 
 A plain `cmake -B build` produces an optimised `RelWithDebInfo` build, which is

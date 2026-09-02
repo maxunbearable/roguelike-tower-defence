@@ -733,6 +733,11 @@ core::RunSave World::snapshot() const {
     s.gold = gold_;
     s.lives = lives_;
     s.buildTimer = buildTimer_;
+    s.enemiesKilled = stats_.enemiesKilled;
+    s.leaked = stats_.leaked;
+    s.goldEarned = stats_.goldEarned;
+    s.towersBuilt = stats_.towersBuilt;
+    s.abilityCooldowns.assign(std::begin(abilityCd_), std::end(abilityCd_));
 
     ecs_.view<const TowerTag, const TileCoord>().each(
         [&](const TowerTag& tag, const TileCoord& tc) {
@@ -755,6 +760,15 @@ void World::restore(const core::RunSave& s) {
     gold_ = s.gold;
     lives_ = s.lives;
     buildTimer_ = s.buildTimer;
+    stats_.enemiesKilled = s.enemiesKilled;
+    stats_.leaked = s.leaked;
+    stats_.goldEarned = s.goldEarned;
+    stats_.towersBuilt = s.towersBuilt;
+    // A save written before cooldowns were stored has none; leave those ready
+    // rather than reading past the end of the vector.
+    for (size_t i = 0; i < static_cast<size_t>(kAbilityCount); ++i) {
+        abilityCd_[i] = i < s.abilityCooldowns.size() ? s.abilityCooldowns[i] : 0.0f;
+    }
     phase_ = Phase::Build;
 
     // Towers are rebuilt directly rather than replayed through the purchase

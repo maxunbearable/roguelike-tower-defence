@@ -42,6 +42,11 @@ std::string toJson(const SaveSlot& slot) {
         jr["gold"] = r.gold;
         jr["lives"] = r.lives;
         jr["buildTimer"] = r.buildTimer;
+        jr["enemiesKilled"] = r.enemiesKilled;
+        jr["leaked"] = r.leaked;
+        jr["goldEarned"] = r.goldEarned;
+        jr["towersBuilt"] = r.towersBuilt;
+        jr["abilityCooldowns"] = r.abilityCooldowns;
         for (const auto& t : r.towers) {
             jr["towers"].push_back({{"x", t.x},
                                     {"y", t.y},
@@ -116,6 +121,12 @@ SaveSlot fromJson(const std::string& text) {
         r.gold = jr.value("gold", 0);
         r.lives = jr.value("lives", 0);
         r.buildTimer = jr.value("buildTimer", 0.0f);
+        // Defaults keep saves written before these fields loadable.
+        r.enemiesKilled = jr.value("enemiesKilled", 0);
+        r.leaked = jr.value("leaked", 0);
+        r.goldEarned = jr.value("goldEarned", 0);
+        r.towersBuilt = jr.value("towersBuilt", 0);
+        r.abilityCooldowns = jr.value("abilityCooldowns", std::vector<float>{});
         if (jr.contains("towers")) {
             for (const auto& jt : jr["towers"]) {
                 TowerSave t;
